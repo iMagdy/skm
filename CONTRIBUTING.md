@@ -1,0 +1,123 @@
+# Contributing to skm
+
+Thank you for your interest in contributing to `skm`.
+
+This project aims to be useful, reliable, and easy to adopt. Contributions are welcome, but we want the project to stay clear, maintainable, and legally safe.
+
+## Code of conduct
+
+Be respectful, constructive, and direct.
+
+Disagreement is fine. Personal attacks, harassment, or intentionally disruptive behavior are not.
+
+## Before you start
+
+For small fixes, feel free to open a pull request directly.
+
+For larger changes, please open an issue first so we can discuss the direction before you spend serious time on implementation.
+
+Examples of larger changes:
+
+- New commands
+- Manifest format changes
+- Registry behavior
+- Installer behavior
+- Security-sensitive logic
+- Breaking changes
+- Changes to public APIs or file formats
+- Features related to future agent support
+
+## Developer Certificate of Origin
+
+This project uses DCO sign-off for contributions.
+
+Every commit must include a `Signed-off-by` line.
+
+Use:
+
+```bash
+git commit -s -m "Your commit message"
+```
+
+The sign-off certifies that you have the right to submit the contribution under the project's open source license.
+
+Pull requests without valid sign-offs may be blocked until corrected.
+
+See `DCO.md` for more details.
+
+## Licensing of contributions
+
+Unless explicitly stated otherwise, contributions are submitted under the same license as the project.
+
+By contributing, you agree that your contribution may be used, modified, and redistributed under the project's license.
+
+## Project identity and trademarks
+
+The `skm` name and official project identity are controlled by the project maintainers.
+
+Forks are welcome, but modified versions should not present themselves as the official `skm` project.
+
+See `TRADEMARK.md` for the trademark and brand policy.
+
+## Pull request expectations
+
+A good pull request should:
+
+- Explain the problem being solved
+- Keep the change focused
+- Include tests where reasonable
+- Update documentation when behavior changes
+- Avoid unrelated refactoring
+- Avoid large formatting-only changes mixed with functional changes
+
+## Commit style
+
+Use clear commit messages.
+
+Good examples:
+
+```text
+Add manifest validation for missing skill source
+Fix linux musl release target
+Document registry authentication flow
+```
+
+Avoid vague messages:
+
+```text
+fix
+update
+changes
+wip
+```
+
+## Tests
+
+Please add or update tests when changing behavior.
+
+For CLI behavior, prefer integration tests that run the compiled binary and assert:
+
+- Exit code
+- stdout
+- stderr
+- file output when relevant
+
+## Security issues
+
+Please do not open public issues for security vulnerabilities.
+
+Instead, report them privately through the official security reporting channel once one is configured.
+
+Until then, contact the maintainer directly through the official project profile or repository contact method.
+
+## Maintainer rights
+
+The maintainers are responsible for the direction, quality, releases, package publishing, and official project identity of `skm`.
+
+The maintainers may close issues or pull requests that are out of scope, inactive, unsafe, legally unclear, or inconsistent with the project's goals.
+
+## Release authority
+
+Only approved maintainers may publish official `skm` releases, binaries, packages, registry entries, or installation scripts.
+
+Unofficial builds must be clearly labeled as unofficial and must not confuse users into thinking they are official `skm` releases.

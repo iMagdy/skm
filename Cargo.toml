@@ -3,6 +3,12 @@ name = "skm"
 version = "0.1.0"
 edition = "2021"
 description = "Agentic skills package manager"
+license = "Apache-2.0"
+homepage = "https://github.com/iMagdy/skm"
+repository = "https://github.com/iMagdy/skm"
+readme = "README.md"
+keywords = ["agentic", "skills", "package manager", "cli"]
+categories = ["command-line-utilities", "development-tools", "agentic-systems", "agentic-skills"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
