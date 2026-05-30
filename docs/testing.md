@@ -1,104 +1,69 @@
 # Testing
 
-This guide explains how to run tests, measure coverage, and verify compliance with the constitution's >=95% coverage requirement.
+The test suite covers unit behavior, CLI workflows, and local git fixtures.
 
-## Running Tests
+## Required Checks
+
+Run these before opening a pull request:
 
 ```bash
-# Run all tests
-cargo test
-
-# Run with output
-cargo test -- --nocapture
-
-# Run unit tests only
-cargo test --lib
-
-# Run integration tests only
-cargo test --test '*'
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all-targets
+python3 scripts/check_docs.py
+python3 scripts/speckit_sync_issues.py --feature-dir tests/fixtures/speckit-sync-feature --dry-run
+python3 scripts/generate_release_docs.py v0.0.0 --output-dir target/release-docs-test
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_automation.py
 ```
 
-## Measuring Coverage
+## Unit and Integration Tests
 
-The project uses `cargo-tarpaulin` for line coverage measurement against the `src/` directory.
+```bash
+cargo test --all-targets
+```
 
-### Install cargo-tarpaulin
+Integration tests create local temporary git repositories. They do not require network access.
+
+## Coverage
+
+CI runs `cargo tarpaulin --fail-under 95` as the coverage gate. To run it locally:
 
 ```bash
 cargo install cargo-tarpaulin
-```
-
-### Generate Coverage Report
-
-```bash
-# Generate coverage report
-cargo tarpaulin --out Stdout
-
-# Generate HTML report
-cargo tarpaulin --out Html
-
-# Generate coverage for specific output format
-cargo tarpaulin --out Xml
-```
-
-### Coverage Threshold
-
-The constitution requires >=95% line coverage (Principle VI). This is a non-negotiable gate — no merge, no release, no exception.
-
-```bash
-# Check coverage meets threshold
 cargo tarpaulin --fail-under 95
 ```
 
-## Coverage Enforcement
-
-Coverage is enforced in CI as a gate before merge. The CI pipeline runs:
+Generate an HTML report:
 
 ```bash
-cargo tarpaulin --fail-under 95 --out Stdout
-```
-
-If coverage drops below 95%, the CI job fails and the PR cannot be merged.
-
-## Investigating Coverage Gaps
-
-### Identify Untested Code
-
-```bash
-# Generate HTML report to see uncovered lines
 cargo tarpaulin --out Html
-
-# Open the report
-open tarpaulin-report.html
 ```
 
-### Common Coverage Gaps
+## Documentation Checks
 
-1. **Error paths**: Ensure all error conditions are tested
-2. **Edge cases**: Test boundary conditions and invalid inputs
-3. **Platform-specific code**: Test cross-platform behavior if applicable
-4. **Git operations**: Code that shells out to git CLI requires actual git repos for testing
+```bash
+python3 scripts/check_docs.py
+```
 
-### Fixing Coverage Issues
+The docs check validates:
 
-1. Identify uncovered lines in the HTML report
-2. Write tests that exercise those code paths
-3. Re-run coverage to verify the fix
-4. Ensure total coverage remains >=95%
+- Root and `docs/` Markdown links.
+- JSON fenced code blocks.
+- Documented `skm` command examples.
+- Stale links to old repository names or generated spec quickstarts.
 
-## CI Pipeline
+## Release Script Checks
 
-The CI pipeline includes:
+```bash
+python3 scripts/generate_release_docs.py v0.0.0 --output-dir target/release-docs-test
+```
 
-1. **Build check**: `cargo build --release`
-2. **Test suite**: `cargo test`
-3. **Clippy lint**: `cargo clippy -- -D warnings`
-4. **Format check**: `cargo fmt --check`
-5. **Coverage gate**: `cargo tarpaulin --fail-under 95`
+This verifies the release-note generator can handle a first-release style tag when no previous tag exists.
 
-All checks must pass before a PR can be merged.
+## Automation Helper Tests
 
-## See Also
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_automation.py
+```
 
-- [Contributing](contributing.md) — Development workflow and PR process
-- [Architecture](architecture.md) — Codebase structure
+These tests cover Speckit task parsing, safe checkbox pull behavior, GitHub Project ambiguity handling, release asset tables, and workflow expectations.

@@ -83,6 +83,14 @@ pub fn copy_cloned_repo_to_dest(
     dest_dir: &Path,
     source_manifest: Option<&Manifest>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if clone_dir == dest_dir
+        && source_manifest
+            .map(|m| m.exports.is_empty())
+            .unwrap_or(true)
+    {
+        return Ok(());
+    }
+
     if let Some(m) = source_manifest {
         copy_skill_files(clone_dir, dest_dir, m)?;
     } else {
@@ -248,7 +256,11 @@ mod tests {
             },
         );
         let result = copy_skill_files(&source, &dest, &manifest);
-        assert!(result.is_ok(), "copy_skill_files failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "copy_skill_files failed: {:?}",
+            result.err()
+        );
         assert!(dest.join("my-skill").exists());
         std::fs::remove_dir_all(&source).unwrap();
         std::fs::remove_dir_all(&dest).unwrap();

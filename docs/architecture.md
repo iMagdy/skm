@@ -1,123 +1,68 @@
 # Architecture
 
-This guide describes the codebase structure, module responsibilities, and key data flows in skm.
+`skm` is a single-binary Rust CLI. It keeps domain logic small and file-based so users can understand and repair project state manually when needed.
 
-## Module Overview
+## Modules
 
 ```text
 src/
-├── main.rs          # Entry point — CLI parsing with clap
-├── cli/             # Command implementations
-│   ├── mod.rs       # Module declarations
-│   ├── init.rs      # skm init — create manifest
-│   ├── install.rs   # skm install — clone skills
-│   ├── list.rs      # skm list — display installed skills
-│   ├── show.rs      # skm show — inspect a skill
-│   ├── uninstall.rs # skm uninstall — remove a skill
-│   └── upgrade.rs   # skm upgrade — update skills
-├── error.rs         # Error types (thiserror)
-├── git.rs           # Git operations (shells out to git CLI)
-├── lockfile.rs      # Lockfile read/write (serde_json)
-├── manifest.rs      # Manifest read/write (serde_json)
-└── skill.rs         # Skill data types
+├── main.rs          # clap command parsing and dispatch
+├── cli/             # command handlers
+├── discovery.rs     # fallback local skill discovery
+├── error.rs         # miette/thiserror diagnostics
+├── git.rs           # git CLI wrapper functions
+├── lockfile.rs      # skills.lock load/save/validation
+├── manifest.rs      # skills.json load/save/validation
+└── skill.rs         # copy and remove skill files
 ```
 
-## Module Responsibilities
+## Command Flow
 
-### main.rs
-
-- Parses CLI arguments using `clap` derive macros
-- Dispatches to the appropriate command handler
-- Handles top-level errors
-
-### cli/
-
-Each module implements a single CLI command:
-
-- **init.rs**: Creates `skills.json` with empty structure
-- **install.rs**: Reads manifest, clones repos, copies exports, updates lockfile
-- **upgrade.rs**: Fetches latest commits, updates skill directories and lockfile
-- **list.rs**: Reads lockfile, displays installed skills in a table
-- **show.rs**: Displays details for a specific skill
-- **uninstall.rs**: Removes skill from manifest, disk, and lockfile
-
-### error.rs
-
-- Defines error types using `thiserror`
-- Uses `miette` for diagnostic output with context
-
-### git.rs
-
-- Shells out to the `git` CLI for all git operations
-- Supports both HTTPS and SSH clone URLs
-- Handles authentication failures with clear error messages
-
-### lockfile.rs
-
-- Reads and writes `skills.lock`
-- Maps skill names to commit SHAs
-
-### manifest.rs
-
-- Reads and writes `skills.json`
-- Validates skill name format and uniqueness
-
-### skill.rs
-
-- Defines the `Skill` data type
-- Contains shared constants and utilities
-
-## Data Flow: skm install
+### Install
 
 ```text
-1. Parse CLI arguments
-2. Read skills.json (manifest.rs)
-3. For each skill in manifest:
-   a. Check if already installed → skip if yes
-   b. Clone repo to .agents/skills/<name>/ (git.rs)
-   c. Read source repo's skills.json exports
-   d. Copy exported files/dirs to .agents/skills/<name>/
-   e. Record commit SHA
-4. Write/update skills.lock (lockfile.rs)
-5. Report results (successes and failures)
+read skills.json
+for each skill:
+  clone repo into .agents/skills/<name>/
+  read source skills.json if present
+  copy exported paths when exports exist
+  record HEAD commit in skills.lock
+write skills.lock
 ```
 
-## Data Flow: skm upgrade
+When no manifest is present, `skm install` looks for a local `skills/` directory and installs a discovered skill as a fallback.
+
+### Export
 
 ```text
-1. Parse CLI arguments
-2. Read skills.lock (lockfile.rs)
-3. For each skill in lockfile:
-   a. Fetch latest commits from default branch (git.rs)
-   b. Update skill directory to latest commit
-   c. Record new commit SHA
-4. Write updated skills.lock (lockfile.rs)
-5. Report results (successes and failures)
+load existing skills.json or create an empty manifest
+read skills.lock
+add locked skills back into skills.json
+scan .agents/skills/ for untracked local directories
+save skills.json
 ```
 
-## Design Decisions
+### Upgrade
 
-### Shell out to git CLI
+```text
+read skills.lock or skills.json
+for each skill directory:
+  git fetch origin
+  resolve default branch
+  checkout origin/<default-branch>
+  update commit in skills.lock
+write skills.lock
+```
 
-skm shells out to the `git` CLI rather than using libgit2. This ensures compatibility with the user's git configuration, including authentication, proxies, and SSH keys.
+## Design Choices
 
-### Graceful Degradation
-
-Partial failures do not abort the entire operation. If one skill fails to clone or upgrade, skm continues with remaining skills and reports all errors at the end. This behavior is implemented in the install and upgrade command handlers.
-
-**Error handling patterns:**
-- All error messages include the specific failure reason
-- All error messages include a suggested remediation action
-- Malformed JSON in `skills.json` is detected and reported with line/column info
-- Duplicate skill names are detected and rejected
-- Missing manifests are reported with a clear error message
-
-### Manifest as Single Source of Truth
-
-`skills.json` is the authoritative source for which skills a project uses. The lockfile is derived from the manifest and git operations.
+- `skm` shells out to `git` instead of using libgit2 so user SSH keys, credential helpers, proxies, and platform git config work normally.
+- The manifest and lockfile are JSON because they are easy to inspect, diff, and repair.
+- Partial failures are collected and reported after a command finishes processing remaining skills.
+- Tests use local temporary git repositories instead of network fixtures.
 
 ## See Also
 
-- [Command Reference](commands.md) — Detailed command documentation
-- [Manifest Format](manifest.md) — `skills.json` structure
-- [Lockfile Format](lockfile.md) — `skills.lock` structure
+- [Manifest format](manifest.md)
+- [Lockfile format](lockfile.md)
+- [Testing](testing.md)

@@ -1,20 +1,24 @@
 # skm Documentation
 
-Welcome to the skm documentation. skm is a command-line tool for managing agentic skills — specialized instructions and workflows for AI coding agents.
+Welcome to the `skm` docs. These pages explain how to install, use, contribute to, test, and release the skills package manager.
 
-## Getting Started
+## Start Here
 
-- [Installation](installation.md) — Install skm on your platform
-- [Quick Start](../specs/002-project-docs/quickstart.md) — Get up and running in minutes
+- [Quickstart](quickstart.md)
+- [Installation](installation.md)
+- [Command reference](commands.md)
 
-## Reference
+## Concepts
 
-- [Command Reference](commands.md) — Complete documentation for all `skm` commands
-- [Manifest Format](manifest.md) — How to configure `skills.json`
-- [Lockfile Format](lockfile.md) — Understanding `skills.lock` for reproducible installs
+- [Manifest format](manifest.md)
+- [Lockfile format](lockfile.md)
+- [Architecture](architecture.md)
+- [Troubleshooting](troubleshooting.md)
 
-## Development
+## Project Workflows
 
-- [Contributing](contributing.md) — Set up the dev environment and submit changes
-- [Architecture](architecture.md) — Understand the codebase structure and data flows
-- [Testing](testing.md) — Run tests and verify coverage compliance
+- [Testing](testing.md)
+- [Contributing](contributing.md)
+- [Release process](release-process.md)
+- [GitHub project sync](github-project-sync.md)
+- [Release notes](RELEASE_NOTES.md)

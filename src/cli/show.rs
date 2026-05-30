@@ -1,10 +1,20 @@
+use std::path::Path;
+
 use crate::error::SkillNotFound;
 use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
 
+#[cfg(not(tarpaulin_include))]
 pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let project_root = std::env::current_dir()?;
+    run_in(&project_root, package_name)
+}
+
+pub(crate) fn run_in(
+    project_root: &Path,
+    package_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_path = project_root.join("skills.json");
     let lockfile_path = project_root.join("skills.lock");
 
@@ -31,7 +41,7 @@ pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         .or_else(|| lock.map(|l| l.repo.as_str()))
         .unwrap_or("—");
     let commit = lock.map(|l| l.commit.as_str()).unwrap_or("—");
-    let dir = git::skill_dir(&project_root, package_name);
+    let dir = git::skill_dir(project_root, package_name);
     let status = if dir.exists() {
         "installed"
     } else if lock.is_some() {
@@ -57,11 +67,8 @@ mod tests {
     fn test_show_not_found() {
         let dir = std::env::temp_dir().join("skm_test_show_notfound");
         std::fs::create_dir_all(&dir).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("nonexistent");
+        let result = run_in(&dir, "nonexistent");
         assert!(result.is_err());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -75,11 +82,8 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("test");
+        let result = run_in(&dir, "test");
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -93,11 +97,8 @@ mod tests {
             r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
         )
         .unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("test");
+        let result = run_in(&dir, "test");
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -112,11 +113,24 @@ mod tests {
         )
         .unwrap();
         // Don't create the skill directory
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("test");
+        let result = run_in(&dir, "test");
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_show_manifest_only_not_installed_status() {
+        let dir = std::env::temp_dir().join("skm_test_show_manifest_only");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+
+        let result = run_in(&dir, "test");
+
+        assert!(result.is_ok());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

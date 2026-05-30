@@ -160,26 +160,15 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
 
 9. **GitHub Issue Progress Tracking**:
-   - Check if `FEATURE_DIR/issue-map.json` exists (created by `/speckit.taskstoissues`)
-   - If it exists, load the mapping and update GitHub issues as tasks complete:
-     - After marking a task as `[X]` in tasks.md, find the corresponding issue number from the map
-     - Update the issue body to mark the matching checkbox as `[x]` using `gh`:
+   - After marking tasks as `[X]`, re-run the idempotent sync script when `FEATURE_DIR/issue-map.json` exists:
 
-       ```bash
-       # Fetch current issue body
-       ISSUE_BODY=$(gh issue view <ISSUE_NUMBER> --json body -q '.body')
+     ```bash
+     python3 scripts/speckit_sync_issues.py --feature-dir "$FEATURE_DIR"
+     ```
 
-       # Replace the specific task checkbox from - [ ] to - [x]
-       # Use sed to find the line containing the TaskID and flip the checkbox
-       UPDATED_BODY=$(echo "$ISSUE_BODY" | sed "s/- \[ \] (<TASK_ID>)/- [x] (\1)/")
-
-       # Update the issue
-       gh issue edit <ISSUE_NUMBER> --body "$UPDATED_BODY"
-       ```
-
-     - If the issue update fails, log a warning but do NOT halt implementation
-     - Track which issues have been fully completed (all checkboxes checked)
-   - If `issue-map.json` does not exist, skip silently (issues may not have been created yet)
+   - The script re-renders issue checkboxes from `tasks.md`, preserves existing issue numbers, and updates GitHub Project mapping.
+   - If the sync fails, log a warning but do NOT halt implementation.
+   - If `issue-map.json` does not exist, skip silently; issues may not have been created yet.
 
 10. Completion validation:
    - Verify all required tasks are completed

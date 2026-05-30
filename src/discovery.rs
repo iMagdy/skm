@@ -128,6 +128,7 @@ pub fn discover_skills(skills_dir: &Path) -> DiscoveryResult {
 
 /// Deduplicate a list of discovered skills by normalized name.
 /// Keeps the first occurrence and collects warnings for duplicates.
+#[cfg(test)]
 pub fn deduplicate_skills(skills: Vec<DiscoveredSkill>) -> DiscoveryResult {
     let mut unique = Vec::new();
     let mut warnings = Vec::new();

@@ -3,6 +3,7 @@ use std::process::Command;
 
 use crate::error::{GitCheckoutFailed, GitCloneFailed, GitFetchFailed, GitRevParseFailed};
 
+#[cfg(test)]
 pub fn is_git_available() -> bool {
     Command::new("git")
         .arg("--version")
@@ -144,6 +145,7 @@ pub fn skill_dir(project_root: &Path, name: &str) -> PathBuf {
     project_root.join(".agents").join("skills").join(name)
 }
 
+#[cfg(test)]
 pub fn is_installed(project_root: &Path, name: &str) -> bool {
     skill_dir(project_root, name).exists()
 }
@@ -176,7 +178,7 @@ mod tests {
     #[test]
     fn test_clone_invalid_url() {
         let dir = std::env::temp_dir().join("skm_test_clone_invalid");
-        let result = clone("https://invalid.example.com/repo.git", &dir);
+        let result = clone("/definitely/not/a/skm/repo", &dir);
         assert!(result.is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -214,7 +216,7 @@ mod tests {
     fn test_clone_to_existing_dir() {
         let dir = std::env::temp_dir().join("skm_test_clone_existing");
         std::fs::create_dir_all(&dir).unwrap();
-        let result = clone("https://invalid.example.com/repo.git", &dir);
+        let result = clone("/definitely/not/a/skm/repo", &dir);
         assert!(result.is_err());
         std::fs::remove_dir_all(&dir).unwrap();
     }

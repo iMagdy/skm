@@ -1,10 +1,20 @@
+use std::path::Path;
+
 use crate::error::SkillNotFound;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
 use crate::skill;
 
+#[cfg(not(tarpaulin_include))]
 pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let project_root = std::env::current_dir()?;
+    run_in(&project_root, package_name)
+}
+
+pub(crate) fn run_in(
+    project_root: &Path,
+    package_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_path = project_root.join("skills.json");
 
     let mut manifest = if manifest_path.exists() {
@@ -31,7 +41,7 @@ pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     lockfile.remove(package_name);
     lockfile.save(&lockfile_path)?;
 
-    skill::remove_skill_dir(&project_root, package_name)?;
+    skill::remove_skill_dir(project_root, package_name)?;
 
     println!("Uninstalled {}", package_name);
     Ok(())
@@ -45,11 +55,8 @@ mod tests {
     fn test_uninstall_no_manifest() {
         let dir = std::env::temp_dir().join("skm_test_uninstall_nomanifest");
         std::fs::create_dir_all(&dir).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("test");
+        let result = run_in(&dir, "test");
         assert!(result.is_err());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -58,11 +65,8 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_uninstall_notfound");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("nonexistent");
+        let result = run_in(&dir, "nonexistent");
         assert!(result.is_err());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -81,9 +85,7 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("test");
+        let result = run_in(&dir, "test");
         assert!(result.is_ok());
         assert!(
             !dir.join("skills.json").exists()
@@ -91,7 +93,6 @@ mod tests {
                     .unwrap()
                     .contains("test")
         );
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -106,11 +107,8 @@ mod tests {
         .unwrap();
         // No lockfile
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run("test");
+        let result = run_in(&dir, "test");
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

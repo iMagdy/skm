@@ -13,7 +13,7 @@ Sponsor `skm` if you believe agent skills should be easy to package, share, inst
 Your sponsorship helps fund:
 
 - Continued development and maintenance
-- Cross-platform release binaries for macOS and Linux
+- Cross-platform release binaries for macOS, Windows, and Linux
 - Better documentation and examples
 - Registry and manifest design
 - Security improvements

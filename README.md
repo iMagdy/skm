@@ -1,45 +1,100 @@
 # skm
 
-A command-line tool for managing agentic skills — specialized instructions and workflows for AI coding agents.
+[![CI](https://github.com/iMagdy/skm/actions/workflows/ci.yml/badge.svg)](https://github.com/iMagdy/skm/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-## Quick Start
+`skm` is a tiny Rust CLI for installing and sharing agent skills. It makes reusable agent instructions portable across projects by keeping a simple `skills.json` manifest, a reproducible `skills.lock`, and installed skills under `.agents/skills/`.
+
+## Why skm?
+
+- **Portable skills**: move agent workflows between repositories without manual copy-paste.
+- **Git-native distribution**: install skills from normal HTTPS or SSH git repositories.
+- **Reproducible installs**: lock every installed skill to the exact commit that was fetched.
+- **Friendly project state**: list, inspect, upgrade, export, and remove skills from one CLI.
+- **Agent-ready layout**: installed content lands where coding agents already look for skills.
+
+## 60-Second Quickstart
 
 ```bash
-# Clone the repository
 git clone https://github.com/iMagdy/skm.git
 cd skm
+cargo install --path .
 
-# Build
-cargo build --release
-
-# Initialize a project
+# In another project:
 skm init .
-
-# Install skills
-skm install
+skm install docs:https://github.com/example/agent-docs.git
+skm list
 ```
+
+This creates:
+
+```text
+skills.json
+skills.lock
+.agents/skills/
+```
+
+## Install
+
+From source:
+
+```bash
+git clone https://github.com/iMagdy/skm.git
+cd skm
+cargo install --path .
+```
+
+From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/skm/releases), unpack it, and place `skm` on your `PATH`.
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `skm init` | Create a new skills manifest |
-| `skm install` | Install skills from the manifest |
-| `skm upgrade` | Upgrade installed skills to latest |
-| `skm list` | List installed skills |
-| `skm show` | Show skill details |
-| `skm uninstall` | Remove a skill |
+| Command | Purpose |
+|---------|---------|
+| `skm init <path>` | Create `skills.json` in a project |
+| `skm install` | Install every skill declared in `skills.json` |
+| `skm install <name:repo>` | Add and install one skill |
+| `skm export` | Rebuild `skills.json` from installed skills |
+| `skm upgrade` | Fetch latest commits for installed skills |
+| `skm list` | Show installed, missing, and orphaned skills |
+| `skm show <name>` | Show one skill's repo, commit, path, and status |
+| `skm uninstall <name>` | Remove a skill from manifest, lockfile, and disk |
+| `skm remove <name>` | Alias for `skm uninstall <name>` |
+
+## Manifest
+
+`skills.json` is intentionally small:
+
+```json
+{
+  "skills": {
+    "docs": {
+      "repo": "https://github.com/example/agent-docs.git"
+    }
+  },
+  "exports": {}
+}
+```
+
+When another repository installs a skill repo, that repo can use `exports` to choose which local files or folders become installable skills.
 
 ## Documentation
 
-For detailed documentation, see [docs/](docs/):
-
-- [Installation Guide](docs/installation.md)
-- [Command Reference](docs/commands.md)
-- [Contributing](docs/contributing.md)
+- [Quickstart](docs/quickstart.md)
+- [Installation](docs/installation.md)
+- [Command reference](docs/commands.md)
+- [Manifest format](docs/manifest.md)
+- [Lockfile format](docs/lockfile.md)
 - [Architecture](docs/architecture.md)
 - [Testing](docs/testing.md)
+- [Release process](docs/release-process.md)
+- [GitHub project sync](docs/github-project-sync.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Contributing](CONTRIBUTING.md)
+
+## Project Status
+
+`skm` is early, useful, and intentionally conservative. The current package format is plain JSON plus git. Future work may add registries, richer metadata, and package signing without taking away the simple manifest workflow.
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+Licensed under [Apache-2.0](LICENSE).

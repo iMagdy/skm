@@ -3,13 +3,6 @@ use thiserror::Error;
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::init::already_exists))]
-pub struct InitAlreadyExists {
-    pub message: String,
-}
-
-#[derive(Error, Diagnostic, Debug)]
-#[error("{}", message)]
 #[diagnostic(code(skm::init::path_not_found))]
 pub struct InitPathNotFound {
     pub message: String,
@@ -20,17 +13,6 @@ pub struct InitPathNotFound {
 #[diagnostic(code(skm::manifest::not_found))]
 pub struct ManifestNotFound {
     pub message: String,
-}
-
-#[derive(Error, Diagnostic, Debug)]
-#[error("{}", message)]
-#[diagnostic(code(skm::manifest::invalid_json))]
-pub struct ManifestInvalidJson {
-    pub message: String,
-    #[source_code]
-    pub content: String,
-    #[label("error here")]
-    pub span: miette::SourceSpan,
 }
 
 #[derive(Error, Diagnostic, Debug)]
@@ -119,13 +101,6 @@ pub struct InstallAlreadyExists {
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::general))]
-pub struct GeneralError {
-    pub message: String,
-}
-
-#[derive(Error, Diagnostic, Debug)]
-#[error("{}", message)]
 #[diagnostic(code(skm::discovery::error))]
 pub struct DiscoveryError {
     pub message: String,
@@ -135,12 +110,5 @@ pub struct DiscoveryError {
 #[error("{}", message)]
 #[diagnostic(code(skm::discovery::skills_directory_empty))]
 pub struct SkillsDirectoryEmpty {
-    pub message: String,
-}
-
-#[derive(Error, Diagnostic, Debug)]
-#[error("{}", message)]
-#[diagnostic(code(skm::discovery::user_cancelled))]
-pub struct UserCancelled {
     pub message: String,
 }

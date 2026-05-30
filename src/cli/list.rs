@@ -1,9 +1,16 @@
+use std::path::Path;
+
 use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
 
+#[cfg(not(tarpaulin_include))]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let project_root = std::env::current_dir()?;
+    run_in(&project_root)
+}
+
+pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_path = project_root.join("skills.json");
     let lockfile_path = project_root.join("skills.lock");
 
@@ -20,16 +27,13 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    println!(
-        "{:<20} {:<45} {:<42} {}",
-        "NAME", "REPO", "COMMIT", "STATUS"
-    );
+    println!("{:<20} {:<45} {:<42} STATUS", "NAME", "REPO", "COMMIT");
     println!("{}", "-".repeat(120));
 
     for (name, entry) in &manifest.skills {
         let lock = lockfile.entry(name);
         let commit = lock.map(|l| l.commit.as_str()).unwrap_or("—");
-        let dir = git::skill_dir(&project_root, name);
+        let dir = git::skill_dir(project_root, name);
         let status = if dir.exists() {
             "installed"
         } else if lock.is_some() {
@@ -45,8 +49,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     for (name, lock) in lockfile.entries() {
         if !manifest.skills.contains_key(name) {
             println!(
-                "{:<20} {:<45} {:<42} {}",
-                name, lock.repo, lock.commit, "orphaned"
+                "{:<20} {:<45} {:<42} orphaned",
+                name, lock.repo, lock.commit
             );
         }
     }
@@ -62,11 +66,8 @@ mod tests {
     fn test_list_empty() {
         let dir = std::env::temp_dir().join("skm_test_list_empty");
         std::fs::create_dir_all(&dir).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run();
+        let result = run_in(&dir);
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -80,11 +81,8 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run();
+        let result = run_in(&dir);
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -102,11 +100,8 @@ mod tests {
             r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
         )
         .unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run();
+        let result = run_in(&dir);
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -120,11 +115,8 @@ mod tests {
             r#"{"orphan": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
         )
         .unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run();
+        let result = run_in(&dir);
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -143,11 +135,8 @@ mod tests {
         )
         .unwrap();
         // Don't create the skill directory
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run();
+        let result = run_in(&dir);
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -161,11 +150,8 @@ mod tests {
         )
         .unwrap();
         // No lockfile
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run();
+        let result = run_in(&dir);
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

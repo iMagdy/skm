@@ -1,23 +1,22 @@
 use std::path::{Path, PathBuf};
+use std::process::Command;
+
 use tempfile::TempDir;
 
-pub const AWESOME_COPILOT_URL: &str = "https://github.com/iMagdy/awesome-copilot.git";
-pub const AWESOME_COPILOT_SHA: &str = "118974fb72ec31524b002795c116fd66bde14bef";
-
-pub const AGENT_SKILLS_URL: &str = "https://github.com/iMagdy/agent-skills";
-pub const AGENT_SKILLS_SHA: &str = "180115660cfb8a86b808f117475a01f54caf3bc5";
-
 pub struct TestContext {
-    pub temp_dir: TempDir,
+    _temp_dir: TempDir,
     pub project_dir: PathBuf,
 }
 
+#[allow(dead_code)]
 impl TestContext {
     pub fn new() -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let project_dir = temp_dir.path().to_path_buf();
+        let project_dir = temp_dir.path().join("project");
+        std::fs::create_dir_all(&project_dir).expect("Failed to create project directory");
+
         Self {
-            temp_dir,
+            _temp_dir: temp_dir,
             project_dir,
         }
     }
@@ -37,34 +36,58 @@ impl TestContext {
     pub fn ensure_skills_dir(&self) {
         std::fs::create_dir_all(self.skills_dir()).expect("Failed to create skills directory");
     }
+
+    pub fn create_fixture_repo(&self, name: &str, with_manifest: bool) -> PathBuf {
+        let repo_dir = self.project_dir.join(format!("{name}-fixture"));
+        create_local_skill_repo(&repo_dir, name, with_manifest);
+        repo_dir
+    }
 }
 
-pub fn clone_repo(url: &str, sha: &str, dest: &Path) -> Result<(), String> {
-    let output = std::process::Command::new("git")
-        .args(["clone", "--depth", "1", url, dest.to_str().unwrap()])
-        .output()
-        .map_err(|e| format!("Failed to execute git clone: {}", e))?;
+pub fn create_local_skill_repo(path: &Path, name: &str, with_manifest: bool) {
+    std::fs::create_dir_all(path.join("skills").join(name)).expect("Failed to create skill dir");
+    std::fs::write(
+        path.join("skills").join(name).join("SKILL.md"),
+        format!("# {name}\n\nA local test skill.\n"),
+    )
+    .expect("Failed to write skill file");
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("git clone failed: {}", stderr));
+    if with_manifest {
+        let manifest = serde_json::json!({
+            "skills": {},
+            "exports": {
+                name: {
+                    "path": format!("skills/{name}")
+                }
+            }
+        });
+        std::fs::write(
+            path.join("skills.json"),
+            serde_json::to_string_pretty(&manifest).unwrap(),
+        )
+        .expect("Failed to write fixture manifest");
     }
 
-    let checkout_output = std::process::Command::new("git")
-        .args(["-C", dest.to_str().unwrap(), "checkout", sha])
-        .output()
-        .map_err(|e| format!("Failed to execute git checkout: {}", e))?;
-
-    if !checkout_output.status.success() {
-        let stderr = String::from_utf8_lossy(&checkout_output.stderr);
-        return Err(format!("git checkout failed: {}", stderr));
-    }
-
-    Ok(())
+    run_git(path, &["init"]);
+    run_git(path, &["add", "."]);
+    run_git(
+        path,
+        &[
+            "-c",
+            "user.name=skm tests",
+            "-c",
+            "user.email=skm-tests@example.com",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            "initial fixture",
+        ],
+    );
 }
 
 pub fn run_skm_command(args: &[&str], working_dir: &Path) -> Result<String, String> {
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_skm"))
+    let output = Command::new(env!("CARGO_BIN_EXE_skm"))
         .args(args)
         .current_dir(working_dir)
         .output()
@@ -78,4 +101,20 @@ pub fn run_skm_command(args: &[&str], working_dir: &Path) -> Result<String, Stri
     }
 
     Ok(stdout)
+}
+
+fn run_git(repo_dir: &Path, args: &[&str]) {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(repo_dir)
+        .output()
+        .expect("Failed to run git");
+
+    assert!(
+        output.status.success(),
+        "git {:?} failed\nstdout:\n{}\nstderr:\n{}",
+        args,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }

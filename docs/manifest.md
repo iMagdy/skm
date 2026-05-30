@@ -1,19 +1,19 @@
 # Manifest Format
 
-The `skills.json` file is the single source of truth for which skills a project imports and exports.
+`skills.json` is the project manifest. It declares imported skills and local exports.
 
-## Structure
+## Shape
 
 ```json
 {
   "skills": {
-    "<skill-name>": {
-      "repo": "<git-clone-url>"
+    "docs": {
+      "repo": "https://github.com/example/agent-docs.git"
     }
   },
   "exports": {
-    "<skill-name>": {
-      "path": "<local-directory>"
+    "local-docs": {
+      "path": "skills/local-docs"
     }
   }
 }
@@ -21,30 +21,20 @@ The `skills.json` file is the single source of truth for which skills a project 
 
 ## Fields
 
-### Root Level
+| Field | Type | Required | Meaning |
+|-------|------|----------|---------|
+| `skills` | object | yes | Skills this project imports |
+| `exports` | object | yes | Local files or directories this repo exposes to other projects |
+| `skills.<name>.repo` | string | yes | Git clone URL or local git path |
+| `exports.<name>.path` | string | yes | Path inside this repo to copy when installed elsewhere |
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `skills` | object | Yes | Skills to import/install from git repositories |
-| `exports` | object | Yes | Local directories this project exports as skills |
+Skill names must match:
 
-### skills.\*
+```text
+^[a-zA-Z0-9_-]+$
+```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `<skill-name>` | string | Yes | Unique skill name (must match `^[a-zA-Z0-9_-]+$`) |
-| `repo` | string | Yes | Git clone URL (HTTPS or SSH) |
-
-### exports.\*
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `<skill-name>` | string | Yes | Unique skill name |
-| `path` | string | Yes | Local directory path to export |
-
-## Examples
-
-### Minimal Manifest
+## Minimal Manifest
 
 ```json
 {
@@ -53,47 +43,38 @@ The `skills.json` file is the single source of truth for which skills a project 
 }
 ```
 
-### Manifest with Imports
+## Import Example
 
 ```json
 {
   "skills": {
-    "my-skill": {
-      "repo": "https://github.com/example/my-skill.git"
+    "docs": {
+      "repo": "https://github.com/example/agent-docs.git"
     },
-    "another-skill": {
-      "repo": "git@github.com:example/another-skill.git"
+    "review": {
+      "repo": "git@github.com:example/review-skill.git"
     }
   },
   "exports": {}
 }
 ```
 
-### Manifest with Exports
+## Export Example
 
 ```json
 {
-  "skills": {
-    "external-skill": {
-      "repo": "https://github.com/example/external-skill.git"
-    }
-  },
+  "skills": {},
   "exports": {
-    "my-local-skill": {
-      "path": "./skills/my-local-skill"
+    "my-skill": {
+      "path": "skills/my-skill"
     }
   }
 }
 ```
 
-## Validation Rules
-
-- Skill names must match `^[a-zA-Z0-9_-]+$`
-- Skill names must be unique within the manifest
-- `skills` and `exports` must both be present as top-level keys
-- JSON must be valid with 2-space indentation
+When a repo with exports is installed, `skm` copies the exported paths into the destination skill directory.
 
 ## See Also
 
-- [Lockfile Format](lockfile.md) — How installed skills are tracked
-- [Command Reference](commands.md) — `skm init` and `skm install` commands
+- [Command reference](commands.md)
+- [Lockfile format](lockfile.md)

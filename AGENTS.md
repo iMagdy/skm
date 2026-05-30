@@ -1,11 +1,10 @@
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
+# Agent Notes
 
-- **Spec**: [specs/005-github-ci-pipeline/spec.md](specs/005-github-ci-pipeline/spec.md)
-- **Plan**: [specs/005-github-ci-pipeline/plan.md](specs/005-github-ci-pipeline/plan.md)
-- **Research**: [specs/005-github-ci-pipeline/research.md](specs/005-github-ci-pipeline/research.md)
-- **Data Model**: [specs/005-github-ci-pipeline/data-model.md](specs/005-github-ci-pipeline/data-model.md)
-- **Contracts**: [specs/005-github-ci-pipeline/contracts/](specs/005-github-ci-pipeline/contracts/)
-- **Quickstart**: [specs/005-github-ci-pipeline/quickstart.md](specs/005-github-ci-pipeline/quickstart.md)
-<!-- SPECKIT END -->
+There is no active Speckit feature for this repository.
+
+When working here:
+
+- Treat `specs/` as historical product context unless the user explicitly activates a feature.
+- Prefer the public docs in `README.md` and `docs/` for current user-facing behavior.
+- Run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test --all-targets` before handing off code changes.
+- Use `scripts/speckit_sync_issues.py --feature-dir <spec-dir> --dry-run` before syncing a Speckit feature to GitHub issues.

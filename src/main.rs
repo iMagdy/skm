@@ -29,6 +29,8 @@ enum Commands {
     },
     /// Upgrade all installed skills to latest versions
     Upgrade,
+    /// Export installed skills back into skills.json
+    Export,
     /// List installed skills
     List,
     /// Show details for a specific skill
@@ -37,12 +39,14 @@ enum Commands {
         package_name: String,
     },
     /// Remove a skill from the project
+    #[command(alias = "remove")]
     Uninstall {
         /// Name of the skill to remove
         package_name: String,
     },
 }
 
+#[cfg(not(tarpaulin_include))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
@@ -50,6 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Init { path } => cli::init::run(&path),
         Commands::Install { target } => cli::install::run(target.as_deref()),
         Commands::Upgrade => cli::upgrade::run(),
+        Commands::Export => cli::export::run(),
         Commands::List => cli::list::run(),
         Commands::Show { package_name } => cli::show::run(&package_name),
         Commands::Uninstall { package_name } => cli::uninstall::run(&package_name),
@@ -72,8 +77,10 @@ mod tests {
         assert!(cmd.find_subcommand("init").is_some());
         assert!(cmd.find_subcommand("install").is_some());
         assert!(cmd.find_subcommand("upgrade").is_some());
+        assert!(cmd.find_subcommand("export").is_some());
         assert!(cmd.find_subcommand("list").is_some());
         assert!(cmd.find_subcommand("show").is_some());
         assert!(cmd.find_subcommand("uninstall").is_some());
+        assert!(cmd.find_subcommand("remove").is_some());
     }
 }

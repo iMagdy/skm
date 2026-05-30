@@ -1,160 +1,113 @@
 # Command Reference
 
-## skm init
+All commands support `--help`. `skm --version` prints the package version.
 
-Create a new skills manifest (`skills.json`) in the specified directory.
+## `skm init <path>`
 
-**Usage**: `skm init <path>`
-
-**Options**:
-- `--help` — Show help message
-- `--version` — Show version
-
-**Examples**:
+Create a `skills.json` manifest in a directory.
 
 ```bash
-# Initialize in current directory
 skm init .
-
-# Initialize in a specific directory
-skm init ./my-project
 ```
 
-**Behavior**:
-- Creates `skills.json` with empty `skills` and `exports` objects
-- Warns if `skills.json` already exists (does not overwrite)
+Behavior:
 
----
+- Creates `skills.json` with empty `skills` and `exports` objects.
+- Leaves an existing manifest untouched.
+- Fails if the target directory does not exist.
 
-## skm install
+## `skm install`
 
-Install skills declared in the manifest.
-
-**Usage**: `skm install [name:repo_url]`
-
-**Options**:
-- `--help` — Show help message
-- `--version` — Show version
-
-**Examples**:
+Install every skill declared in `skills.json`.
 
 ```bash
-# Install all skills from manifest
 skm install
-
-# Install a specific skill
-skm install myskill:https://github.com/example/repo.git
 ```
 
-**Behavior**:
-- Reads `skills.json` and clones each skill into `.agents/skills/<name>/`
-- Creates or updates `skills.lock` with commit SHAs
-- Skips already-installed skills
-- Reports errors for individual skills without aborting
+Behavior:
 
----
+- Clones each manifest entry into `.agents/skills/<name>/`.
+- Reads the source repo's `skills.json` exports when present.
+- Records resolved commits in `skills.lock`.
+- Continues after individual clone/copy failures and reports all errors.
 
-## skm upgrade
+## `skm install <name:repo>`
 
-Upgrade all installed skills to their latest versions.
-
-**Usage**: `skm upgrade`
-
-**Options**:
-- `--help` — Show help message
-- `--version` — Show version
-
-**Examples**:
+Add one skill to `skills.json` and install it.
 
 ```bash
-# Upgrade all skills
+skm install docs:https://github.com/example/agent-docs.git
+```
+
+The `repo` value can be an HTTPS URL, SSH URL, or local git path.
+
+## `skm export`
+
+Rebuild `skills.json` from installed skills.
+
+```bash
+skm export
+```
+
+Behavior:
+
+- Reads `skills.lock` first.
+- Adds untracked directories under `.agents/skills/` using their local paths.
+- Preserves existing `exports`.
+- Creates an empty manifest if no skills are installed.
+
+## `skm upgrade`
+
+Fetch latest commits for installed skills.
+
+```bash
 skm upgrade
 ```
 
-**Behavior**:
-- Fetches latest commits from each skill's default branch
-- Updates skill directories and lockfile
-- Reports errors for individual skills without aborting
+Behavior:
 
----
+- Uses `skills.lock` when present, otherwise falls back to `skills.json`.
+- Runs git fetch and checks out the resolved default branch.
+- Updates `skills.lock` for successful upgrades.
+- Reports per-skill errors without stopping the whole command.
 
-## skm list
+## `skm list`
 
-List all installed skills with their source and locked version.
-
-**Usage**: `skm list`
-
-**Options**:
-- `--help` — Show help message
-- `--version` — Show version
-
-**Examples**:
+Show all known skills.
 
 ```bash
-# List installed skills
 skm list
 ```
 
-**Behavior**:
-- Displays a table of skill names, source repos, and locked commit SHAs
-- Flags stale or missing skills
+Statuses:
 
----
+- `installed`: manifest or lockfile entry exists and files are present.
+- `missing`: lockfile entry exists but files are missing.
+- `not locked`: manifest entry exists but no lock entry exists.
+- `orphaned`: lockfile entry exists but no manifest entry exists.
 
-## skm show
+## `skm show <name>`
 
-Show detailed information about a specific skill.
-
-**Usage**: `skm show <package_name>`
-
-**Options**:
-- `--help` — Show help message
-- `--version` — Show version
-
-**Examples**:
+Show one skill.
 
 ```bash
-# Show details for a specific skill
-skm show myskill
+skm show docs
 ```
 
-**Behavior**:
-- Displays repo URL, locked commit ID, and local path
-- Reports error if skill not found
+Output includes name, repo, commit, local path, and status.
 
----
+## `skm uninstall <name>`
 
-## skm uninstall / skm remove
-
-Remove a skill from the manifest, lockfile, and disk.
-
-**Usage**: `skm uninstall <package_name>` or `skm remove <package_name>`
-
-**Options**:
-- `--help` — Show help message
-- `--version` — Show version
-
-**Examples**:
+Remove a skill from manifest, lockfile, and disk.
 
 ```bash
-# Uninstall a skill
-skm uninstall myskill
-
-# Or using remove
-skm remove myskill
+skm uninstall docs
 ```
 
-**Behavior**:
-- Removes skill from `skills.json`
-- Deletes skill directory from `.agents/skills/`
-- Removes entry from `skills.lock`
-- Reports error if skill not found
+## `skm remove <name>`
 
----
+Alias for `skm uninstall <name>`.
 
-## Global Flags
-
-All commands support:
-
-- `--help` — Show help message
-- `--version` — Show version
+```bash
+skm remove docs
+```

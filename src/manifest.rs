@@ -231,14 +231,17 @@ mod tests {
 
     #[test]
     fn test_validate_duplicate_names() {
-        let content = r#"{"skills": {"test": {"repo": "url1"}, "test": {"repo": "url2"}}, "exports": {}}"#;
-        let path = Path::new("test.json");
         // serde_json will just take the last value, so no duplicate error
         // But we should test the validate function directly
         let mut manifest = Manifest::new();
         manifest.add_skill("test".to_string(), "url1".to_string());
         // Manually add duplicate to test validation
-        manifest.skills.insert("test".to_string(), SkillEntry { repo: "url2".to_string() });
+        manifest.skills.insert(
+            "test".to_string(),
+            SkillEntry {
+                repo: "url2".to_string(),
+            },
+        );
         assert!(manifest.validate().is_ok()); // serde deduplicates
     }
 
@@ -247,17 +250,17 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_manifest_roundtrip");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("skills.json");
-        
+
         let mut manifest = Manifest::new();
         manifest.add_skill("skill1".to_string(), "url1".to_string());
         manifest.add_skill("skill2".to_string(), "url2".to_string());
         manifest.save(&path).unwrap();
-        
+
         let loaded = Manifest::load(&path).unwrap();
         assert_eq!(loaded.skills.len(), 2);
         assert!(loaded.has_skill("skill1"));
         assert!(loaded.has_skill("skill2"));
-        
+
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

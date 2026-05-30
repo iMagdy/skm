@@ -1,16 +1,13 @@
 mod helpers;
 
-use helpers::{clone_repo, run_skm_command, TestContext, AWESOME_COPILOT_SHA, AWESOME_COPILOT_URL};
+use helpers::{run_skm_command, TestContext};
 
 #[test]
-#[ignore = "requires network access"]
 fn test_export_creates_skills_json() {
     let ctx = TestContext::new();
     ctx.ensure_skills_dir();
 
-    // Clone fixture repo
-    let fixture_dir = ctx.project_dir.join("fixture");
-    clone_repo(AWESOME_COPILOT_URL, AWESOME_COPILOT_SHA, &fixture_dir).unwrap();
+    let fixture_dir = ctx.create_fixture_repo("awesome-copilot", true);
 
     // Create skills.json
     let manifest = serde_json::json!({
@@ -21,7 +18,11 @@ fn test_export_creates_skills_json() {
         },
         "exports": {}
     });
-    std::fs::write(ctx.manifest(), serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    std::fs::write(
+        ctx.manifest(),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
 
     // Install first
     let result = run_skm_command(&["install"], &ctx.project_dir);
@@ -36,14 +37,11 @@ fn test_export_creates_skills_json() {
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_export_manifest_contains_skills_key() {
     let ctx = TestContext::new();
     ctx.ensure_skills_dir();
 
-    // Clone fixture repo
-    let fixture_dir = ctx.project_dir.join("fixture");
-    clone_repo(AWESOME_COPILOT_URL, AWESOME_COPILOT_SHA, &fixture_dir).unwrap();
+    let fixture_dir = ctx.create_fixture_repo("awesome-copilot", true);
 
     // Create skills.json
     let manifest = serde_json::json!({
@@ -54,7 +52,11 @@ fn test_export_manifest_contains_skills_key() {
         },
         "exports": {}
     });
-    std::fs::write(ctx.manifest(), serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    std::fs::write(
+        ctx.manifest(),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
 
     // Install first
     let result = run_skm_command(&["install"], &ctx.project_dir);
@@ -67,18 +69,18 @@ fn test_export_manifest_contains_skills_key() {
     // Verify manifest contains skills key
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
     let manifest: serde_json::Value = serde_json::from_str(&manifest_content).unwrap();
-    assert!(manifest.get("skills").is_some(), "Manifest should contain skills key");
+    assert!(
+        manifest.get("skills").is_some(),
+        "Manifest should contain skills key"
+    );
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_export_manifest_contains_exports_key() {
     let ctx = TestContext::new();
     ctx.ensure_skills_dir();
 
-    // Clone fixture repo
-    let fixture_dir = ctx.project_dir.join("fixture");
-    clone_repo(AWESOME_COPILOT_URL, AWESOME_COPILOT_SHA, &fixture_dir).unwrap();
+    let fixture_dir = ctx.create_fixture_repo("awesome-copilot", true);
 
     // Create skills.json
     let manifest = serde_json::json!({
@@ -89,7 +91,11 @@ fn test_export_manifest_contains_exports_key() {
         },
         "exports": {}
     });
-    std::fs::write(ctx.manifest(), serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    std::fs::write(
+        ctx.manifest(),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
 
     // Install first
     let result = run_skm_command(&["install"], &ctx.project_dir);
@@ -102,18 +108,18 @@ fn test_export_manifest_contains_exports_key() {
     // Verify manifest contains exports key
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
     let manifest: serde_json::Value = serde_json::from_str(&manifest_content).unwrap();
-    assert!(manifest.get("exports").is_some(), "Manifest should contain exports key");
+    assert!(
+        manifest.get("exports").is_some(),
+        "Manifest should contain exports key"
+    );
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_export_lists_skill_with_correct_source() {
     let ctx = TestContext::new();
     ctx.ensure_skills_dir();
 
-    // Clone fixture repo
-    let fixture_dir = ctx.project_dir.join("fixture");
-    clone_repo(AWESOME_COPILOT_URL, AWESOME_COPILOT_SHA, &fixture_dir).unwrap();
+    let fixture_dir = ctx.create_fixture_repo("awesome-copilot", true);
 
     // Create skills.json
     let manifest = serde_json::json!({
@@ -124,7 +130,11 @@ fn test_export_lists_skill_with_correct_source() {
         },
         "exports": {}
     });
-    std::fs::write(ctx.manifest(), serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    std::fs::write(
+        ctx.manifest(),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
 
     // Install first
     let result = run_skm_command(&["install"], &ctx.project_dir);
@@ -137,19 +147,20 @@ fn test_export_lists_skill_with_correct_source() {
     // Verify manifest lists skill with correct source
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
     let manifest: serde_json::Value = serde_json::from_str(&manifest_content).unwrap();
-    let skill = manifest.get("skills").unwrap().get("awesome-copilot").unwrap();
+    let skill = manifest
+        .get("skills")
+        .unwrap()
+        .get("awesome-copilot")
+        .unwrap();
     assert!(skill.get("repo").is_some(), "Skill should have repo field");
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_export_manifest_valid_json() {
     let ctx = TestContext::new();
     ctx.ensure_skills_dir();
 
-    // Clone fixture repo
-    let fixture_dir = ctx.project_dir.join("fixture");
-    clone_repo(AWESOME_COPILOT_URL, AWESOME_COPILOT_SHA, &fixture_dir).unwrap();
+    let fixture_dir = ctx.create_fixture_repo("awesome-copilot", true);
 
     // Create skills.json
     let manifest = serde_json::json!({
@@ -160,7 +171,11 @@ fn test_export_manifest_valid_json() {
         },
         "exports": {}
     });
-    std::fs::write(ctx.manifest(), serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    std::fs::write(
+        ctx.manifest(),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
 
     // Install first
     let result = run_skm_command(&["install"], &ctx.project_dir);
@@ -177,14 +192,11 @@ fn test_export_manifest_valid_json() {
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_export_manifest_2space_indent() {
     let ctx = TestContext::new();
     ctx.ensure_skills_dir();
 
-    // Clone fixture repo
-    let fixture_dir = ctx.project_dir.join("fixture");
-    clone_repo(AWESOME_COPILOT_URL, AWESOME_COPILOT_SHA, &fixture_dir).unwrap();
+    let fixture_dir = ctx.create_fixture_repo("awesome-copilot", true);
 
     // Create skills.json
     let manifest = serde_json::json!({
@@ -195,7 +207,11 @@ fn test_export_manifest_2space_indent() {
         },
         "exports": {}
     });
-    std::fs::write(ctx.manifest(), serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    std::fs::write(
+        ctx.manifest(),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
 
     // Install first
     let result = run_skm_command(&["install"], &ctx.project_dir);
@@ -208,5 +224,8 @@ fn test_export_manifest_2space_indent() {
     // Verify manifest uses 2-space indent
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
     // Check that the manifest uses 2-space indentation
-    assert!(manifest_content.contains("  "), "Manifest should use 2-space indentation");
+    assert!(
+        manifest_content.contains("  "),
+        "Manifest should use 2-space indentation"
+    );
 }

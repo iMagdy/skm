@@ -10,14 +10,21 @@ use crate::lockfile::{LockEntry, Lockfile};
 use crate::manifest::Manifest;
 use crate::skill;
 
+#[cfg(not(tarpaulin_include))]
 pub fn run(target: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let project_root = std::env::current_dir()?;
+    run_in(&project_root, target)
+}
 
+pub(crate) fn run_in(
+    project_root: &Path,
+    target: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(t) = target {
-        return run_single(&project_root, t);
+        return run_single(project_root, t);
     }
 
-    run_bulk(&project_root)
+    run_bulk(project_root)
 }
 
 fn run_bulk(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -108,9 +115,7 @@ fn run_bulk_with_manifest(
 }
 
 /// T010, T011, T012, T013, T014, T015: Fallback discovery when manifest not found
-fn run_bulk_with_fallback(
-    project_root: &Path,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn run_bulk_with_fallback(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // T011: Display warning messages
     eprintln!("Warning: No skills.json found. Auto-discovering skills...");
     eprintln!("Discovering skills in repository...");
@@ -120,7 +125,8 @@ fn run_bulk_with_fallback(
         Some(dir) => dir,
         None => {
             return Err(crate::error::DiscoveryError {
-                message: "No skills directory found. Cannot discover skills without a manifest.".to_string(),
+                message: "No skills directory found. Cannot discover skills without a manifest."
+                    .to_string(),
             }
             .into());
         }
@@ -156,6 +162,7 @@ fn run_bulk_with_fallback(
 }
 
 /// T012: Prompt user to select a skill from discovered options
+#[cfg(not(tarpaulin_include))]
 fn prompt_user_selection(
     skills: &[DiscoveredSkill],
 ) -> Result<DiscoveredSkill, Box<dyn std::error::Error>> {
@@ -168,7 +175,10 @@ fn prompt_user_selection(
 
     // T014: Handle user cancellation
     let selection = Select::new()
-        .with_prompt(format!("\nSelect skill to install (1-{}, or 'q' to cancel)", skills.len()))
+        .with_prompt(format!(
+            "\nSelect skill to install (1-{}, or 'q' to cancel)",
+            skills.len()
+        ))
         .items(&skills.iter().map(|s| s.name.as_str()).collect::<Vec<_>>())
         .default(0)
         .interact_opt()?;
@@ -181,6 +191,16 @@ fn prompt_user_selection(
             std::process::exit(3);
         }
     }
+}
+
+#[cfg(tarpaulin_include)]
+fn prompt_user_selection(
+    _skills: &[DiscoveredSkill],
+) -> Result<DiscoveredSkill, Box<dyn std::error::Error>> {
+    Err(crate::error::DiscoveryError {
+        message: "Interactive selection is disabled during coverage runs".to_string(),
+    }
+    .into())
 }
 
 /// T015: Install a discovered skill
@@ -202,6 +222,7 @@ fn install_discovered_skill(
     // We'll copy it directly instead of cloning
 
     let skill_dir = git::skill_dir(project_root, &skill.name);
+    std::fs::create_dir_all(&skill_dir)?;
 
     pb.set_message(format!("Installing {}...", skill.name));
 
@@ -222,7 +243,7 @@ fn install_discovered_skill(
     lockfile.insert(
         skill.name.clone(),
         LockEntry {
-            commit: String::new(), // No commit for local copies
+            commit: "0".repeat(40), // Local discovery has no git commit to lock.
             repo: skill.path.to_string_lossy().to_string(),
         },
     );
@@ -335,15 +356,14 @@ fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::erro
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Command;
 
     #[test]
     fn test_run_invalid_format() {
         let dir = std::env::temp_dir().join("skm_test_install_invalid");
         std::fs::create_dir_all(&dir).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(Some("invalidformat"));
+        let result = run_in(&dir, Some("invalidformat"));
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -351,10 +371,8 @@ mod tests {
     fn test_run_invalid_format_no_colon() {
         let dir = std::env::temp_dir().join("skm_test_install_nocolon");
         std::fs::create_dir_all(&dir).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(Some("nameonly"));
+        let result = run_in(&dir, Some("nameonly"));
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -362,10 +380,8 @@ mod tests {
     fn test_run_invalid_format_empty_name() {
         let dir = std::env::temp_dir().join("skm_test_install_ename");
         std::fs::create_dir_all(&dir).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(Some(":url"));
+        let result = run_in(&dir, Some(":url"));
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -373,10 +389,8 @@ mod tests {
     fn test_run_invalid_format_empty_url() {
         let dir = std::env::temp_dir().join("skm_test_install_eurl");
         std::fs::create_dir_all(&dir).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(Some("name:"));
+        let result = run_in(&dir, Some("name:"));
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -385,10 +399,8 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_install_empty");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(None);
+        let result = run_in(&dir, None);
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -407,10 +419,8 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(None);
+        let result = run_in(&dir, None);
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -418,11 +428,17 @@ mod tests {
     fn test_run_bulk_clone_fails() {
         let dir = std::env::temp_dir().join("skm_test_install_clonefail");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "https://invalid.example.com/repo.git"}}, "exports": {}}"#).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(None);
+        let missing_repo = dir.join("missing-repo");
+        std::fs::write(
+            dir.join("skills.json"),
+            format!(
+                r#"{{"skills": {{"test": {{"repo": "{}"}}}}, "exports": {{}}}}"#,
+                missing_repo.display()
+            ),
+        )
+        .unwrap();
+        let result = run_in(&dir, None);
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -435,10 +451,8 @@ mod tests {
             r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
         )
         .unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(Some("test:https://example.com/repo.git"));
+        let result = run_in(&dir, Some("test:https://example.com/repo.git"));
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -447,10 +461,27 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_install_single_clonefail");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(Some("test:https://invalid.example.com/repo.git"));
+        let target = format!("test:{}", dir.join("missing-repo").display());
+        let result = run_in(&dir, Some(&target));
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_single_success_with_local_repo() {
+        let dir = std::env::temp_dir().join("skm_test_install_single_success");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        let repo = create_local_repo(&dir, "source");
+
+        let target = format!("test:{}", repo.display());
+        let result = run_in(&dir, Some(&target));
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/test").exists());
+        assert!(dir.join("skills.lock").exists());
+
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -458,10 +489,8 @@ mod tests {
     fn test_run_bulk_fallback_no_skills_dir() {
         let dir = std::env::temp_dir().join("skm_test_install_fallback_nodir");
         std::fs::create_dir_all(&dir).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(None);
+        let result = run_in(&dir, None);
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -469,11 +498,8 @@ mod tests {
     fn test_run_bulk_fallback_empty_skills_dir() {
         let dir = std::env::temp_dir().join("skm_test_install_fallback_empty");
         std::fs::create_dir_all(dir.join("skills")).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(None);
+        let result = run_in(&dir, None);
         assert!(result.is_err());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -482,13 +508,10 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_install_fallback_single");
         std::fs::create_dir_all(dir.join("skills")).unwrap();
         std::fs::write(dir.join("skills/test-skill.md"), "# Test Skill").unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(None);
-        // The install may fail due to lockfile issues, but the fallback discovery should work
-        // We're testing that the fallback path is taken, not the full install
-        assert!(result.is_ok() || result.is_err()); // Accept either outcome for now
-        std::env::set_current_dir(&original_dir).unwrap();
+        let result = run_in(&dir, None);
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/test skill/test-skill.md").exists());
+        assert!(dir.join("skills.lock").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -541,11 +564,8 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_bulk_manifest_success");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -554,11 +574,8 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_bulk_manifest_empty");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -567,11 +584,8 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_bulk_manifest_invalid");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), "not json").unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_err());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -579,11 +593,8 @@ mod tests {
     fn test_run_bulk_with_fallback_no_skills_dir() {
         let dir = std::env::temp_dir().join("skm_test_bulk_fallback_nodir");
         std::fs::create_dir_all(&dir).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
         let result = run_bulk_with_fallback(&dir);
         assert!(result.is_err());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -591,11 +602,8 @@ mod tests {
     fn test_run_bulk_with_fallback_empty() {
         let dir = std::env::temp_dir().join("skm_test_bulk_fallback_empty2");
         std::fs::create_dir_all(dir.join("skills")).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
         let result = run_bulk_with_fallback(&dir);
         assert!(result.is_err());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -614,11 +622,8 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -626,16 +631,54 @@ mod tests {
     fn test_run_bulk_with_manifest_clone_fails() {
         let dir = std::env::temp_dir().join("skm_test_bulk_manifest_clonefail");
         std::fs::create_dir_all(&dir).unwrap();
+        let missing_repo = dir.join("missing-repo");
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "https://invalid.example.com/repo.git"}}, "exports": {}}"#,
+            format!(
+                r#"{{"skills": {{"test": {{"repo": "{}"}}}}, "exports": {{}}}}"#,
+                missing_repo.display()
+            ),
         )
         .unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&dir).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
-        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn create_local_repo(root: &Path, name: &str) -> std::path::PathBuf {
+        let repo = root.join(name);
+        std::fs::create_dir_all(&repo).unwrap();
+        std::fs::write(repo.join("SKILL.md"), "# Test").unwrap();
+        run_git(&repo, &["init"]);
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=skm tests",
+                "-c",
+                "user.email=skm-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "initial fixture",
+            ],
+        );
+        repo
+    }
+
+    fn run_git(repo: &Path, args: &[&str]) {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(repo)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 }

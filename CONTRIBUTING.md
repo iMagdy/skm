@@ -72,14 +72,14 @@ A good pull request should:
 
 ## Commit style
 
-Use clear commit messages.
+Use conventional commit messages.
 
 Good examples:
 
 ```text
-Add manifest validation for missing skill source
-Fix linux musl release target
-Document registry authentication flow
+feat: add manifest validation for missing skill source
+fix: correct linux release target packaging
+docs: document registry authentication flow
 ```
 
 Avoid vague messages:
@@ -95,6 +95,15 @@ wip
 
 Please add or update tests when changing behavior.
 
+Before opening a pull request, run:
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all-targets
+python3 scripts/check_docs.py
+```
+
 For CLI behavior, prefer integration tests that run the compiled binary and assert:
 
 - Exit code
@@ -104,11 +113,7 @@ For CLI behavior, prefer integration tests that run the compiled binary and asse
 
 ## Security issues
 
-Please do not open public issues for security vulnerabilities.
-
-Instead, report them privately through the official security reporting channel once one is configured.
-
-Until then, contact the maintainer directly through the official project profile or repository contact method.
+Please do not open public issues for security vulnerabilities. Follow `SECURITY.md`.
 
 ## Maintainer rights
 

@@ -1,60 +1,47 @@
 # Installation
 
+`skm` is a Rust CLI. It works on macOS, Linux, and Windows as long as `git` is available on `PATH`.
+
 ## Prerequisites
 
-- **Rust**: 2021 edition or later (install via [rustup](https://rustup.rs/))
-- **Git**: Any recent version
+- Rust 2021 toolchain or newer from [rustup](https://rustup.rs/)
+- Git
 
 ## Install from Source
 
 ```bash
-# Clone the repository
-git clone https://github.com/imagdy/skills.git
-cd skills
-
-# Build in release mode
-cargo build --release
-
-# The binary will be at target/release/skm
-# Add to your PATH or run via cargo
+git clone https://github.com/iMagdy/skm.git
+cd skm
+cargo install --path .
 ```
 
-## Install via Cargo
-
-If published to crates.io:
-
-```bash
-cargo install skm
-```
-
-## Verify Installation
+Verify:
 
 ```bash
 skm --version
 skm --help
 ```
 
-## Cross-Platform Notes
+## Install from a Release
 
-skm works on Linux, macOS, and Windows without platform-specific code paths.
+Download the archive for your platform from [GitHub Releases](https://github.com/iMagdy/skm/releases), then unpack it and place the `skm` binary on your `PATH`.
 
-**Platform considerations:**
-- File operations use path-agnostic APIs (`std::path::Path/PathBuf`)
-- The `.agents/skills/` directory is the canonical install location across all platforms
-- Git operations shell out to the system `git` CLI, inheriting platform-specific configuration
-- No platform-specific code paths are used in the implementation
+Release archives use this naming pattern:
 
-**Windows-specific notes:**
-- Ensure Git is installed and available in PATH
-- Use forward slashes or escaped backslashes in paths
+```text
+skm-<tag>-<target>.tar.gz
+skm-<tag>-<target>.zip
+```
 
-**macOS-specific notes:**
-- Xcode Command Line Tools may be required for building from source
+Each release also includes `.sha256` files and an aggregate checksum file.
 
-**Linux-specific notes:**
-- Standard build tools (gcc, make) may be required for native dependencies
+## Platform Notes
+
+- macOS may require Xcode Command Line Tools when building from source.
+- Windows users should install Git for Windows and make sure `git.exe` is on `PATH`.
+- Linux users may need standard build tools for Rust crates.
 
 ## Next Steps
 
-- [Quick Start](../specs/002-project-docs/quickstart.md) — Get started with skm
-- [Command Reference](commands.md) — Learn all available commands
+- [Quickstart](quickstart.md)
+- [Command reference](commands.md)

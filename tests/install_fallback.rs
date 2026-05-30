@@ -1,18 +1,18 @@
 mod helpers;
 
-use helpers::{clone_repo, run_skm_command, TestContext, AGENT_SKILLS_SHA, AGENT_SKILLS_URL};
+use helpers::{run_skm_command, TestContext};
 
 #[test]
-#[ignore = "requires network access"]
 fn test_install_fallback_displays_warning() {
     let ctx = TestContext::new();
 
-    // Clone the agent-skills fixture repo (no skills.json)
-    let fixture_dir = ctx.project_dir.join("fixture");
-    clone_repo(AGENT_SKILLS_URL, AGENT_SKILLS_SHA, &fixture_dir).unwrap();
+    let fixture_dir = ctx.create_fixture_repo("agent-skill", false);
 
     // The agent-skills repo should not have skills.json
-    assert!(!fixture_dir.join("skills.json").exists(), "Fixture should not have skills.json");
+    assert!(
+        !fixture_dir.join("skills.json").exists(),
+        "Fixture should not have skills.json"
+    );
 
     // Run skm install without a manifest - this should trigger fallback discovery
     // Note: This test may fail because the CLI expects a manifest
@@ -25,7 +25,6 @@ fn test_install_fallback_displays_warning() {
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_install_fallback_discovers_skills_directory() {
     let ctx = TestContext::new();
 
@@ -42,7 +41,6 @@ fn test_install_fallback_discovers_skills_directory() {
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_install_fallback_error_missing_skills_dir() {
     let ctx = TestContext::new();
 
@@ -54,11 +52,13 @@ fn test_install_fallback_error_missing_skills_dir() {
     let result = run_skm_command(&["install"], &fixture_dir);
 
     // Should fail because no skills directory found
-    assert!(result.is_err(), "Should fail when no skills directory exists");
+    assert!(
+        result.is_err(),
+        "Should fail when no skills directory exists"
+    );
 }
 
 #[test]
-#[ignore = "requires network access"]
 fn test_install_fallback_error_empty_skills_dir() {
     let ctx = TestContext::new();
 
@@ -70,5 +70,8 @@ fn test_install_fallback_error_empty_skills_dir() {
     let result = run_skm_command(&["install"], &fixture_dir);
 
     // Should fail because skills directory is empty
-    assert!(result.is_err(), "Should fail when skills directory is empty");
+    assert!(
+        result.is_err(),
+        "Should fail when skills directory is empty"
+    );
 }

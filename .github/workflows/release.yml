@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+            binary: skm
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+            binary: skm.exe
+          - os: macos-13
+            target: x86_64-apple-darwin
+            archive: tar.gz
+            binary: skm
+          - os: macos-14
+            target: aarch64-apple-darwin
+            archive: tar.gz
+            binary: skm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Package Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          asset="skm-${tag}-${{ matrix.target }}.${{ matrix.archive }}"
+          mkdir -p dist/package
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" dist/package/
+          cp README.md LICENSE dist/package/
+          tar -czf "dist/${asset}" -C dist/package .
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd dist && sha256sum "${asset}" > "${asset}.sha256")
+          else
+            (cd dist && shasum -a 256 "${asset}" > "${asset}.sha256")
+          fi
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $asset = "skm-$tag-${{ matrix.target }}.${{ matrix.archive }}"
+          New-Item -ItemType Directory -Force -Path dist/package | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary }}" dist/package/
+          Copy-Item README.md dist/package/
+          Copy-Item LICENSE dist/package/
+          Compress-Archive -Path dist/package/* -DestinationPath "dist/$asset" -Force
+          $hash = (Get-FileHash "dist/$asset" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $asset" | Out-File -Encoding ascii "dist/$asset.sha256"
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: skm-${{ github.ref_name }}-${{ matrix.target }}
+          path: dist/*
+
+  publish:
+    name: publish release
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Prepare release notes and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          python3 scripts/generate_release_docs.py "$tag" --output-dir target/release-docs
+          (cd dist && cat *.sha256 | sort > "skm-${tag}-checksums.txt")
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "skm ${tag}" --notes-file target/release-docs/release-body.md --draft
+          else
+            gh release create "$tag" --draft --title "skm ${tag}" --notes-file target/release-docs/release-body.md
+          fi
+          gh release upload "$tag" dist/* --clobber
+          gh release edit "$tag" --draft=false --latest
+      - name: Open release docs pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          branch="release-docs/${tag}"
+          git fetch origin main
+          git checkout -B "$branch" origin/main
+          python3 scripts/generate_release_docs.py "$tag" --update-files
+          if git diff --quiet -- CHANGELOG.md docs/RELEASE_NOTES.md; then
+            echo "Release docs already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md docs/RELEASE_NOTES.md
+          git commit -m "docs: update release notes for ${tag}"
+          git push --force-with-lease origin "$branch"
+          if gh pr view "$branch" >/dev/null 2>&1; then
+            gh pr edit "$branch" --title "docs: update release notes for ${tag}" --body "Updates generated release documentation for ${tag}."
+          else
+            gh pr create --title "docs: update release notes for ${tag}" --body "Updates generated release documentation for ${tag}." --base main --head "$branch"
+          fi
