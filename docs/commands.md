@@ -18,7 +18,7 @@ Behavior:
 
 ## `skm install`
 
-Install every skill declared in `skills.json`.
+Install every skill declared in `skills.json`. If `skills` is omitted, it is treated as empty.
 
 ```bash
 skm install

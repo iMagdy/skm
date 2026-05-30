@@ -18,7 +18,9 @@ pub struct ExportEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
+    #[serde(default)]
     pub skills: HashMap<String, SkillEntry>,
+    #[serde(default)]
     pub exports: HashMap<String, ExportEntry>,
 }
 
@@ -181,6 +183,33 @@ mod tests {
         let path = Path::new("test.json");
         let manifest = Manifest::parse_str(content, path).unwrap();
         assert!(manifest.skills.is_empty());
+    }
+
+    #[test]
+    fn test_parse_missing_skills_defaults_empty() {
+        let content = r#"{"exports": {"my-skill": {"path": "skills/my-skill"}}}"#;
+        let path = Path::new("test.json");
+        let manifest = Manifest::parse_str(content, path).unwrap();
+        assert!(manifest.skills.is_empty());
+        assert!(manifest.exports.contains_key("my-skill"));
+    }
+
+    #[test]
+    fn test_parse_missing_exports_defaults_empty() {
+        let content = r#"{"skills": {"my-skill": {"repo": "url"}}}"#;
+        let path = Path::new("test.json");
+        let manifest = Manifest::parse_str(content, path).unwrap();
+        assert!(manifest.has_skill("my-skill"));
+        assert!(manifest.exports.is_empty());
+    }
+
+    #[test]
+    fn test_parse_empty_object_defaults_fields_empty() {
+        let content = r#"{}"#;
+        let path = Path::new("test.json");
+        let manifest = Manifest::parse_str(content, path).unwrap();
+        assert!(manifest.skills.is_empty());
+        assert!(manifest.exports.is_empty());
     }
 
     #[test]

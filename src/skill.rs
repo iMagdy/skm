@@ -221,6 +221,25 @@ mod tests {
     }
 
     #[test]
+    fn test_copy_cloned_repo_with_exports_only_manifest() {
+        let src = std::env::temp_dir().join("skm_test_clone_exports_only_src");
+        let dst = std::env::temp_dir().join("skm_test_clone_exports_only_dst");
+        std::fs::create_dir_all(src.join("skills/test")).unwrap();
+        std::fs::write(src.join("skills/test/SKILL.md"), "content").unwrap();
+        std::fs::write(
+            src.join("skills.json"),
+            r#"{"exports": {"test": {"path": "skills/test"}}}"#,
+        )
+        .unwrap();
+
+        assert!(copy_cloned_repo_to_dest(&src, &dst).is_ok());
+        assert!(dst.join("test/SKILL.md").exists());
+
+        std::fs::remove_dir_all(&src).unwrap();
+        std::fs::remove_dir_all(&dst).unwrap();
+    }
+
+    #[test]
     fn test_copy_cloned_repo_without_manifest() {
         let src = std::env::temp_dir().join("skm_test_clone_without_src");
         let dst = std::env::temp_dir().join("skm_test_clone_without_dst");

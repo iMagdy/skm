@@ -23,8 +23,8 @@
 
 | Field | Type | Required | Meaning |
 |-------|------|----------|---------|
-| `skills` | object | yes | Skills this project imports |
-| `exports` | object | yes | Local files or directories this repo exposes to other projects |
+| `skills` | object | no | Skills this project imports; defaults to `{}` |
+| `exports` | object | no | Local files or directories this repo exposes to other projects; defaults to `{}` |
 | `skills.<name>.repo` | string | yes | Git clone URL or local git path |
 | `exports.<name>.path` | string | yes | Path inside this repo to copy when installed elsewhere |
 
@@ -37,11 +37,10 @@ Skill names must match:
 ## Minimal Manifest
 
 ```json
-{
-  "skills": {},
-  "exports": {}
-}
+{}
 ```
+
+`skm init` writes both top-level keys for readability, but parsers treat missing `skills` and missing `exports` as empty objects.
 
 ## Import Example
 
@@ -63,7 +62,6 @@ Skill names must match:
 
 ```json
 {
-  "skills": {},
   "exports": {
     "my-skill": {
       "path": "skills/my-skill"
