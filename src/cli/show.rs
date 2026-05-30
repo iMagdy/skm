@@ -45,3 +45,45 @@ pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_show_not_found() {
+        let dir = std::env::temp_dir().join("skm_test_show_notfound");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("nonexistent");
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_show_found() {
+        let dir = std::env::temp_dir().join("skm_test_show_found");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("test");
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_show_in_lockfile_only() {
+        let dir = std::env::temp_dir().join("skm_test_show_lockonly");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(dir.join("skills.lock"), r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("test");
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+}

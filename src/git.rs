@@ -147,3 +147,59 @@ pub fn skill_dir(project_root: &Path, name: &str) -> PathBuf {
 pub fn is_installed(project_root: &Path, name: &str) -> bool {
     skill_dir(project_root, name).exists()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_git_available() {
+        assert!(is_git_available());
+    }
+
+    #[test]
+    fn test_skill_dir() {
+        let root = Path::new("/project");
+        let dir = skill_dir(root, "my-skill");
+        assert_eq!(dir, PathBuf::from("/project/.agents/skills/my-skill"));
+    }
+
+    #[test]
+    fn test_is_installed() {
+        let dir = std::env::temp_dir().join("skm_test_is_installed");
+        std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        assert!(is_installed(&dir, "test"));
+        assert!(!is_installed(&dir, "other"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_clone_invalid_url() {
+        let dir = std::env::temp_dir().join("skm_test_clone_invalid");
+        let result = clone("https://invalid.example.com/repo.git", &dir);
+        assert!(result.is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_fetch_invalid_dir() {
+        let dir = std::env::temp_dir().join("skm_test_fetch_invalid");
+        let result = fetch(&dir);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rev_parse_head_invalid_dir() {
+        let dir = std::env::temp_dir().join("skm_test_revparse_invalid");
+        let result = rev_parse_head(&dir);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resolve_default_branch_invalid_dir() {
+        let dir = std::env::temp_dir().join("skm_test_resolve_invalid");
+        let result = resolve_default_branch(&dir);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "main");
+    }
+}

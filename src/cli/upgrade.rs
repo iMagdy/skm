@@ -93,3 +93,44 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_upgrade_empty() {
+        let dir = std::env::temp_dir().join("skm_test_upgrade_empty");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run();
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_upgrade_with_manifest() {
+        let dir = std::env::temp_dir().join("skm_test_upgrade_manifest");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run();
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_upgrade_with_lockfile() {
+        let dir = std::env::temp_dir().join("skm_test_upgrade_lockfile");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(dir.join("skills.lock"), r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run();
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+}

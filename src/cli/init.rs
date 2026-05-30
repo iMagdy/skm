@@ -27,3 +27,34 @@ pub fn run(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("Created skills.json at {}", manifest_path.display());
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_init_new() {
+        let dir = std::env::temp_dir().join("skm_test_init_new");
+        std::fs::create_dir_all(&dir).unwrap();
+        let result = run(dir.to_str().unwrap());
+        assert!(result.is_ok());
+        assert!(dir.join("skills.json").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_init_already_exists() {
+        let dir = std::env::temp_dir().join("skm_test_init_exists");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), "{}").unwrap();
+        let result = run(dir.to_str().unwrap());
+        assert!(result.is_ok());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_init_path_not_found() {
+        let result = run("/nonexistent/path");
+        assert!(result.is_err());
+    }
+}

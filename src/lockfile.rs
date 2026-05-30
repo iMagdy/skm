@@ -88,3 +88,123 @@ impl Lockfile {
         &self.entries
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_new() {
+        let lockfile = Lockfile::new();
+        assert!(lockfile.entries.is_empty());
+    }
+
+    #[test]
+    fn test_default() {
+        let lockfile = Lockfile::default();
+        assert!(lockfile.entries.is_empty());
+    }
+
+    #[test]
+    fn test_parse_valid() {
+        let content = r#"{"my-skill": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#;
+        let lockfile = Lockfile::parse(content).unwrap();
+        assert!(lockfile.contains("my-skill"));
+    }
+
+    #[test]
+    fn test_parse_empty() {
+        let lockfile = Lockfile::parse("{}").unwrap();
+        assert!(lockfile.entries.is_empty());
+    }
+
+    #[test]
+    fn test_parse_whitespace() {
+        let lockfile = Lockfile::parse("   ").unwrap();
+        assert!(lockfile.entries.is_empty());
+    }
+
+    #[test]
+    fn test_parse_invalid_json() {
+        assert!(Lockfile::parse("not json").is_err());
+    }
+
+    #[test]
+    fn test_parse_bad_commit_length() {
+        let content = r#"{"s": {"commit": "abc", "repo": "url"}}"#;
+        assert!(Lockfile::parse(content).is_err());
+    }
+
+    #[test]
+    fn test_parse_bad_commit_hex() {
+        let content = r#"{"s": {"commit": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "repo": "url"}}"#;
+        assert!(Lockfile::parse(content).is_err());
+    }
+
+    #[test]
+    fn test_entry() {
+        let mut lockfile = Lockfile::new();
+        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        assert!(lockfile.entry("s").is_some());
+    }
+
+    #[test]
+    fn test_entry_not_found() {
+        assert!(Lockfile::new().entry("x").is_none());
+    }
+
+    #[test]
+    fn test_insert() {
+        let mut lockfile = Lockfile::new();
+        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        assert!(lockfile.contains("s"));
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut lockfile = Lockfile::new();
+        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        assert!(lockfile.remove("s"));
+        assert!(!lockfile.contains("s"));
+    }
+
+    #[test]
+    fn test_remove_nonexistent() {
+        assert!(!Lockfile::new().remove("x"));
+    }
+
+    #[test]
+    fn test_contains() {
+        let mut lockfile = Lockfile::new();
+        assert!(!lockfile.contains("s"));
+        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        assert!(lockfile.contains("s"));
+    }
+
+    #[test]
+    fn test_entries() {
+        let mut lockfile = Lockfile::new();
+        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        assert_eq!(lockfile.entries().len(), 1);
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let mut lockfile = Lockfile::new();
+        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        let dir = std::env::temp_dir().join("skm_test_lockfile");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("skills.lock");
+        lockfile.save(&path).unwrap();
+        let loaded = Lockfile::load(&path).unwrap();
+        assert!(loaded.contains("s"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_load_not_found() {
+        let lockfile = Lockfile::load(Path::new("/nonexistent")).unwrap();
+        assert!(lockfile.entries.is_empty());
+    }
+}

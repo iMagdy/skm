@@ -36,3 +36,46 @@ pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("Uninstalled {}", package_name);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_uninstall_no_manifest() {
+        let dir = std::env::temp_dir().join("skm_test_uninstall_nomanifest");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("test");
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_uninstall_not_found() {
+        let dir = std::env::temp_dir().join("skm_test_uninstall_notfound");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("nonexistent");
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_uninstall_success() {
+        let dir = std::env::temp_dir().join("skm_test_uninstall_success");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
+        std::fs::write(dir.join("skills.lock"), r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("test");
+        assert!(result.is_ok());
+        assert!(!dir.join("skills.json").exists() || !std::fs::read_to_string(dir.join("skills.json")).unwrap().contains("test"));
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+}

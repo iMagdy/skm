@@ -168,3 +168,125 @@ fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::erro
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_run_invalid_format() {
+        let dir = std::env::temp_dir().join("skm_test_install_invalid");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(Some("invalidformat"));
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_invalid_format_no_colon() {
+        let dir = std::env::temp_dir().join("skm_test_install_nocolon");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(Some("nameonly"));
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_invalid_format_empty_name() {
+        let dir = std::env::temp_dir().join("skm_test_install_ename");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(Some(":url"));
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_invalid_format_empty_url() {
+        let dir = std::env::temp_dir().join("skm_test_install_eurl");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(Some("name:"));
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_no_manifest() {
+        let dir = std::env::temp_dir().join("skm_test_install_nomanifest");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(None);
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_empty() {
+        let dir = std::env::temp_dir().join("skm_test_install_empty");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(None);
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_already_installed() {
+        let dir = std::env::temp_dir().join("skm_test_install_already");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
+        std::fs::write(dir.join("skills.lock"), r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(None);
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_clone_fails() {
+        let dir = std::env::temp_dir().join("skm_test_install_clonefail");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "https://invalid.example.com/repo.git"}}, "exports": {}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(None);
+        assert!(result.is_ok());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_single_already_exists() {
+        let dir = std::env::temp_dir().join("skm_test_install_single_exists");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(Some("test:https://example.com/repo.git"));
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_single_clone_fails() {
+        let dir = std::env::temp_dir().join("skm_test_install_single_clonefail");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(Some("test:https://invalid.example.com/repo.git"));
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+}

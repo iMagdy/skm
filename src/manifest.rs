@@ -105,3 +105,122 @@ impl Default for Manifest {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_new() {
+        let manifest = Manifest::new();
+        assert!(manifest.skills.is_empty());
+        assert!(manifest.exports.is_empty());
+    }
+
+    #[test]
+    fn test_default() {
+        let manifest = Manifest::default();
+        assert!(manifest.skills.is_empty());
+        assert!(manifest.exports.is_empty());
+    }
+
+    #[test]
+    fn test_add_skill() {
+        let mut manifest = Manifest::new();
+        manifest.add_skill("test-skill".to_string(), "https://github.com/test/repo.git".to_string());
+        assert!(manifest.has_skill("test-skill"));
+        assert_eq!(manifest.skills.len(), 1);
+    }
+
+    #[test]
+    fn test_remove_skill() {
+        let mut manifest = Manifest::new();
+        manifest.add_skill("test-skill".to_string(), "https://github.com/test/repo.git".to_string());
+        assert!(manifest.remove_skill("test-skill"));
+        assert!(!manifest.has_skill("test-skill"));
+    }
+
+    #[test]
+    fn test_remove_nonexistent() {
+        let mut manifest = Manifest::new();
+        assert!(!manifest.remove_skill("nonexistent"));
+    }
+
+    #[test]
+    fn test_has_skill() {
+        let mut manifest = Manifest::new();
+        assert!(!manifest.has_skill("test-skill"));
+        manifest.add_skill("test-skill".to_string(), "https://github.com/test/repo.git".to_string());
+        assert!(manifest.has_skill("test-skill"));
+    }
+
+    #[test]
+    fn test_parse_valid() {
+        let content = r#"{
+            "skills": {
+                "my-skill": {
+                    "repo": "https://github.com/test/repo.git"
+                }
+            },
+            "exports": {}
+        }"#;
+        let path = Path::new("test.json");
+        let manifest = Manifest::parse_str(content, path).unwrap();
+        assert!(manifest.has_skill("my-skill"));
+    }
+
+    #[test]
+    fn test_parse_empty() {
+        let content = r#"{"skills": {}, "exports": {}}"#;
+        let path = Path::new("test.json");
+        let manifest = Manifest::parse_str(content, path).unwrap();
+        assert!(manifest.skills.is_empty());
+    }
+
+    #[test]
+    fn test_parse_invalid_json() {
+        let content = r#"{"skills": {}"#;
+        let path = Path::new("test.json");
+        assert!(Manifest::parse_str(content, path).is_err());
+    }
+
+    #[test]
+    fn test_parse_invalid_name() {
+        let content = r#"{"skills": {"bad name!": {"repo": "url"}}, "exports": {}}"#;
+        let path = Path::new("test.json");
+        assert!(Manifest::parse_str(content, path).is_err());
+    }
+
+    #[test]
+    fn test_validate_valid() {
+        let mut manifest = Manifest::new();
+        manifest.add_skill("valid_name-123".to_string(), "url".to_string());
+        assert!(manifest.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_invalid_name() {
+        let mut manifest = Manifest::new();
+        manifest.add_skill("bad name!".to_string(), "url".to_string());
+        assert!(manifest.validate().is_err());
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let mut manifest = Manifest::new();
+        manifest.add_skill("test".to_string(), "url".to_string());
+        let dir = std::env::temp_dir().join("skm_test_manifest");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("skills.json");
+        manifest.save(&path).unwrap();
+        let loaded = Manifest::load(&path).unwrap();
+        assert!(loaded.has_skill("test"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_load_not_found() {
+        assert!(Manifest::load(Path::new("/nonexistent")).is_err());
+    }
+}
