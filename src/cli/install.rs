@@ -1,8 +1,10 @@
 use std::path::Path;
 
+use dialoguer::Select;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
-use crate::error::{InstallAlreadyExists, InstallInvalidFormat, ManifestNotFound};
+use crate::discovery::{self, DiscoveredSkill, SkillType};
+use crate::error::{InstallAlreadyExists, InstallInvalidFormat};
 use crate::git;
 use crate::lockfile::{LockEntry, Lockfile};
 use crate::manifest::Manifest;
@@ -20,15 +22,22 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
 
 fn run_bulk(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_path = project_root.join("skills.json");
-    if !manifest_path.exists() {
-        return Err(ManifestNotFound {
-            message: "No skills.json found in current directory. Run 'skm init .' to create one."
-                .to_string(),
-        }
-        .into());
+
+    // T009: Check for manifest existence
+    if manifest_path.exists() {
+        // Existing manifest flow
+        return run_bulk_with_manifest(project_root, &manifest_path);
     }
 
-    let manifest = Manifest::load(&manifest_path)?;
+    // T010: Fallback path when manifest not found
+    run_bulk_with_fallback(project_root)
+}
+
+fn run_bulk_with_manifest(
+    project_root: &Path,
+    manifest_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let manifest = Manifest::load(manifest_path)?;
     let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
 
     let mp = MultiProgress::new();
@@ -92,6 +101,160 @@ fn run_bulk(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("\nErrors encountered:");
         for err in &errors {
             eprintln!("  {}", err);
+        }
+    }
+
+    Ok(())
+}
+
+/// T010, T011, T012, T013, T014, T015: Fallback discovery when manifest not found
+fn run_bulk_with_fallback(
+    project_root: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // T011: Display warning messages
+    eprintln!("Warning: No skills.json found. Auto-discovering skills...");
+    eprintln!("Discovering skills in repository...");
+
+    // T004: Find skills directory
+    let skills_dir = match discovery::find_skills_directory(project_root) {
+        Some(dir) => dir,
+        None => {
+            return Err(crate::error::DiscoveryError {
+                message: "No skills directory found. Cannot discover skills without a manifest.".to_string(),
+            }
+            .into());
+        }
+    };
+
+    // T005: Discover skills in the directory
+    let result = discovery::discover_skills(&skills_dir);
+
+    // Display any warnings from discovery
+    for warning in &result.warnings {
+        eprintln!("{}", warning);
+    }
+
+    // T013: Handle empty skills directory
+    if result.skills.is_empty() {
+        return Err(crate::error::SkillsDirectoryEmpty {
+            message: "No skills found in the discovered directory".to_string(),
+        }
+        .into());
+    }
+
+    // T012, T019: Handle selection based on number of skills
+    let selected_skill = if result.skills.len() == 1 {
+        // T019: Auto-select when exactly one skill found
+        result.skills.into_iter().next().unwrap()
+    } else {
+        // T012: Prompt user to select from multiple skills
+        prompt_user_selection(&result.skills)?
+    };
+
+    // T015: Install the selected skill
+    install_discovered_skill(project_root, &selected_skill)
+}
+
+/// T012: Prompt user to select a skill from discovered options
+fn prompt_user_selection(
+    skills: &[DiscoveredSkill],
+) -> Result<DiscoveredSkill, Box<dyn std::error::Error>> {
+    println!("\nMultiple skills found in repository:\n");
+
+    // Display numbered list
+    for (i, skill) in skills.iter().enumerate() {
+        println!("  {}. {}", i + 1, skill.name);
+    }
+
+    // T014: Handle user cancellation
+    let selection = Select::new()
+        .with_prompt(format!("\nSelect skill to install (1-{}, or 'q' to cancel)", skills.len()))
+        .items(&skills.iter().map(|s| s.name.as_str()).collect::<Vec<_>>())
+        .default(0)
+        .interact_opt()?;
+
+    match selection {
+        Some(index) => Ok(skills[index].clone()),
+        None => {
+            // User pressed Ctrl+C or Esc
+            eprintln!("Installation cancelled");
+            std::process::exit(3);
+        }
+    }
+}
+
+/// T015: Install a discovered skill
+fn install_discovered_skill(
+    project_root: &Path,
+    skill: &DiscoveredSkill,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mp = MultiProgress::new();
+    let pb = mp.add(ProgressBar::new_spinner());
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.green} {msg}")
+            .unwrap(),
+    );
+
+    // For discovered skills, we need to clone from a URL
+    // Since discovery finds skills in a local directory, we need to handle this differently
+    // The skill.path is the local path to the skill file/directory
+    // We'll copy it directly instead of cloning
+
+    let skill_dir = git::skill_dir(project_root, &skill.name);
+
+    pb.set_message(format!("Installing {}...", skill.name));
+
+    // Copy the skill from the discovered location
+    match skill.skill_type {
+        SkillType::File => {
+            // Copy the .md file
+            std::fs::copy(&skill.path, skill_dir.join(skill.path.file_name().unwrap()))?;
+        }
+        SkillType::Directory => {
+            // Copy the directory contents
+            copy_dir_recursive(&skill.path, &skill_dir)?;
+        }
+    }
+
+    // Create a minimal lockfile entry
+    let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
+    lockfile.insert(
+        skill.name.clone(),
+        LockEntry {
+            commit: String::new(), // No commit for local copies
+            repo: skill.path.to_string_lossy().to_string(),
+        },
+    );
+    lockfile.save(&project_root.join("skills.lock"))?;
+
+    pb.finish_with_message(format!("Installed {}", skill.name));
+    println!("Installed {}", skill.name);
+
+    Ok(())
+}
+
+/// Copy directory recursively, skipping .git and other common directories
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    if !dst.exists() {
+        std::fs::create_dir_all(dst)?;
+    }
+
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name == ".git" || name == "target" || name == "node_modules" {
+            continue;
+        }
+
+        if file_type.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            std::fs::copy(&src_path, &dst_path)?;
         }
     }
 
@@ -218,17 +381,6 @@ mod tests {
     }
 
     #[test]
-    fn test_run_bulk_no_manifest() {
-        let dir = std::env::temp_dir().join("skm_test_install_nomanifest");
-        std::fs::create_dir_all(&dir).unwrap();
-        std::env::set_current_dir(&dir).unwrap();
-        let result = run(None);
-        assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
     fn test_run_bulk_empty() {
         let dir = std::env::temp_dir().join("skm_test_install_empty");
         std::fs::create_dir_all(&dir).unwrap();
@@ -297,6 +449,28 @@ mod tests {
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run(Some("test:https://invalid.example.com/repo.git"));
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_fallback_no_skills_dir() {
+        let dir = std::env::temp_dir().join("skm_test_install_fallback_nodir");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(None);
+        assert!(result.is_err());
+        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_fallback_empty_skills_dir() {
+        let dir = std::env::temp_dir().join("skm_test_install_fallback_empty");
+        std::fs::create_dir_all(dir.join("skills")).unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run(None);
         assert!(result.is_err());
         std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();

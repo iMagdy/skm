@@ -1,0 +1,305 @@
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+
+/// Type of discovered skill source
+#[derive(Debug, Clone, PartialEq)]
+pub enum SkillType {
+    /// Single `.md` file
+    File,
+    /// Directory containing skill files
+    Directory,
+}
+
+/// A skill found during fallback discovery
+#[derive(Debug, Clone)]
+pub struct DiscoveredSkill {
+    /// Normalized display name (file/dir name, cleaned)
+    pub name: String,
+    /// Original path in the repository
+    pub path: PathBuf,
+    /// Whether source is file or directory
+    pub skill_type: SkillType,
+}
+
+/// Result of the fallback discovery process
+#[derive(Debug)]
+pub struct DiscoveryResult {
+    /// List of discovered skills (deduplicated)
+    pub skills: Vec<DiscoveredSkill>,
+    /// Warnings encountered during discovery
+    pub warnings: Vec<String>,
+}
+
+/// Normalize a skill name from a filename or directory name.
+/// Strips `.md` extension, replaces hyphens and underscores with spaces.
+pub fn normalize_skill_name(name: &str) -> String {
+    let mut result = name.to_string();
+
+    // Strip .md extension
+    if let Some(stripped) = result.strip_suffix(".md") {
+        result = stripped.to_string();
+    }
+
+    // Replace hyphens and underscores with spaces
+    result = result.replace('-', " ");
+    result = result.replace('_', " ");
+
+    result
+}
+
+/// Find the skills directory in a repository root.
+/// Normalizes directory names to lowercase before searching for "skills".
+/// Returns the path to the skills directory if found.
+pub fn find_skills_directory(repo_root: &Path) -> Option<PathBuf> {
+    let entries = std::fs::read_dir(repo_root).ok()?;
+
+    for entry in entries.flatten() {
+        let file_type = entry.file_type().ok()?;
+        if !file_type.is_dir() {
+            continue;
+        }
+
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy().to_lowercase();
+
+        if name_str == "skills" {
+            return Some(entry.path());
+        }
+    }
+
+    None
+}
+
+/// Discover skills in a directory by scanning for .md files and subdirectories.
+pub fn discover_skills(skills_dir: &Path) -> DiscoveryResult {
+    let mut skills = Vec::new();
+    let mut warnings = Vec::new();
+    let mut seen_names = HashSet::new();
+
+    let entries = match std::fs::read_dir(skills_dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            warnings.push(format!("Failed to read skills directory: {}", e));
+            return DiscoveryResult { skills, warnings };
+        }
+    };
+
+    for entry in entries.flatten() {
+        let file_type = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+
+        let file_name = entry.file_name().to_string_lossy().to_string();
+
+        // Skip hidden files and common non-skill directories
+        if file_name.starts_with('.') || file_name == "target" || file_name == "node_modules" {
+            continue;
+        }
+
+        let skill_type = if file_type.is_dir() {
+            SkillType::Directory
+        } else if file_name.ends_with(".md") {
+            SkillType::File
+        } else {
+            continue; // Skip non-.md files and other non-directory entries
+        };
+
+        let normalized_name = normalize_skill_name(&file_name);
+
+        // Deduplicate by normalized name
+        if !seen_names.insert(normalized_name.clone()) {
+            warnings.push(format!("Duplicate skill '{}' skipped", normalized_name));
+            continue;
+        }
+
+        skills.push(DiscoveredSkill {
+            name: normalized_name,
+            path: entry.path(),
+            skill_type,
+        });
+    }
+
+    // Sort by name for consistent display
+    skills.sort_by(|a, b| a.name.cmp(&b.name));
+
+    DiscoveryResult { skills, warnings }
+}
+
+/// Deduplicate a list of discovered skills by normalized name.
+/// Keeps the first occurrence and collects warnings for duplicates.
+pub fn deduplicate_skills(skills: Vec<DiscoveredSkill>) -> DiscoveryResult {
+    let mut unique = Vec::new();
+    let mut warnings = Vec::new();
+    let mut seen_names = HashSet::new();
+
+    for skill in skills {
+        if seen_names.insert(skill.name.clone()) {
+            unique.push(skill);
+        } else {
+            warnings.push(format!("Duplicate skill '{}' skipped", skill.name));
+        }
+    }
+
+    DiscoveryResult {
+        skills: unique,
+        warnings,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalize_skill_name_with_extension() {
+        assert_eq!(normalize_skill_name("web-perf.md"), "web perf");
+    }
+
+    #[test]
+    fn test_normalize_skill_name_without_extension() {
+        assert_eq!(normalize_skill_name("ui-ux-pro-max"), "ui ux pro max");
+    }
+
+    #[test]
+    fn test_normalize_skill_name_underscores() {
+        assert_eq!(normalize_skill_name("agents_sdk.md"), "agents sdk");
+    }
+
+    #[test]
+    fn test_normalize_skill_name_mixed() {
+        assert_eq!(normalize_skill_name("my_cool-skill.md"), "my cool skill");
+    }
+
+    #[test]
+    fn test_normalize_skill_name_no_changes() {
+        assert_eq!(normalize_skill_name("simple"), "simple");
+    }
+
+    #[test]
+    fn test_find_skills_directory_found() {
+        let dir = std::env::temp_dir().join("skm_test_find_skills");
+        let skills_dir = dir.join("skills");
+        std::fs::create_dir_all(&skills_dir).unwrap();
+
+        let result = find_skills_directory(&dir);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), skills_dir);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_find_skills_directory_case_insensitive() {
+        let dir = std::env::temp_dir().join("skm_test_find_skills_case");
+        let skills_dir = dir.join("SKILLS");
+        std::fs::create_dir_all(&skills_dir).unwrap();
+
+        let result = find_skills_directory(&dir);
+        assert!(result.is_some());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_find_skills_directory_not_found() {
+        let dir = std::env::temp_dir().join("skm_test_find_skills_none");
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let result = find_skills_directory(&dir);
+        assert!(result.is_none());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_skills_md_files() {
+        let dir = std::env::temp_dir().join("skm_test_discover_md");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("web-perf.md"), "content").unwrap();
+        std::fs::write(dir.join("ui-ux.md"), "content").unwrap();
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 2);
+        assert!(result.warnings.is_empty());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_skills_directories() {
+        let dir = std::env::temp_dir().join("skm_test_discover_dirs");
+        std::fs::create_dir_all(dir.join("skill-a")).unwrap();
+        std::fs::create_dir_all(dir.join("skill-b")).unwrap();
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 2);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_skills_mixed() {
+        let dir = std::env::temp_dir().join("skm_test_discover_mixed");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("file-skill.md"), "content").unwrap();
+        std::fs::create_dir_all(dir.join("dir-skill")).unwrap();
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 2);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_skills_deduplication() {
+        let dir = std::env::temp_dir().join("skm_test_discover_dedup");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skill.md"), "content1").unwrap();
+        std::fs::create_dir_all(dir.join("skill")).unwrap();
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 1);
+        assert!(!result.warnings.is_empty());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_skills_skips_hidden() {
+        let dir = std::env::temp_dir().join("skm_test_discover_hidden");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(".hidden.md"), "content").unwrap();
+        std::fs::write(dir.join("visible.md"), "content").unwrap();
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 1);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_deduplicate_skills() {
+        let skills = vec![
+            DiscoveredSkill {
+                name: "skill".to_string(),
+                path: PathBuf::from("/a"),
+                skill_type: SkillType::File,
+            },
+            DiscoveredSkill {
+                name: "skill".to_string(),
+                path: PathBuf::from("/b"),
+                skill_type: SkillType::Directory,
+            },
+            DiscoveredSkill {
+                name: "other".to_string(),
+                path: PathBuf::from("/c"),
+                skill_type: SkillType::File,
+            },
+        ];
+
+        let result = deduplicate_skills(skills);
+        assert_eq!(result.skills.len(), 2);
+        assert_eq!(result.warnings.len(), 1);
+    }
+}

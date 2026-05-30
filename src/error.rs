@@ -123,3 +123,24 @@ pub struct InstallAlreadyExists {
 pub struct GeneralError {
     pub message: String,
 }
+
+#[derive(Error, Diagnostic, Debug)]
+#[error("{}", message)]
+#[diagnostic(code(skm::discovery::error))]
+pub struct DiscoveryError {
+    pub message: String,
+}
+
+#[derive(Error, Diagnostic, Debug)]
+#[error("{}", message)]
+#[diagnostic(code(skm::discovery::skills_directory_empty))]
+pub struct SkillsDirectoryEmpty {
+    pub message: String,
+}
+
+#[derive(Error, Diagnostic, Debug)]
+#[error("{}", message)]
+#[diagnostic(code(skm::discovery::user_cancelled))]
+pub struct UserCancelled {
+    pub message: String,
+}

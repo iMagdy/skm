@@ -1,4 +1,5 @@
 mod cli;
+mod discovery;
 mod error;
 mod git;
 mod lockfile;
