@@ -159,7 +159,29 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
 
-9. Completion validation:
+9. **GitHub Issue Progress Tracking**:
+   - Check if `FEATURE_DIR/issue-map.json` exists (created by `/speckit.taskstoissues`)
+   - If it exists, load the mapping and update GitHub issues as tasks complete:
+     - After marking a task as `[X]` in tasks.md, find the corresponding issue number from the map
+     - Update the issue body to mark the matching checkbox as `[x]` using `gh`:
+
+       ```bash
+       # Fetch current issue body
+       ISSUE_BODY=$(gh issue view <ISSUE_NUMBER> --json body -q '.body')
+
+       # Replace the specific task checkbox from - [ ] to - [x]
+       # Use sed to find the line containing the TaskID and flip the checkbox
+       UPDATED_BODY=$(echo "$ISSUE_BODY" | sed "s/- \[ \] (<TASK_ID>)/- [x] (\1)/")
+
+       # Update the issue
+       gh issue edit <ISSUE_NUMBER> --body "$UPDATED_BODY"
+       ```
+
+     - If the issue update fails, log a warning but do NOT halt implementation
+     - Track which issues have been fully completed (all checkboxes checked)
+   - If `issue-map.json` does not exist, skip silently (issues may not have been created yet)
+
+10. Completion validation:
    - Verify all required tasks are completed
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements
@@ -168,7 +190,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
 
-10. **Check for extension hooks**: After completion validation, check if `.specify/extensions.yml` exists in the project root.
+11. **Check for extension hooks**: After completion validation, check if `.specify/extensions.yml` exists in the project root.
     - If it exists, read it and look for entries under the `hooks.after_implement` key
     - If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
     - Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.

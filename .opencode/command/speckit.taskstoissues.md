@@ -1,6 +1,5 @@
 ---
-description: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts.
-tools: ['github/github-mcp-server/issue_write']
+description: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts. Creates issues with task checklists and saves an issue map for progress tracking.
 ---
 
 ## User Input
@@ -52,13 +51,90 @@ You **MUST** consider the user input before proceeding (if not empty).
 1. Get the Git remote by running:
 
 ```bash
-git config --get remote.origin.url
+gh repo view --json nameWithOwner -q '.nameWithOwner'
 ```
 
 > [!CAUTION]
-> ONLY PROCEED TO NEXT STEPS IF THE REMOTE IS A GITHUB URL
+> ONLY PROCEED TO NEXT STEPS IF THE COMMAND SUCCEEDS (indicates a GitHub remote)
 
-1. For each task in the list, use the GitHub MCP server to create a new issue in the repository that is representative of the Git remote.
+1. Read the tasks.md file and parse all tasks. Each task follows the format:
+   ```text
+   - [ ] T001 [P] [US1] Description with file path
+   ```
+1. Group tasks by their user story label ([US1], [US2], etc.). Tasks without a story label belong to shared phases (Setup, Foundational, Polish).
+1. For each user story group, create a **single GitHub issue** using `gh` CLI:
+
+   ```bash
+   gh issue create \
+     --title "[FEATURE_NAME] User Story N: [STORY_TITLE]" \
+     --label "story" \
+     --body "## User Story N: [STORY_TITLE]
+
+   **Priority**: P1/P2/P3
+   **Spec**: [SPEC_PATH]
+
+   ### Tasks
+
+   - [ ] T001 Description
+   - [ ] T005 [P] Description
+   ...
+
+   ### Acceptance Criteria
+
+   - [Criteria from spec.md for this story]
+   "
+   ```
+
+   For tasks without a user story (Setup, Foundational, Polish), create a **single shared issue**:
+
+   ```bash
+   gh issue create \
+     --title "[FEATURE_NAME] Setup & Infrastructure" \
+     --label "infrastructure" \
+     --body "## Setup & Infrastructure Tasks
+
+   ### Tasks
+
+   - [ ] T001 Description
+   - [ ] T002 Description
+   ...
+   "
+   ```
+
+1. After creating each issue, capture the issue number from the output.
+1. Save an **issue map** to `.specify/issue-map.json` in the feature directory:
+
+   ```json
+   {
+     "feature": "FEATURE_NAME",
+     "repo": "OWNER/REPO",
+     "created_at": "ISO_TIMESTAMP",
+     "issues": {
+       "US1": { "number": 123, "title": "...", "url": "..." },
+       "US2": { "number": 124, "title": "...", "url": "..." },
+       "shared": { "number": 125, "title": "...", "url": "..." }
+     },
+     "task_to_issue": {
+       "T001": 125,
+       "T002": 125,
+       "T005": 123,
+       "T006": 123,
+       "T010": 124
+     }
+   }
+   ```
+
+   This mapping is used by `/speckit.implement` to update issue checkboxes as tasks are completed.
+
+1. **Report**: Output a summary table:
+
+   ```text
+   | Story | Issue # | Title | Tasks |
+   |-------|---------|-------|-------|
+   | US1   | #123    | ...   | 8     |
+   | US2   | #124    | ...   | 6     |
+   | Shared| #125    | ...   | 5     |
+   ```
 
 > [!CAUTION]
 > UNDER NO CIRCUMSTANCES EVER CREATE ISSUES IN REPOSITORIES THAT DO NOT MATCH THE REMOTE URL
