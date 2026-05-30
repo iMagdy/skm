@@ -6,8 +6,8 @@ A command-line tool for managing agentic skills — specialized instructions and
 
 ```bash
 # Clone the repository
-git clone https://github.com/imagdy/skills.git
-cd skills
+git clone https://github.com/iMagdy/skm.git
+cd skm
 
 # Build
 cargo build --release
