@@ -48,8 +48,7 @@ impl Lockfile {
             })?;
 
         for (name, entry) in &entries {
-            if entry.commit.len() != 40 || !entry.commit.chars().all(|c| c.is_ascii_hexdigit())
-            {
+            if entry.commit.len() != 40 || !entry.commit.chars().all(|c| c.is_ascii_hexdigit()) {
                 return Err(LockfileInvalid {
                     message: format!(
                         "Invalid commit hash for skill '{}': must be 40 hex characters",
@@ -138,14 +137,21 @@ mod tests {
 
     #[test]
     fn test_parse_bad_commit_hex() {
-        let content = r#"{"s": {"commit": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "repo": "url"}}"#;
+        let content =
+            r#"{"s": {"commit": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "repo": "url"}}"#;
         assert!(Lockfile::parse(content).is_err());
     }
 
     #[test]
     fn test_entry() {
         let mut lockfile = Lockfile::new();
-        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        lockfile.insert(
+            "s".to_string(),
+            LockEntry {
+                commit: "a".repeat(40),
+                repo: "url".to_string(),
+            },
+        );
         assert!(lockfile.entry("s").is_some());
     }
 
@@ -157,14 +163,26 @@ mod tests {
     #[test]
     fn test_insert() {
         let mut lockfile = Lockfile::new();
-        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        lockfile.insert(
+            "s".to_string(),
+            LockEntry {
+                commit: "a".repeat(40),
+                repo: "url".to_string(),
+            },
+        );
         assert!(lockfile.contains("s"));
     }
 
     #[test]
     fn test_remove() {
         let mut lockfile = Lockfile::new();
-        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        lockfile.insert(
+            "s".to_string(),
+            LockEntry {
+                commit: "a".repeat(40),
+                repo: "url".to_string(),
+            },
+        );
         assert!(lockfile.remove("s"));
         assert!(!lockfile.contains("s"));
     }
@@ -178,21 +196,39 @@ mod tests {
     fn test_contains() {
         let mut lockfile = Lockfile::new();
         assert!(!lockfile.contains("s"));
-        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        lockfile.insert(
+            "s".to_string(),
+            LockEntry {
+                commit: "a".repeat(40),
+                repo: "url".to_string(),
+            },
+        );
         assert!(lockfile.contains("s"));
     }
 
     #[test]
     fn test_entries() {
         let mut lockfile = Lockfile::new();
-        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        lockfile.insert(
+            "s".to_string(),
+            LockEntry {
+                commit: "a".repeat(40),
+                repo: "url".to_string(),
+            },
+        );
         assert_eq!(lockfile.entries().len(), 1);
     }
 
     #[test]
     fn test_save_and_load() {
         let mut lockfile = Lockfile::new();
-        lockfile.insert("s".to_string(), LockEntry { commit: "a".repeat(40), repo: "url".to_string() });
+        lockfile.insert(
+            "s".to_string(),
+            LockEntry {
+                commit: "a".repeat(40),
+                repo: "url".to_string(),
+            },
+        );
         let dir = std::env::temp_dir().join("skm_test_lockfile");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("skills.lock");

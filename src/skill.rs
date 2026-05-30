@@ -94,7 +94,7 @@ pub fn copy_cloned_repo_to_dest(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manifest::{Manifest, ExportEntry};
+    use crate::manifest::{ExportEntry, Manifest};
 
     #[test]
     fn test_copy_skill_files_empty_exports() {
@@ -116,7 +116,12 @@ mod tests {
         std::fs::create_dir_all(source.join("skills/test")).unwrap();
         std::fs::write(source.join("skills/test/f.txt"), "c").unwrap();
         let mut manifest = Manifest::new();
-        manifest.exports.insert("test".to_string(), ExportEntry { path: "skills/test".to_string() });
+        manifest.exports.insert(
+            "test".to_string(),
+            ExportEntry {
+                path: "skills/test".to_string(),
+            },
+        );
         assert!(copy_skill_files(&source, &dest, &manifest).is_ok());
         assert!(dest.join("test/f.txt").exists());
         std::fs::remove_dir_all(&source).unwrap();
@@ -129,7 +134,12 @@ mod tests {
         let dest = std::env::temp_dir().join("skm_test_notfound_dst");
         std::fs::create_dir_all(&source).unwrap();
         let mut manifest = Manifest::new();
-        manifest.exports.insert("x".to_string(), ExportEntry { path: "nope".to_string() });
+        manifest.exports.insert(
+            "x".to_string(),
+            ExportEntry {
+                path: "nope".to_string(),
+            },
+        );
         assert!(copy_skill_files(&source, &dest, &manifest).is_err());
         std::fs::remove_dir_all(&source).unwrap();
         let _ = std::fs::remove_dir_all(&dest);
@@ -182,7 +192,12 @@ mod tests {
         std::fs::create_dir_all(src.join("skills/test")).unwrap();
         std::fs::write(src.join("skills/test/f.txt"), "c").unwrap();
         let mut m = Manifest::new();
-        m.exports.insert("test".to_string(), ExportEntry { path: "skills/test".to_string() });
+        m.exports.insert(
+            "test".to_string(),
+            ExportEntry {
+                path: "skills/test".to_string(),
+            },
+        );
         assert!(copy_cloned_repo_to_dest(&src, &dst, Some(&m)).is_ok());
         assert!(dst.join("test/f.txt").exists());
         std::fs::remove_dir_all(&src).unwrap();

@@ -66,11 +66,9 @@ fn run_bulk(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
             None
         };
 
-        if let Err(e) = skill::copy_cloned_repo_to_dest(
-            &skill_dir,
-            &skill_dir,
-            source_manifest.as_ref(),
-        ) {
+        if let Err(e) =
+            skill::copy_cloned_repo_to_dest(&skill_dir, &skill_dir, source_manifest.as_ref())
+        {
             pb.finish_with_message(format!("Error copying files for {}: {}", name, e));
             errors.push(format!("Error copying files for {}: {}", name, e));
             continue;
@@ -104,7 +102,9 @@ fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::erro
     let parts: Vec<&str> = target.splitn(2, ':').collect();
     if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
         return Err(InstallInvalidFormat {
-            message: "Invalid format. Expected name:url (e.g., clap:https://github.com/clap-rs/clap.git)".to_string(),
+            message:
+                "Invalid format. Expected name:url (e.g., clap:https://github.com/clap-rs/clap.git)"
+                    .to_string(),
         }
         .into());
     }
@@ -244,8 +244,16 @@ mod tests {
     fn test_run_bulk_already_installed() {
         let dir = std::env::temp_dir().join("skm_test_install_already");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
-        std::fs::write(dir.join("skills.lock"), r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
+        )
+        .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run(None);
@@ -270,7 +278,11 @@ mod tests {
     fn test_run_single_already_exists() {
         let dir = std::env::temp_dir().join("skm_test_install_single_exists");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run(Some("test:https://example.com/repo.git"));
         assert!(result.is_err());

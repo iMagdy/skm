@@ -26,7 +26,10 @@ pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
 
-    let repo = entry.map(|e| e.repo.as_str()).or_else(|| lock.map(|l| l.repo.as_str())).unwrap_or("—");
+    let repo = entry
+        .map(|e| e.repo.as_str())
+        .or_else(|| lock.map(|l| l.repo.as_str()))
+        .unwrap_or("—");
     let commit = lock.map(|l| l.commit.as_str()).unwrap_or("—");
     let dir = git::skill_dir(&project_root, package_name);
     let status = if dir.exists() {
@@ -65,7 +68,11 @@ mod tests {
     fn test_show_found() {
         let dir = std::env::temp_dir().join("skm_test_show_found");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("test");
@@ -79,7 +86,11 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_show_lockonly");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
-        std::fs::write(dir.join("skills.lock"), r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
+        )
+        .unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("test");
         assert!(result.is_ok());

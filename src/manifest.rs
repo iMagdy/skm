@@ -42,10 +42,9 @@ impl Manifest {
     }
 
     pub fn parse_str(content: &str, path: &Path) -> Result<Self, ManifestNotFound> {
-        let manifest: Manifest =
-            serde_json::from_str(content).map_err(|e| ManifestNotFound {
-                message: format!("Invalid skills.json at {}: {}", path.display(), e),
-            })?;
+        let manifest: Manifest = serde_json::from_str(content).map_err(|e| ManifestNotFound {
+            message: format!("Invalid skills.json at {}: {}", path.display(), e),
+        })?;
 
         manifest.validate().map_err(|e| ManifestNotFound {
             message: e.to_string(),
@@ -60,10 +59,7 @@ impl Manifest {
         for name in self.skills.keys() {
             if !name_re.is_match(name) {
                 return Err(ManifestInvalidName {
-                    message: format!(
-                        "Invalid skill name '{}': must match [a-zA-Z0-9_-]+",
-                        name
-                    ),
+                    message: format!("Invalid skill name '{}': must match [a-zA-Z0-9_-]+", name),
                 }
                 .into());
             }
@@ -128,7 +124,10 @@ mod tests {
     #[test]
     fn test_add_skill() {
         let mut manifest = Manifest::new();
-        manifest.add_skill("test-skill".to_string(), "https://github.com/test/repo.git".to_string());
+        manifest.add_skill(
+            "test-skill".to_string(),
+            "https://github.com/test/repo.git".to_string(),
+        );
         assert!(manifest.has_skill("test-skill"));
         assert_eq!(manifest.skills.len(), 1);
     }
@@ -136,7 +135,10 @@ mod tests {
     #[test]
     fn test_remove_skill() {
         let mut manifest = Manifest::new();
-        manifest.add_skill("test-skill".to_string(), "https://github.com/test/repo.git".to_string());
+        manifest.add_skill(
+            "test-skill".to_string(),
+            "https://github.com/test/repo.git".to_string(),
+        );
         assert!(manifest.remove_skill("test-skill"));
         assert!(!manifest.has_skill("test-skill"));
     }
@@ -151,7 +153,10 @@ mod tests {
     fn test_has_skill() {
         let mut manifest = Manifest::new();
         assert!(!manifest.has_skill("test-skill"));
-        manifest.add_skill("test-skill".to_string(), "https://github.com/test/repo.git".to_string());
+        manifest.add_skill(
+            "test-skill".to_string(),
+            "https://github.com/test/repo.git".to_string(),
+        );
         assert!(manifest.has_skill("test-skill"));
     }
 
