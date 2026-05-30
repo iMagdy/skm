@@ -75,7 +75,7 @@ From a release archive, download the binary for your platform from [GitHub Relea
 }
 ```
 
-When another repository installs a skill repo, that repo can use `exports` to choose which local files or folders become installable skills.
+When another repository installs a skill repo, that repo can use `exports` to choose which local files or folders become installable skills. `skm` installs only exported paths; if the source repo has no `skills.json`, it asks before falling back to selectable directories under `skills/` or `SKILLS/`.
 
 ## Documentation
 

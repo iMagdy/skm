@@ -21,7 +21,7 @@
 
 ## Behavior
 
-- `skm install` creates or updates `skills.lock`.
+- `skm install` creates or updates `skills.lock` only after a repo fetch and content copy succeeds.
 - `skm upgrade` updates commits after successful fetch/checkout.
 - `skm uninstall` and `skm remove` remove lock entries.
 - `skm list` flags entries not present in `skills.json` as `orphaned`.

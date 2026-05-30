@@ -26,9 +26,10 @@ skm install
 
 Behavior:
 
-- Clones each manifest entry into `.agents/skills/<name>/`.
-- Reads the source repo's `skills.json` exports when present.
-- Records resolved commits in `skills.lock`.
+- Fetches each manifest entry into a temporary workspace.
+- Installs only paths declared in the source repo's `skills.json` `exports`.
+- If the source repo has no `skills.json`, asks before discovering directories under `skills/` or `SKILLS/`; multiple directories can be selected.
+- Records resolved commits in `skills.lock` only for successful installs.
 - Continues after individual clone/copy failures and reports all errors.
 
 ## `skm install <name:repo>`
@@ -40,6 +41,8 @@ skm install docs:https://github.com/example/agent-docs.git
 ```
 
 The `repo` value can be an HTTPS URL, SSH URL, or local git path.
+
+`skm` updates `skills.json` and `skills.lock` only after the repo is fetched and installable content is copied successfully. A bad target, failed clone, missing exports, cancelled fallback, or missing fallback `skills/` directory leaves those files unchanged.
 
 ## `skm export`
 

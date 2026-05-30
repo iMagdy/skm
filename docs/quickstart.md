@@ -43,7 +43,9 @@ Or edit `skills.json` manually and run:
 skm install
 ```
 
-Installed files are placed under `.agents/skills/<name>/`, and `skills.lock` records the exact commit.
+Installed files are placed under `.agents/skills/<name>/`, and `skills.lock` records the exact commit after a successful fetch and copy.
+
+Source repos normally declare installable paths in their own `skills.json` `exports`. If a source repo has no `skills.json`, `skm` warns, asks for confirmation, and can install one or more directories found under `skills/` or `SKILLS/`.
 
 ## Inspect Project State
 

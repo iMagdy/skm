@@ -10,8 +10,10 @@ pub fn copy_skill_files(
     manifest: &Manifest,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if manifest.exports.is_empty() {
-        copy_dir_recursive(source_repo, dest_dir)?;
-        return Ok(());
+        return Err(SkillCopyFailed {
+            message: "Source skills.json does not declare any exports".to_string(),
+        }
+        .into());
     }
 
     for (name, export) in &manifest.exports {
@@ -81,21 +83,24 @@ pub fn remove_skill_dir(project_root: &Path, name: &str) -> Result<(), std::io::
 pub fn copy_cloned_repo_to_dest(
     clone_dir: &Path,
     dest_dir: &Path,
-    source_manifest: Option<&Manifest>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if clone_dir == dest_dir
-        && source_manifest
-            .map(|m| m.exports.is_empty())
-            .unwrap_or(true)
-    {
-        return Ok(());
+    let source_manifest_path = clone_dir.join("skills.json");
+    if !source_manifest_path.exists() {
+        return Err(SkillCopyFailed {
+            message: "Source repo has no skills.json".to_string(),
+        }
+        .into());
     }
 
-    if let Some(m) = source_manifest {
-        copy_skill_files(clone_dir, dest_dir, m)?;
-    } else {
-        copy_dir_recursive(clone_dir, dest_dir)?;
+    let source_manifest = Manifest::load(&source_manifest_path)?;
+    if source_manifest.exports.is_empty() {
+        return Err(SkillCopyFailed {
+            message: "Source skills.json does not declare any exports".to_string(),
+        }
+        .into());
     }
+
+    copy_skill_files(clone_dir, dest_dir, &source_manifest)?;
     Ok(())
 }
 
@@ -111,10 +116,10 @@ mod tests {
         std::fs::create_dir_all(&source).unwrap();
         std::fs::write(source.join("file.txt"), "content").unwrap();
         let manifest = Manifest::new();
-        assert!(copy_skill_files(&source, &dest, &manifest).is_ok());
-        assert!(dest.join("file.txt").exists());
+        assert!(copy_skill_files(&source, &dest, &manifest).is_err());
+        assert!(!dest.join("file.txt").exists());
         std::fs::remove_dir_all(&source).unwrap();
-        std::fs::remove_dir_all(&dest).unwrap();
+        let _ = std::fs::remove_dir_all(&dest);
     }
 
     #[test]
@@ -206,8 +211,11 @@ mod tests {
                 path: "skills/test".to_string(),
             },
         );
-        assert!(copy_cloned_repo_to_dest(&src, &dst, Some(&m)).is_ok());
+        std::fs::write(src.join("skills.json"), serde_json::to_string(&m).unwrap()).unwrap();
+        std::fs::write(src.join("README.md"), "not exported").unwrap();
+        assert!(copy_cloned_repo_to_dest(&src, &dst).is_ok());
         assert!(dst.join("test/f.txt").exists());
+        assert!(!dst.join("README.md").exists());
         std::fs::remove_dir_all(&src).unwrap();
         std::fs::remove_dir_all(&dst).unwrap();
     }
@@ -216,12 +224,25 @@ mod tests {
     fn test_copy_cloned_repo_without_manifest() {
         let src = std::env::temp_dir().join("skm_test_clone_without_src");
         let dst = std::env::temp_dir().join("skm_test_clone_without_dst");
-        std::fs::create_dir_all(&src).unwrap();
-        std::fs::write(src.join("f.txt"), "c").unwrap();
-        assert!(copy_cloned_repo_to_dest(&src, &dst, None).is_ok());
-        assert!(dst.join("f.txt").exists());
+        std::fs::create_dir_all(src.join("skills/fallback")).unwrap();
+        std::fs::write(src.join("skills/fallback/SKILL.md"), "c").unwrap();
+        std::fs::write(src.join("README.md"), "not a skill").unwrap();
+        assert!(copy_cloned_repo_to_dest(&src, &dst).is_err());
+        assert!(!dst.join("fallback/SKILL.md").exists());
+        assert!(!dst.join("README.md").exists());
         std::fs::remove_dir_all(&src).unwrap();
-        std::fs::remove_dir_all(&dst).unwrap();
+        let _ = std::fs::remove_dir_all(&dst);
+    }
+
+    #[test]
+    fn test_copy_cloned_repo_without_manifest_or_skills_dir_fails() {
+        let src = std::env::temp_dir().join("skm_test_clone_no_exports_src");
+        let dst = std::env::temp_dir().join("skm_test_clone_no_exports_dst");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("README.md"), "not a skill").unwrap();
+        assert!(copy_cloned_repo_to_dest(&src, &dst).is_err());
+        std::fs::remove_dir_all(&src).unwrap();
+        let _ = std::fs::remove_dir_all(&dst);
     }
 
     #[test]

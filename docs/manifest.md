@@ -72,7 +72,9 @@ Skill names must match:
 }
 ```
 
-When a repo with exports is installed, `skm` copies the exported paths into the destination skill directory.
+When a repo with exports is installed, `skm` copies only the exported paths into the destination skill directory. Other repository files, including `.git`, docs, fixtures, and unrelated source files, are not installed.
+
+If an installed repo has no `skills.json`, `skm` asks before falling back to directories under `skills/` or `SKILLS/`. Repos with a `skills.json` but no `exports` are not installable by fallback.
 
 ## See Also
 

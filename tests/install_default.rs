@@ -171,6 +171,18 @@ fn test_install_clones_correct_content() {
     let skill_dir = ctx.skills_dir().join("awesome-copilot");
     let entries: Vec<_> = std::fs::read_dir(&skill_dir).unwrap().collect();
     assert!(!entries.is_empty(), "Skill directory should not be empty");
+    assert!(
+        skill_dir.join("awesome-copilot/SKILL.md").exists(),
+        "Exported skill content should be installed"
+    );
+    assert!(
+        !skill_dir.join("README.md").exists(),
+        "Unexported repo files should not be installed"
+    );
+    assert!(
+        !skill_dir.join(".git").exists(),
+        "Git metadata should not be installed"
+    );
 }
 
 #[test]
