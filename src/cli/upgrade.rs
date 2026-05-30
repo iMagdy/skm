@@ -141,4 +141,38 @@ mod tests {
         std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
+
+    #[test]
+    fn test_upgrade_nonexistent_dir() {
+        let dir = std::env::temp_dir().join("skm_test_upgrade_nonexist");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
+        )
+        .unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run();
+        assert!(result.is_ok());
+        std::env::set_current_dir(&original_dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_upgrade_fetch_fails() {
+        let dir = std::env::temp_dir().join("skm_test_upgrade_fetchfail");
+        std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
+        )
+        .unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run();
+        assert!(result.is_ok());
+        std::env::set_current_dir(&original_dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }

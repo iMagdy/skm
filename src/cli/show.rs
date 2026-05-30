@@ -57,10 +57,11 @@ mod tests {
     fn test_show_not_found() {
         let dir = std::env::temp_dir().join("skm_test_show_notfound");
         std::fs::create_dir_all(&dir).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("nonexistent");
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -74,10 +75,11 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("test");
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -91,10 +93,30 @@ mod tests {
             r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
         )
         .unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("test");
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_show_missing_status() {
+        let dir = std::env::temp_dir().join("skm_test_show_missing");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
+        )
+        .unwrap();
+        // Don't create the skill directory
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("test");
+        assert!(result.is_ok());
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

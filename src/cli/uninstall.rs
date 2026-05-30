@@ -45,10 +45,11 @@ mod tests {
     fn test_uninstall_no_manifest() {
         let dir = std::env::temp_dir().join("skm_test_uninstall_nomanifest");
         std::fs::create_dir_all(&dir).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("test");
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -57,10 +58,11 @@ mod tests {
         let dir = std::env::temp_dir().join("skm_test_uninstall_notfound");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("nonexistent");
         assert!(result.is_err());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -79,6 +81,7 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run("test");
         assert!(result.is_ok());
@@ -88,7 +91,26 @@ mod tests {
                     .unwrap()
                     .contains("test")
         );
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_uninstall_without_lockfile() {
+        let dir = std::env::temp_dir().join("skm_test_uninstall_nolock");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+        // No lockfile
+        std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run("test");
+        assert!(result.is_ok());
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

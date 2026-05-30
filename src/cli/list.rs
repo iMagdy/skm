@@ -62,10 +62,11 @@ mod tests {
     fn test_list_empty() {
         let dir = std::env::temp_dir().join("skm_test_list_empty");
         std::fs::create_dir_all(&dir).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run();
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -79,10 +80,11 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run();
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -100,10 +102,11 @@ mod tests {
             r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
         )
         .unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run();
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -117,10 +120,52 @@ mod tests {
             r#"{"orphan": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
         )
         .unwrap();
+        let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
         let result = run();
         assert!(result.is_ok());
-        std::env::set_current_dir("/Users/imagdy/dev/skills").unwrap();
+        std::env::set_current_dir(&original_dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_list_missing_status() {
+        let dir = std::env::temp_dir().join("skm_test_list_missing");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
+        )
+        .unwrap();
+        // Don't create the skill directory
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run();
+        assert!(result.is_ok());
+        std::env::set_current_dir(&original_dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_list_not_locked_status() {
+        let dir = std::env::temp_dir().join("skm_test_list_notlocked");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+        // No lockfile
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+        let result = run();
+        assert!(result.is_ok());
+        std::env::set_current_dir(&original_dir).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

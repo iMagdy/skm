@@ -55,3 +55,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Uninstall { package_name } => cli::uninstall::run(&package_name),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::CommandFactory;
+
+    #[test]
+    fn test_cli_struct_valid() {
+        Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn test_cli_subcommands_exist() {
+        let cmd = Cli::command();
+        assert!(cmd.find_subcommand("init").is_some());
+        assert!(cmd.find_subcommand("install").is_some());
+        assert!(cmd.find_subcommand("upgrade").is_some());
+        assert!(cmd.find_subcommand("list").is_some());
+        assert!(cmd.find_subcommand("show").is_some());
+        assert!(cmd.find_subcommand("uninstall").is_some());
+    }
+}

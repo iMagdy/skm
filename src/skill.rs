@@ -232,4 +232,38 @@ mod tests {
         assert!(remove_skill_dir(&root, "x").is_ok());
         std::fs::remove_dir_all(&root).unwrap();
     }
+
+    #[test]
+    fn test_copy_skill_files_with_file_export() {
+        let source = std::env::temp_dir().join("skm_test_file_export_src");
+        let dest = std::env::temp_dir().join("skm_test_file_export_dst");
+        std::fs::create_dir_all(&source).unwrap();
+        std::fs::create_dir_all(&dest).unwrap();
+        std::fs::write(source.join("skill.md"), "content").unwrap();
+        let mut manifest = Manifest::new();
+        manifest.exports.insert(
+            "my-skill".to_string(),
+            ExportEntry {
+                path: "skill.md".to_string(),
+            },
+        );
+        let result = copy_skill_files(&source, &dest, &manifest);
+        assert!(result.is_ok(), "copy_skill_files failed: {:?}", result.err());
+        assert!(dest.join("my-skill").exists());
+        std::fs::remove_dir_all(&source).unwrap();
+        std::fs::remove_dir_all(&dest).unwrap();
+    }
+
+    #[test]
+    fn test_copy_dir_recursive_skips_node_modules() {
+        let src = std::env::temp_dir().join("skm_test_skip_nm_src");
+        let dst = std::env::temp_dir().join("skm_test_skip_nm_dst");
+        std::fs::create_dir_all(src.join("node_modules/pkg")).unwrap();
+        std::fs::write(src.join("f.txt"), "x").unwrap();
+        assert!(copy_dir_recursive(&src, &dst).is_ok());
+        assert!(dst.join("f.txt").exists());
+        assert!(!dst.join("node_modules").exists());
+        std::fs::remove_dir_all(&src).unwrap();
+        std::fs::remove_dir_all(&dst).unwrap();
+    }
 }

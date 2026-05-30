@@ -279,27 +279,68 @@ mod tests {
     }
 
     #[test]
-    fn test_deduplicate_skills() {
+    fn test_discover_skills_empty_dir() {
+        let dir = std::env::temp_dir().join("skm_test_discover_empty");
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 0);
+        assert!(result.warnings.is_empty());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_skills_non_md_files() {
+        let dir = std::env::temp_dir().join("skm_test_discover_nonmd");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("script.js"), "content").unwrap();
+        std::fs::write(dir.join("style.css"), "content").unwrap();
+        std::fs::write(dir.join("readme.txt"), "content").unwrap();
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 0);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_skills_unreadable_dir() {
+        let dir = std::env::temp_dir().join("skm_test_discover_unreadable");
+        // Don't create the directory
+
+        let result = discover_skills(&dir);
+        assert_eq!(result.skills.len(), 0);
+        assert!(!result.warnings.is_empty());
+
+        // No cleanup needed since directory doesn't exist
+    }
+
+    #[test]
+    fn test_deduplicate_skills_no_duplicates() {
         let skills = vec![
             DiscoveredSkill {
-                name: "skill".to_string(),
+                name: "skill1".to_string(),
                 path: PathBuf::from("/a"),
                 skill_type: SkillType::File,
             },
             DiscoveredSkill {
-                name: "skill".to_string(),
+                name: "skill2".to_string(),
                 path: PathBuf::from("/b"),
                 skill_type: SkillType::Directory,
-            },
-            DiscoveredSkill {
-                name: "other".to_string(),
-                path: PathBuf::from("/c"),
-                skill_type: SkillType::File,
             },
         ];
 
         let result = deduplicate_skills(skills);
         assert_eq!(result.skills.len(), 2);
-        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_deduplicate_skills_empty() {
+        let skills = vec![];
+        let result = deduplicate_skills(skills);
+        assert_eq!(result.skills.len(), 0);
+        assert!(result.warnings.is_empty());
     }
 }

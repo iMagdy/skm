@@ -202,4 +202,29 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "main");
     }
+
+    #[test]
+    fn test_checkout_default_branch_invalid_dir() {
+        let dir = std::env::temp_dir().join("skm_test_checkout_invalid");
+        let result = checkout_default_branch(&dir);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_clone_to_existing_dir() {
+        let dir = std::env::temp_dir().join("skm_test_clone_existing");
+        std::fs::create_dir_all(&dir).unwrap();
+        let result = clone("https://invalid.example.com/repo.git", &dir);
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_fetch_non_git_dir() {
+        let dir = std::env::temp_dir().join("skm_test_fetch_non_git");
+        std::fs::create_dir_all(&dir).unwrap();
+        let result = fetch(&dir);
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }
