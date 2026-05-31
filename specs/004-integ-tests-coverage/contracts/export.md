@@ -6,7 +6,7 @@
 ## Command Interface
 
 ```bash
-skm export
+kt export
 ```
 
 ### Parameters
@@ -61,7 +61,7 @@ None — command operates on current project state.
 
 1. Clone `awesome-copilot` fixture
 2. Install skill from fixture
-3. Run `skm export`
+3. Run `kt export`
 4. Verify `skills.json` contains installed skill
 5. Verify manifest is valid JSON
 6. Verify skill source matches fixture URL

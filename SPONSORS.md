@@ -1,14 +1,14 @@
-# Sponsoring skm
+# Sponsoring Ktesio
 
-`skm` is an open source CLI for sharing, distributing, and installing agent skills.
+Ktesio is an open source CLI for sharing, distributing, and installing agent skills.
 
-The goal of `skm` is to make skills portable, discoverable, installable, and reusable across AI agents and developer workflows.
+The goal of Ktesio is to make skills portable, discoverable, installable, and reusable across AI agents and developer workflows.
 
 Sponsorship helps keep the project maintained, independent, and useful for the wider community.
 
-## Why sponsor skm?
+## Why sponsor Ktesio?
 
-Sponsor `skm` if you believe agent skills should be easy to package, share, install, and reuse.
+Sponsor Ktesio if you believe agent skills should be easy to package, share, install, and reuse.
 
 Your sponsorship helps fund:
 
@@ -45,7 +45,7 @@ Sponsor recognition does not mean control over the project.
 
 Sponsorship supports the project, but it does not buy ownership, trademark rights, release rights, or maintainer authority.
 
-The `skm` name, official releases, project direction, and governance remain controlled by the project maintainers.
+The Ktesio name, official releases, project direction, and governance remain controlled by the project maintainers.
 
 Sponsors may suggest features, report issues, fund specific work, or support priorities, but maintainers make final project decisions.
 
@@ -53,7 +53,7 @@ Sponsors may suggest features, report issues, fund specific work, or support pri
 
 Sponsorship is especially welcome from:
 
-- Developers using `skm`
+- Developers using Ktesio
 - Teams building agent tooling
 - Companies building AI developer platforms
 - Organizations interested in portable agent skills
@@ -83,11 +83,11 @@ Sponsorship does not include:
 
 - Ownership of the project
 - Exclusive control over roadmap
-- Permission to use the `skm` name as your own product
+- Permission to use the Ktesio name as your own product
 - Guaranteed feature delivery unless separately agreed
 - Private support unless explicitly agreed
-- Endorsement by the `skm` project
-- Permission to publish official-looking `skm` releases
+- Endorsement by the Ktesio project
+- Permission to publish official-looking Ktesio releases
 
 For brand and trademark rules, see `TRADEMARK.md`.
 
@@ -95,7 +95,7 @@ For brand and trademark rules, see `TRADEMARK.md`.
 
 Company sponsorship is welcome.
 
-Companies can sponsor `skm` to support:
+Companies can sponsor Ktesio to support:
 
 - Open source sustainability
 - Tooling they depend on
@@ -107,6 +107,6 @@ For larger sponsorships, please contact the maintainer to discuss the best path.
 
 ## Thank you
 
-Every sponsorship helps keep `skm` moving forward.
+Every sponsorship helps keep Ktesio moving forward.
 
 Thank you for supporting open source infrastructure for agent skills.

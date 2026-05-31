@@ -229,7 +229,7 @@ mod tests {
                 repo: "url".to_string(),
             },
         );
-        let dir = std::env::temp_dir().join("skm_test_lockfile");
+        let dir = std::env::temp_dir().join("ktesio_test_lockfile");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("skills.lock");
         lockfile.save(&path).unwrap();

@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_find_skills_directory_found() {
-        let dir = std::env::temp_dir().join("skm_test_find_skills");
+        let dir = std::env::temp_dir().join("ktesio_test_find_skills");
         let skills_dir = dir.join("skills");
         std::fs::create_dir_all(&skills_dir).unwrap();
 
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_find_skills_directory_case_insensitive() {
-        let dir = std::env::temp_dir().join("skm_test_find_skills_case");
+        let dir = std::env::temp_dir().join("ktesio_test_find_skills_case");
         let skills_dir = dir.join("SKILLS");
         std::fs::create_dir_all(&skills_dir).unwrap();
 
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_find_skills_directory_not_found() {
-        let dir = std::env::temp_dir().join("skm_test_find_skills_none");
+        let dir = std::env::temp_dir().join("ktesio_test_find_skills_none");
         std::fs::create_dir_all(&dir).unwrap();
 
         let result = find_skills_directory(&dir);
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_md_files() {
-        let dir = std::env::temp_dir().join("skm_test_discover_md");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_md");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("web-perf.md"), "content").unwrap();
         std::fs::write(dir.join("ui-ux.md"), "content").unwrap();
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_directories() {
-        let dir = std::env::temp_dir().join("skm_test_discover_dirs");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_dirs");
         std::fs::create_dir_all(dir.join("skill-a")).unwrap();
         std::fs::create_dir_all(dir.join("skill-b")).unwrap();
 
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_mixed() {
-        let dir = std::env::temp_dir().join("skm_test_discover_mixed");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_mixed");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("file-skill.md"), "content").unwrap();
         std::fs::create_dir_all(dir.join("dir-skill")).unwrap();
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_deduplication() {
-        let dir = std::env::temp_dir().join("skm_test_discover_dedup");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_dedup");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skill.md"), "content1").unwrap();
         std::fs::create_dir_all(dir.join("skill")).unwrap();
@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_skips_hidden() {
-        let dir = std::env::temp_dir().join("skm_test_discover_hidden");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_hidden");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join(".hidden.md"), "content").unwrap();
         std::fs::write(dir.join("visible.md"), "content").unwrap();
@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_empty_dir() {
-        let dir = std::env::temp_dir().join("skm_test_discover_empty");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_empty");
         std::fs::create_dir_all(&dir).unwrap();
 
         let result = discover_skills(&dir);
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_non_md_files() {
-        let dir = std::env::temp_dir().join("skm_test_discover_nonmd");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_nonmd");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("script.js"), "content").unwrap();
         std::fs::write(dir.join("style.css"), "content").unwrap();
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_discover_skills_unreadable_dir() {
-        let dir = std::env::temp_dir().join("skm_test_discover_unreadable");
+        let dir = std::env::temp_dir().join("ktesio_test_discover_unreadable");
         // Don't create the directory
 
         let result = discover_skills(&dir);

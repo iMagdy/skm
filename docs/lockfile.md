@@ -17,16 +17,16 @@
 
 - Reproduce installs across machines.
 - Show exactly which commit is installed.
-- Preserve repo URLs for `skm export`.
+- Preserve repo URLs for `kt export`.
 
 ## Behavior
 
-- `skm install` creates or updates `skills.lock` only after a repo fetch and content copy succeeds.
-- `skm upgrade` updates commits after successful fetch/checkout.
-- `skm uninstall` and `skm remove` remove lock entries.
-- `skm list` flags entries not present in `skills.json` as `orphaned`.
+- `kt install` creates or updates `skills.lock` only after a repo fetch and content copy succeeds.
+- `kt upgrade` updates commits after successful fetch/checkout.
+- `kt uninstall` and `kt remove` remove lock entries.
+- `kt list` flags entries not present in `skills.json` as `orphaned`.
 
-For locally discovered skills, `skm` records a zero commit (`0000000000000000000000000000000000000000`) because there is no remote commit to lock.
+For locally discovered skills, Ktesio records a zero commit (`0000000000000000000000000000000000000000`) because there is no remote commit to lock.
 
 ## See Also
 

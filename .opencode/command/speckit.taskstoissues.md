@@ -26,9 +26,9 @@ $ARGUMENTS
    ```bash
    python3 scripts/speckit_sync_issues.py \
      --feature-dir <feature-dir> \
-     --repo iMagdy/skm \
+     --repo iMagdy/ktesio \
      --project-owner iMagdy \
-     --project-title skm
+     --project-title Ktesio
    ```
 
 5. Report:

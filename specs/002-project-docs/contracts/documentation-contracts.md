@@ -11,40 +11,40 @@ This contract defines the structure and required content for each documentation 
 
 ## Contract 1: Installation Guide (`docs/installation.md`)
 
-**Purpose**: Document how to install skm on all supported platforms.
+**Purpose**: Document how to install Ktesio on all supported platforms.
 
 **Required sections**:
 1. `# Installation` — Top-level heading
 2. `## Prerequisites` — System requirements (Rust, Git)
 3. `## Install from Source` — Build from git repository
 4. `## Install via Cargo` — `cargo install` instructions (if published)
-5. `## Verify Installation` — How to confirm skm is working
+5. `## Verify Installation` — How to confirm Ktesio is working
 
 **Required examples**:
 - At least one `cargo install` or `cargo build` command
-- At least one `skm --version` verification command
+- At least one `kt --version` verification command
 
 **Acceptance criteria**:
-- A developer can install skm on Linux, macOS, or Windows by following the steps
+- A developer can install Ktesio on Linux, macOS, or Windows by following the steps
 - All code blocks use language-specific fencing (```bash)
 
 ---
 
 ## Contract 2: Command Reference (`docs/commands.md`)
 
-**Purpose**: Document every `skm` subcommand with usage syntax, options, and examples.
+**Purpose**: Document every Ktesio subcommand with usage syntax, options, and examples.
 
 **Required sections**:
 1. `# Command Reference` — Top-level heading
-2. One section per command (`## skm init`, `## skm install`, etc.)
+2. One section per command (`## kt init`, `## kt install`, etc.)
 
 **Per-command structure**:
 ```
-## skm <command>
+## kt <command>
 
 <One-line description>
 
-**Usage**: `skm <command> [options] [args]`
+**Usage**: `kt <command> [options] [args]`
 
 **Options**:
 - `--help` — Show help
@@ -53,17 +53,17 @@ This contract defines the structure and required content for each documentation 
 
 **Examples**:
 ```bash
-skm <command> <example-args>
+kt <command> <example-args>
 ```
 ```
 
 **Required commands** (from spec.md):
-- `skm init`
-- `skm install`
-- `skm upgrade`
-- `skm list`
-- `skm show`
-- `skm uninstall` / `skm remove`
+- `kt init`
+- `kt install`
+- `kt upgrade`
+- `kt list`
+- `kt show`
+- `kt uninstall` / `kt remove`
 
 **Acceptance criteria**:
 - Every CLI command documented in the spec has at least one usage example (SC-003)
@@ -101,7 +101,7 @@ skm <command> <example-args>
 
 **Acceptance criteria**:
 - Accurately describes each module's responsibility (SC, User Story 3)
-- Documents the data flow for `skm install` and `skm upgrade`
+- Documents the data flow for `kt install` and `kt upgrade`
 
 ---
 

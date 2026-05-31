@@ -10,7 +10,7 @@
 **Decision**: Use GitHub Actions (native to the repository's hosting platform).
 
 **Rationale**:
-- Repository is hosted on GitHub (`github.com/iMagdy/skm`)
+- Repository is hosted on GitHub (`github.com/iMagdy/ktesio`)
 - Native integration with PR status checks — no external service configuration
 - Free for public repositories, generous free tier for private
 - Supports parallel jobs, caching, and matrix builds

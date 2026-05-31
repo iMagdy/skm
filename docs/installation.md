@@ -1,6 +1,6 @@
 # Installation
 
-`skm` is a Rust CLI. It works on macOS, Linux, and Windows as long as `git` is available on `PATH`.
+Ktesio is a Rust CLI. It works on macOS, Linux, and Windows as long as `git` is available on `PATH`.
 
 ## Prerequisites
 
@@ -10,35 +10,35 @@
 ## Install from Source
 
 ```bash
-git clone https://github.com/iMagdy/skm.git
-cd skm
+git clone https://github.com/iMagdy/ktesio.git
+cd ktesio
 cargo install --path .
 ```
 
 Verify:
 
 ```bash
-skm --version
-skm --help
+kt --version
+kt --help
 ```
 
 ## Install from crates.io
 
 ```bash
-cargo install skm-rs
+cargo install ktesio
 ```
 
-The crates.io package is named `skm-rs`; it installs the `skm` binary.
+The crates.io package is named `ktesio`; it installs the `kt` binary.
 
 ## Install from a Release
 
-Download the archive for your platform from [GitHub Releases](https://github.com/iMagdy/skm/releases), then unpack it and place the `skm` binary on your `PATH`.
+Download the archive for your platform from [GitHub Releases](https://github.com/iMagdy/ktesio/releases), then unpack it and place the `kt` binary on your `PATH`.
 
 Release archives use this naming pattern:
 
 ```text
-skm-<tag>-<target>.tar.gz
-skm-<tag>-<target>.zip
+ktesio-<tag>-<target>.tar.gz
+ktesio-<tag>-<target>.zip
 ```
 
 Each release also includes `.sha256` files and an aggregate checksum file.
@@ -48,7 +48,7 @@ Each release also includes `.sha256` files and an aggregate checksum file.
 After a release is published to the Homebrew tap:
 
 ```bash
-brew install imagdy/tap/skm
+brew install imagdy/tap/ktesio
 ```
 
 The formula installs the prebuilt macOS or Linux release archive for your platform.

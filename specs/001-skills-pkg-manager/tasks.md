@@ -1,4 +1,4 @@
-# Tasks: Skills Package Manager CLI
+# Tasks: Ktesio CLI
 
 **Input**: Design documents from `/specs/001-skills-pkg-manager/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
@@ -44,42 +44,42 @@
 
 ## Phase 3: User Story 1 — Initialize a Skills Manifest (Priority: P1) 🎯 MVP
 
-**Goal**: `skm init .` creates a valid `skills.json` with empty `skills` and `exports` objects
+**Goal**: `kt init .` creates a valid `skills.json` with empty `skills` and `exports` objects
 
-**Independent Test**: Run `skm init .` in empty dir, verify `skills.json` is created with `{ "skills": {}, "exports": {} }`
+**Independent Test**: Run `kt init .` in empty dir, verify `skills.json` is created with `{ "skills": {}, "exports": {} }`
 
 ### Implementation for User Story 1
 
-- [x] T010 [US1] Implement skm init command in src/cli/init.rs: parse path arg, create skills.json, handle exists/not-found errors
+- [x] T010 [US1] Implement kt init command in src/cli/init.rs: parse path arg, create skills.json, handle exists/not-found errors
 - [x] T011 [US1] Wire init subcommand into clap CLI in src/main.rs
 - [ ] T012 [US1] Add integration test for init in tests/integration/init_test.rs: create, exists-warning, not-found-error
 
-**Checkpoint**: `skm init .` works — can create manifest
+**Checkpoint**: `kt init .` works — can create manifest
 
 ---
 
 ## Phase 4: User Story 2 — Install All Declared Skills (Priority: P1)
 
-**Goal**: `skm install` reads skills.json, clones all skills, copies exports, creates skills.lock
+**Goal**: `kt install` reads skills.json, clones all skills, copies exports, creates skills.lock
 
-**Independent Test**: Create skills.json with a public repo, run `skm install`, verify skill in .agents/skills/ and skills.lock exists
+**Independent Test**: Create skills.json with a public repo, run `kt install`, verify skill in .agents/skills/ and skills.lock exists
 
 ### Implementation for User Story 2
 
-- [x] T013 [US2] Implement skm install (bulk) command in src/cli/install.rs: read manifest, loop skills, clone, copy exports, write lockfile, skip already-installed, handle partial failures
+- [x] T013 [US2] Implement kt install (bulk) command in src/cli/install.rs: read manifest, loop skills, clone, copy exports, write lockfile, skip already-installed, handle partial failures
 - [x] T014 [US2] Wire install subcommand (no args) into clap CLI in src/main.rs
 - [x] T015 [US2] Add progress indicators using indicatif MultiProgress in src/cli/install.rs: spinner per skill during clone
 - [ ] T016 [US2] Add integration test for bulk install in tests/integration/install_test.rs: install from manifest, skip existing, partial failure, missing manifest
 
-**Checkpoint**: `skm install` fully works — core value proposition delivered
+**Checkpoint**: `kt install` fully works — core value proposition delivered
 
 ---
 
 ## Phase 5: User Story 3 — Install a Specific Skill (Priority: P2)
 
-**Goal**: `skm install <name:url>` adds one skill to manifest, clones it, updates lockfile
+**Goal**: `kt install <name:url>` adds one skill to manifest, clones it, updates lockfile
 
-**Independent Test**: Run `skm install myskill:https://github.com/example/repo.git`, verify added to skills.json, cloned, and locked
+**Independent Test**: Run `kt install myskill:https://github.com/example/repo.git`, verify added to skills.json, cloned, and locked
 
 ### Implementation for User Story 3
 
@@ -87,72 +87,72 @@
 - [x] T018 [US3] Wire install subcommand (with arg) into clap CLI in src/main.rs
 - [ ] T019 [US3] Add integration test for single install in tests/integration/install_test.rs: install single, duplicate warning, auto-create manifest
 
-**Checkpoint**: `skm install <name:url>` works — can add individual skills
+**Checkpoint**: `kt install <name:url>` works — can add individual skills
 
 ---
 
 ## Phase 6: User Story 4 — List Installed Skills (Priority: P2)
 
-**Goal**: `skm list` displays table of installed skills with name, repo, commit, status
+**Goal**: `kt list` displays table of installed skills with name, repo, commit, status
 
-**Independent Test**: Run `skm list` after installing skills, verify table output with correct status
+**Independent Test**: Run `kt list` after installing skills, verify table output with correct status
 
 ### Implementation for User Story 4
 
-- [x] T020 [US4] Implement skm list command in src/cli/list.rs: read manifest + lockfile, check disk, format table, handle empty case
+- [x] T020 [US4] Implement kt list command in src/cli/list.rs: read manifest + lockfile, check disk, format table, handle empty case
 - [x] T021 [US4] Wire list subcommand into clap CLI in src/main.rs
 - [ ] T022 [US4] Add integration test for list in tests/integration/list_test.rs: list installed, list empty, list with missing dirs
 
-**Checkpoint**: `skm list` shows installed skills with status
+**Checkpoint**: `kt list` shows installed skills with status
 
 ---
 
 ## Phase 7: User Story 5 — Show Skill Details (Priority: P3)
 
-**Goal**: `skm show <name>` displays repo URL, commit, path, status for one skill
+**Goal**: `kt show <name>` displays repo URL, commit, path, status for one skill
 
-**Independent Test**: Run `skm show <installed-skill>`, verify details printed; run `skm show <unknown>`, verify error
+**Independent Test**: Run `kt show <installed-skill>`, verify details printed; run `kt show <unknown>`, verify error
 
 ### Implementation for User Story 5
 
-- [x] T023 [US5] Implement skm show command in src/cli/show.rs: lookup in lockfile, check disk, format output, handle not-found
+- [x] T023 [US5] Implement kt show command in src/cli/show.rs: lookup in lockfile, check disk, format output, handle not-found
 - [x] T024 [US5] Wire show subcommand into clap CLI in src/main.rs
 - [ ] T025 [US5] Add integration test for show in tests/integration/show_test.rs: show installed, show not-found
 
-**Checkpoint**: `skm show <name>` inspects individual skills
+**Checkpoint**: `kt show <name>` inspects individual skills
 
 ---
 
 ## Phase 8: User Story 6 — Upgrade Skills (Priority: P2)
 
-**Goal**: `skm upgrade` fetches latest HEAD for each skill, updates lockfile
+**Goal**: `kt upgrade` fetches latest HEAD for each skill, updates lockfile
 
-**Independent Test**: Run `skm upgrade` after upstream has new commits, verify lockfile commit hashes updated
+**Independent Test**: Run `kt upgrade` after upstream has new commits, verify lockfile commit hashes updated
 
 ### Implementation for User Story 6
 
-- [x] T026 [US6] Implement skm upgrade command in src/cli/upgrade.rs: read lockfile (fallback to manifest), fetch+checkout per skill, resolve new HEAD, update lockfile, handle partial failures
+- [x] T026 [US6] Implement kt upgrade command in src/cli/upgrade.rs: read lockfile (fallback to manifest), fetch+checkout per skill, resolve new HEAD, update lockfile, handle partial failures
 - [x] T027 [US6] Wire upgrade subcommand into clap CLI in src/main.rs
 - [x] T028 [US6] Add progress indicators using indicatif MultiProgress in src/cli/upgrade.rs: spinner per skill during fetch
 - [ ] T029 [US6] Add integration test for upgrade in tests/integration/upgrade_test.rs: upgrade all, upgrade with unreachable repo, upgrade without lockfile
 
-**Checkpoint**: `skm upgrade` keeps skills current
+**Checkpoint**: `kt upgrade` keeps skills current
 
 ---
 
 ## Phase 9: User Story 7 — Uninstall a Skill (Priority: P2)
 
-**Goal**: `skm uninstall <name>` / `skm remove <name>` removes skill from manifest, lockfile, and disk
+**Goal**: `kt uninstall <name>` / `kt remove <name>` removes skill from manifest, lockfile, and disk
 
-**Independent Test**: Run `skm uninstall <skill>`, verify removed from skills.json, skills.lock, and .agents/skills/
+**Independent Test**: Run `kt uninstall <skill>`, verify removed from skills.json, skills.lock, and .agents/skills/
 
 ### Implementation for User Story 7
 
-- [x] T030 [US7] Implement skm uninstall command in src/cli/uninstall.rs: remove from manifest, remove from lockfile, delete directory, handle not-found
+- [x] T030 [US7] Implement kt uninstall command in src/cli/uninstall.rs: remove from manifest, remove from lockfile, delete directory, handle not-found
 - [x] T031 [US7] Wire uninstall subcommand (alias: remove) into clap CLI in src/main.rs
 - [ ] T032 [US7] Add integration test for uninstall in tests/integration/uninstall_test.rs: uninstall success, uninstall not-found
 
-**Checkpoint**: `skm uninstall` / `skm remove` cleans up skills
+**Checkpoint**: `kt uninstall` / `kt remove` cleans up skills
 
 ---
 
@@ -164,12 +164,12 @@
 - [ ] T034 [P] Validate malformed JSON handling: test skills.json with syntax errors, missing keys, wrong types in tests/integration/
 - [ ] T035 [P] Validate duplicate name detection: test skills.json with duplicate skill names in tests/integration/
 - [ ] T036 [P] Validate network error handling: test clone/fetch failures with unreachable repos in tests/integration/
-- [ ] T037 [P] Validate stale/untracked directory detection in `skm list` in tests/integration/
+- [ ] T037 [P] Validate stale/untracked directory detection in `kt list` in tests/integration/
 - [ ] T038 [P] Validate auth failure handling: test git URLs requiring auth in tests/integration/
 - [ ] T039 Benchmark init command to verify SC-001 (<5s)
 - [ ] T040 Benchmark single skill install to verify SC-002 (<30s)
 - [ ] T041 Benchmark list command to verify SC-003 (<1s)
-- [ ] T042 Run quickstart.md end-to-end validation: cargo build, skm init, skm install, skm list, skm show, skm upgrade, skm uninstall
+- [ ] T042 Run quickstart.md end-to-end validation: cargo build, kt init, kt install, kt list, kt show, kt upgrade, kt uninstall
 
 ---
 
@@ -222,7 +222,7 @@ Task: T016 — Integration tests
 2. Complete Phase 2: Foundational
 3. Complete Phase 3: US1 (init)
 4. Complete Phase 4: US2 (install)
-5. **STOP and VALIDATE**: `skm init .` + `skm install` workflow works
+5. **STOP and VALIDATE**: `kt init .` + `kt install` workflow works
 6. Deploy/demo if ready
 
 ### Incremental Delivery

@@ -5,7 +5,7 @@ use tempfile::TempDir;
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct SkmCommandOutput {
+pub struct KtCommandOutput {
     pub stdout: String,
     pub stderr: String,
 }
@@ -86,9 +86,9 @@ pub fn create_local_skill_repo(path: &Path, name: &str, with_manifest: bool) {
         path,
         &[
             "-c",
-            "user.name=skm tests",
+            "user.name=ktesio tests",
             "-c",
-            "user.email=skm-tests@example.com",
+            "user.email=ktesio-tests@example.com",
             "-c",
             "commit.gpgsign=false",
             "commit",
@@ -98,28 +98,25 @@ pub fn create_local_skill_repo(path: &Path, name: &str, with_manifest: bool) {
     );
 }
 
-pub fn run_skm_command(args: &[&str], working_dir: &Path) -> Result<String, String> {
-    run_skm_command_output(args, working_dir).map(|output| output.stdout)
+pub fn run_kt_command(args: &[&str], working_dir: &Path) -> Result<String, String> {
+    run_kt_command_output(args, working_dir).map(|output| output.stdout)
 }
 
-pub fn run_skm_command_output(
-    args: &[&str],
-    working_dir: &Path,
-) -> Result<SkmCommandOutput, String> {
-    let output = Command::new(env!("CARGO_BIN_EXE_skm"))
+pub fn run_kt_command_output(args: &[&str], working_dir: &Path) -> Result<KtCommandOutput, String> {
+    let output = Command::new(env!("CARGO_BIN_EXE_kt"))
         .args(args)
         .current_dir(working_dir)
         .output()
-        .map_err(|e| format!("Failed to execute skm: {}", e))?;
+        .map_err(|e| format!("Failed to execute kt: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success() {
-        return Err(format!("skm failed: {}\n{}", stdout, stderr));
+        return Err(format!("kt failed: {}\n{}", stdout, stderr));
     }
 
-    Ok(SkmCommandOutput { stdout, stderr })
+    Ok(KtCommandOutput { stdout, stderr })
 }
 
 fn run_git(repo_dir: &Path, args: &[&str]) {

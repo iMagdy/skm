@@ -40,7 +40,7 @@ Skill names must match:
 {}
 ```
 
-`skm init` writes both top-level keys for readability, but parsers treat missing `skills` and missing `exports` as empty objects.
+`kt init` writes both top-level keys for readability, but parsers treat missing `skills` and missing `exports` as empty objects.
 
 ## Import Example
 
@@ -70,9 +70,9 @@ Skill names must match:
 }
 ```
 
-When a repo with exports is installed, `skm` copies only the exported paths into the destination skill directory. Other repository files, including `.git`, docs, fixtures, and unrelated source files, are not installed.
+When a repo with exports is installed, Ktesio copies only the exported paths into the destination skill directory. Other repository files, including `.git`, docs, fixtures, and unrelated source files, are not installed.
 
-If an installed repo has no `skills.json`, `skm` asks before falling back to directories under `skills/` or `SKILLS/`. Repos with a `skills.json` but no `exports` are not installable by fallback.
+If an installed repo has no `skills.json`, Ktesio asks before falling back to directories under `skills/` or `SKILLS/`. Repos with a `skills.json` but no `exports` are not installable by fallback.
 
 ## See Also
 

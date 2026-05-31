@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_upgrade_empty() {
-        let dir = std::env::temp_dir().join("skm_test_upgrade_empty");
+        let dir = std::env::temp_dir().join("ktesio_test_upgrade_empty");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir);
         assert!(result.is_ok());
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_upgrade_with_manifest() {
-        let dir = std::env::temp_dir().join("skm_test_upgrade_manifest");
+        let dir = std::env::temp_dir().join("ktesio_test_upgrade_manifest");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_upgrade_with_lockfile() {
-        let dir = std::env::temp_dir().join("skm_test_upgrade_lockfile");
+        let dir = std::env::temp_dir().join("ktesio_test_upgrade_lockfile");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         std::fs::write(
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_upgrade_nonexistent_dir() {
-        let dir = std::env::temp_dir().join("skm_test_upgrade_nonexist");
+        let dir = std::env::temp_dir().join("ktesio_test_upgrade_nonexist");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.lock"),
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_upgrade_fetch_fails() {
-        let dir = std::env::temp_dir().join("skm_test_upgrade_fetchfail");
+        let dir = std::env::temp_dir().join("ktesio_test_upgrade_fetchfail");
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
         std::fs::write(
             dir.join("skills.lock"),
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_upgrade_success_updates_lockfile_commit() {
-        let dir = std::env::temp_dir().join("skm_test_upgrade_success");
+        let dir = std::env::temp_dir().join("ktesio_test_upgrade_success");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let source = create_local_repo(&dir, "source");
@@ -226,9 +226,9 @@ mod tests {
             &repo,
             &[
                 "-c",
-                "user.name=skm tests",
+                "user.name=ktesio tests",
                 "-c",
-                "user.email=skm-tests@example.com",
+                "user.email=ktesio-tests@example.com",
                 "-c",
                 "commit.gpgsign=false",
                 "commit",

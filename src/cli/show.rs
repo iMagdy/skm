@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_show_not_found() {
-        let dir = std::env::temp_dir().join("skm_test_show_notfound");
+        let dir = std::env::temp_dir().join("ktesio_test_show_notfound");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir, "nonexistent");
         assert!(result.is_err());
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_show_found() {
-        let dir = std::env::temp_dir().join("skm_test_show_found");
+        let dir = std::env::temp_dir().join("ktesio_test_show_found");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_show_in_lockfile_only() {
-        let dir = std::env::temp_dir().join("skm_test_show_lockonly");
+        let dir = std::env::temp_dir().join("ktesio_test_show_lockonly");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         std::fs::write(
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_show_missing_status() {
-        let dir = std::env::temp_dir().join("skm_test_show_missing");
+        let dir = std::env::temp_dir().join("ktesio_test_show_missing");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         std::fs::write(
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_show_manifest_only_not_installed_status() {
-        let dir = std::env::temp_dir().join("skm_test_show_manifest_only");
+        let dir = std::env::temp_dir().join("ktesio_test_show_manifest_only");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),

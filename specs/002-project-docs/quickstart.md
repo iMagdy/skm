@@ -1,11 +1,11 @@
-# Quick Start: skm
+# Quick Start: Ktesio
 
 **Date**: 2026-05-30
 **Feature**: 002-project-docs
 
-## What is skm?
+## What is Ktesio?
 
-skm is a command-line tool for managing agentic skills. Skills are git repositories that provide specialized instructions and workflows for AI coding agents. skm fetches, installs, upgrades, and manages these skills in your project.
+Ktesio is a command-line tool for managing agentic skills. Skills are git repositories that provide specialized instructions and workflows for AI coding agents. Ktesio fetches, installs, upgrades, and manages these skills in your project.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ cd skills
 # Build the project
 cargo build --release
 
-# The binary will be at target/release/skm
+# The binary will be at target/release/kt
 # Add it to your PATH or run via cargo
 ```
 
@@ -30,7 +30,7 @@ cargo build --release
 
 ```bash
 # Create a skills manifest in your project
-skm init .
+kt init .
 
 # This creates skills.json with empty skills and exports
 cat skills.json
@@ -40,26 +40,26 @@ cat skills.json
 
 ```bash
 # Install all skills from the manifest
-skm install
+kt install
 
 # Install a specific skill
-skm install myskill:https://github.com/example/repo.git
+kt install myskill:https://github.com/example/repo.git
 
 # List installed skills
-skm list
+kt list
 ```
 
 ## Upgrade & Uninstall
 
 ```bash
 # Upgrade all installed skills to latest versions
-skm upgrade
+kt upgrade
 
 # Show details for a specific skill
-skm show myskill
+kt show myskill
 
 # Remove a skill
-skm uninstall myskill
+kt uninstall myskill
 ```
 
 ## Next Steps
@@ -67,4 +67,4 @@ skm uninstall myskill
 - [Installation Guide](installation.md) — Detailed platform-specific instructions
 - [Command Reference](commands.md) — Full documentation for all commands
 - [Manifest Format](manifest.md) — How to configure `skills.json`
-- [Contributing](contributing.md) — Help improve skm
+- [Contributing](contributing.md) — Help improve Ktesio

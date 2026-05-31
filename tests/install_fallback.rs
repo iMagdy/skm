@@ -1,6 +1,6 @@
 mod helpers;
 
-use helpers::{run_skm_command, TestContext};
+use helpers::{run_kt_command, TestContext};
 
 #[test]
 fn test_install_fallback_displays_warning() {
@@ -14,10 +14,10 @@ fn test_install_fallback_displays_warning() {
         "Fixture should not have skills.json"
     );
 
-    // Run skm install without a manifest - this should trigger fallback discovery
+    // Run kt install without a manifest - this should trigger fallback discovery
     // Note: This test may fail because the CLI expects a manifest
     // We're testing that the fallback path is taken
-    let result = run_skm_command(&["install"], &fixture_dir);
+    let result = run_kt_command(&["install"], &fixture_dir);
 
     // The install may fail due to various reasons, but we're testing the fallback path
     // For now, just verify the command ran
@@ -33,8 +33,8 @@ fn test_install_fallback_discovers_skills_directory() {
     std::fs::create_dir_all(fixture_dir.join("skills")).unwrap();
     std::fs::write(fixture_dir.join("skills/test-skill.md"), "# Test Skill").unwrap();
 
-    // Run skm install - this should trigger fallback discovery
-    let result = run_skm_command(&["install"], &fixture_dir);
+    // Run kt install - this should trigger fallback discovery
+    let result = run_kt_command(&["install"], &fixture_dir);
 
     // The install may fail, but we're testing the fallback path
     assert!(result.is_ok() || result.is_err(), "Command should complete");
@@ -48,8 +48,8 @@ fn test_install_fallback_error_missing_skills_dir() {
     let fixture_dir = ctx.project_dir.join("fixture");
     std::fs::create_dir_all(&fixture_dir).unwrap();
 
-    // Run skm install - this should fail because no skills directory exists
-    let result = run_skm_command(&["install"], &fixture_dir);
+    // Run kt install - this should fail because no skills directory exists
+    let result = run_kt_command(&["install"], &fixture_dir);
 
     // Should fail because no skills directory found
     assert!(
@@ -66,8 +66,8 @@ fn test_install_fallback_error_empty_skills_dir() {
     let fixture_dir = ctx.project_dir.join("fixture");
     std::fs::create_dir_all(fixture_dir.join("skills")).unwrap();
 
-    // Run skm install - this should fail because skills directory is empty
-    let result = run_skm_command(&["install"], &fixture_dir);
+    // Run kt install - this should fail because skills directory is empty
+    let result = run_kt_command(&["install"], &fixture_dir);
 
     // Should fail because skills directory is empty
     assert!(

@@ -1,4 +1,4 @@
-# CLI Contract: skm
+# CLI Contract: Ktesio
 
 **Feature**: 001-skills-pkg-manager
 **Date**: 2026-05-30
@@ -6,7 +6,7 @@
 ## Binary
 
 ```
-skm [COMMAND]
+kt [COMMAND]
 ```
 
 Global flags:
@@ -22,7 +22,7 @@ Exit codes:
 
 ## Commands
 
-### `skm init <path>`
+### `kt init <path>`
 
 Initialize a new `skills.json` manifest at the given path.
 
@@ -42,7 +42,7 @@ Initialize a new `skills.json` manifest at the given path.
 
 ---
 
-### `skm install`
+### `kt install`
 
 Install all skills declared in `skills.json`.
 
@@ -64,7 +64,7 @@ Install all skills declared in `skills.json`.
 
 ---
 
-### `skm install <name:url>`
+### `kt install <name:url>`
 
 Install a single skill by name and git URL.
 
@@ -85,7 +85,7 @@ Install a single skill by name and git URL.
 
 ---
 
-### `skm upgrade`
+### `kt upgrade`
 
 Upgrade all installed skills to latest commit on default branch.
 
@@ -104,7 +104,7 @@ Upgrade all installed skills to latest commit on default branch.
 
 ---
 
-### `skm list`
+### `kt list`
 
 List all installed skills.
 
@@ -124,11 +124,11 @@ miette  https://github.com/zkat/miette.git     789abc012    missing
 
 STATUS values: `installed`, `missing` (lock entry exists but dir missing)
 
-**Stdout** (no skills): `No skills installed. Run 'skm install' to add skills.`
+**Stdout** (no skills): `No skills installed. Run 'kt install' to add skills.`
 
 ---
 
-### `skm show <package_name>`
+### `kt show <package_name>`
 
 Show details for a specific skill.
 
@@ -155,7 +155,7 @@ Status:  installed
 
 ---
 
-### `skm uninstall <package_name>` / `skm remove <package_name>`
+### `kt uninstall <package_name>` / `kt remove <package_name>`
 
 Remove a skill from the project.
 

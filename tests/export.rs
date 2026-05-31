@@ -1,6 +1,6 @@
 mod helpers;
 
-use helpers::{run_skm_command, TestContext};
+use helpers::{run_kt_command, TestContext};
 
 #[test]
 fn test_export_creates_skills_json() {
@@ -25,12 +25,12 @@ fn test_export_creates_skills_json() {
     .unwrap();
 
     // Install first
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
-    // Run skm export
-    let result = run_skm_command(&["export"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm export failed: {:?}", result.err());
+    // Run kt export
+    let result = run_kt_command(&["export"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt export failed: {:?}", result.err());
 
     // Verify skills.json exists
     assert!(ctx.manifest().exists(), "skills.json should exist");
@@ -59,12 +59,12 @@ fn test_export_manifest_contains_skills_key() {
     .unwrap();
 
     // Install first
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
-    // Run skm export
-    let result = run_skm_command(&["export"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm export failed: {:?}", result.err());
+    // Run kt export
+    let result = run_kt_command(&["export"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt export failed: {:?}", result.err());
 
     // Verify manifest contains skills key
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
@@ -98,12 +98,12 @@ fn test_export_manifest_contains_exports_key() {
     .unwrap();
 
     // Install first
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
-    // Run skm export
-    let result = run_skm_command(&["export"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm export failed: {:?}", result.err());
+    // Run kt export
+    let result = run_kt_command(&["export"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt export failed: {:?}", result.err());
 
     // Verify manifest contains exports key
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
@@ -137,12 +137,12 @@ fn test_export_lists_skill_with_correct_source() {
     .unwrap();
 
     // Install first
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
-    // Run skm export
-    let result = run_skm_command(&["export"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm export failed: {:?}", result.err());
+    // Run kt export
+    let result = run_kt_command(&["export"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt export failed: {:?}", result.err());
 
     // Verify manifest lists skill with correct source
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
@@ -178,12 +178,12 @@ fn test_export_manifest_valid_json() {
     .unwrap();
 
     // Install first
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
-    // Run skm export
-    let result = run_skm_command(&["export"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm export failed: {:?}", result.err());
+    // Run kt export
+    let result = run_kt_command(&["export"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt export failed: {:?}", result.err());
 
     // Verify manifest is valid JSON
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();
@@ -214,12 +214,12 @@ fn test_export_manifest_2space_indent() {
     .unwrap();
 
     // Install first
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
-    // Run skm export
-    let result = run_skm_command(&["export"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm export failed: {:?}", result.err());
+    // Run kt export
+    let result = run_kt_command(&["export"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt export failed: {:?}", result.err());
 
     // Verify manifest uses 2-space indent
     let manifest_content = std::fs::read_to_string(ctx.manifest()).unwrap();

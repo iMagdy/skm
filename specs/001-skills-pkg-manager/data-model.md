@@ -1,4 +1,4 @@
-# Data Model: Skills Package Manager CLI
+# Data Model: Ktesio CLI
 
 **Feature**: 001-skills-pkg-manager
 **Date**: 2026-05-30
@@ -60,15 +60,15 @@ The `skills.json` file structure.
 }
 ```
 
-**Location**: Project root (where `skm` is invoked)
+**Location**: Project root (where Ktesio is invoked)
 **Format**: JSON, 2-space indentation
 **Cardinality**: One per project
 
 **State transitions**:
-1. Created by `skm init` (empty `skills` and `exports`)
-2. Modified by `skm install <name:url>` (adds to `skills`)
-3. Modified by `skm uninstall <name>` (removes from `skills`)
-4. Read by `skm install`, `skm upgrade`, `skm list`, `skm show`, `skm uninstall`
+1. Created by `kt init` (empty `skills` and `exports`)
+2. Modified by `kt install <name:url>` (adds to `skills`)
+3. Modified by `kt uninstall <name>` (removes from `skills`)
+4. Read by `kt install`, `kt upgrade`, `kt list`, `kt show`, `kt uninstall`
 
 ---
 
@@ -105,10 +105,10 @@ The `skills.lock` file structure.
 **Cardinality**: One per project
 
 **State transitions**:
-1. Created by `skm install` (populates entries for each installed skill)
-2. Updated by `skm upgrade` (refreshes commit hashes)
-3. Modified by `skm uninstall` (removes entry)
-4. Read by `skm list`, `skm show`, `skm upgrade`
+1. Created by `kt install` (populates entries for each installed skill)
+2. Updated by `kt upgrade` (refreshes commit hashes)
+3. Modified by `kt uninstall` (removes entry)
+4. Read by `kt list`, `kt show`, `kt upgrade`
 
 ---
 
@@ -128,7 +128,7 @@ Runtime representation of a skill on disk.
 **State transitions**:
 1. Not installed (no directory, no lock entry)
 2. Installed (directory exists, lock entry exists)
-3. Stale (lock entry exists but directory missing — detected by `skm list`)
+3. Stale (lock entry exists but directory missing — detected by `kt list`)
 4. Uninstalled (directory deleted, lock entry removed, manifest entry removed)
 
 ---

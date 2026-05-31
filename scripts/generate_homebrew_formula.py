@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Homebrew formula for a tagged skm release."""
+"""Generate the Homebrew formula for a tagged Ktesio release."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import re
 from pathlib import Path
 
 
-REPO = "iMagdy/skm"
-FORMULA_CLASS = "Skm"
+REPO = "iMagdy/ktesio"
+FORMULA_CLASS = "Ktesio"
 DESCRIPTION = "Agentic skills package manager"
 LICENSE = "Apache-2.0"
 HOMEBREW_TARGETS = [
@@ -101,11 +101,11 @@ def render_formula(tag: str, checksums: dict[str, str]) -> str:
   end
 
   def install
-    bin.install "skm"
+    bin.install "kt"
   end
 
   test do
-    assert_match version.to_s, shell_output("#{{bin}}/skm --version")
+    assert_match version.to_s, shell_output("#{{bin}}/kt --version")
   end
 end
 '''
@@ -119,7 +119,7 @@ def version_from_tag(tag: str) -> str:
 
 
 def asset_name(tag: str, target: str, extension: str) -> str:
-    return f"skm-{tag}-{target}.{extension}"
+    return f"ktesio-{tag}-{target}.{extension}"
 
 
 def release_url(tag: str, asset: str) -> str:

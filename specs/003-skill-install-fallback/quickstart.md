@@ -5,11 +5,11 @@
 
 ## Overview
 
-This feature adds fallback discovery to `skm install`, allowing skill installation from repositories that don't have a `skills.json` manifest file.
+This feature adds fallback discovery to `kt install`, allowing skill installation from repositories that don't have a `skills.json` manifest file.
 
 ## How It Works
 
-When you run `skm install` and no `skills.json` is found:
+When you run `kt install` and no `skills.json` is found:
 
 1. **Warning displayed**: `Warning: No skills.json found. Auto-discovering skills...`
 2. **Directory search**: System searches for `skills/` directory (case-insensitive)
@@ -23,7 +23,7 @@ When you run `skm install` and no `skills.json` is found:
 
 ```bash
 cd my-project
-skm install
+kt install
 # Reads skills.json, installs all listed skills
 ```
 
@@ -31,7 +31,7 @@ skm install
 
 ```bash
 cd repo-without-manifest
-skm install
+kt install
 
 # Output:
 # Warning: No skills.json found. Auto-discovering skills...
@@ -51,7 +51,7 @@ skm install
 
 ```bash
 cd repo-with-one-skill
-skm install
+kt install
 
 # Output:
 # Warning: No skills.json found. Auto-discovering skills...
@@ -66,7 +66,7 @@ skm install
 
 ```bash
 cd repo-with-empty-skills
-skm install
+kt install
 
 # Output:
 # Warning: No skills.json found. Auto-discovering skills...

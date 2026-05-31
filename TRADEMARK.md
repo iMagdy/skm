@@ -1,28 +1,28 @@
-# skm Trademark and Brand Policy
+# Ktesio Trademark and Brand Policy
 
-This document explains how the `skm` name, logo, and related project identity may be used.
+This document explains how the Ktesio name, logo, and related project identity may be used.
 
 The goal is simple:
 
-- The `skm` source code is open for use, contribution, and reuse under the project license.
-- The `skm` name and official project identity remain controlled by the project maintainers.
+- The Ktesio source code is open for use, contribution, and reuse under the project license.
+- The Ktesio name and official project identity remain controlled by the project maintainers.
 - Forks, integrations, articles, plugins, and community work are welcome, but they must not confuse users about what is official.
 
 ## 1. Protected project identity
 
-The following are considered part of the `skm` project identity:
+The following are considered part of the Ktesio project identity:
 
-- The name `skm`
-- The `skm` logo
-- Official `skm` release names and package names
+- The name Ktesio
+- The Ktesio logo
+- Official Ktesio release names and package names
 - Official domains, repositories, registries, package namespaces, and social accounts
-- Any visual identity that clearly represents the official `skm` project
+- Any visual identity that clearly represents the official Ktesio project
 
-In this document, these are called the **skm Marks**.
+In this document, these are called the **Ktesio Marks**.
 
-## 2. Who controls the skm Marks
+## 2. Who controls the Ktesio Marks
 
-The skm Marks are controlled by the official `skm` project maintainers.
+The Ktesio Marks are controlled by the official Ktesio project maintainers.
 
 Unless stated otherwise, the current project owner and initial maintainer is:
 
@@ -34,98 +34,98 @@ The project owner or maintainers may update this policy as the project evolves.
 
 The project license covers use, copying, modification, and distribution of the source code.
 
-The project license does **not** grant permission to use the skm Marks in a way that suggests official status, sponsorship, endorsement, or ownership of the `skm` project.
+The project license does **not** grant permission to use the Ktesio Marks in a way that suggests official status, sponsorship, endorsement, or ownership of the Ktesio project.
 
-You may fork the code. You may not present your fork as the official `skm` project unless the maintainers have explicitly approved that use.
+You may fork the code. You may not present your fork as the official Ktesio project unless the maintainers have explicitly approved that use.
 
 ## 4. Allowed uses
 
-You may use the skm Marks without prior written permission when the use is truthful, non-misleading, and clearly refers to the official project.
+You may use the Ktesio Marks without prior written permission when the use is truthful, non-misleading, and clearly refers to the official project.
 
 Examples of allowed use:
 
-- Saying that your project uses `skm`
-- Saying that your package, skill, registry, plugin, or tool is compatible with `skm`
-- Writing tutorials, blog posts, videos, talks, or documentation about `skm`
-- Linking to the official `skm` repository or website
-- Describing yourself as a contributor to `skm`, if true
-- Using the `skm` name in dependency metadata where needed to identify compatibility
-- Referring to a fork as “a fork of `skm`”, as long as the fork has a clearly different name
+- Saying that your project uses Ktesio
+- Saying that your package, skill, registry, plugin, or tool is compatible with Ktesio
+- Writing tutorials, blog posts, videos, talks, or documentation about Ktesio
+- Linking to the official Ktesio repository or website
+- Describing yourself as a contributor to Ktesio, if true
+- Using the Ktesio name in dependency metadata where needed to identify compatibility
+- Referring to a fork as “a fork of Ktesio”, as long as the fork has a clearly different name
 
 Allowed examples:
 
-- “Works with skm”
-- “Compatible with skm”
-- “A plugin for skm”
-- “A fork of skm called `<your-name>`”
-- “This project integrates with skm”
+- “Works with Ktesio”
+- “Compatible with Ktesio”
+- “A plugin for Ktesio”
+- “A fork of Ktesio called `<your-name>`”
+- “This project integrates with Ktesio”
 
 ## 5. Uses that require permission
 
-You need prior written permission from the maintainers to use the skm Marks in ways that may imply official status or endorsement.
+You need prior written permission from the maintainers to use the Ktesio Marks in ways that may imply official status or endorsement.
 
 Examples requiring permission:
 
-- Publishing a modified version under the name `skm`
-- Publishing packages, binaries, containers, installers, or registry entries that appear to be official `skm` releases
-- Using `skm` as the main name of a company, product, hosted service, registry, marketplace, or commercial offering
-- Registering domains, accounts, organizations, app names, package names, or handles that imply official control of `skm`
-- Using the `skm` logo or visual identity for a product that is not officially maintained by the `skm` project
-- Claiming or implying that your project is endorsed, certified, sponsored, or maintained by the `skm` maintainers
+- Publishing a modified version under the name Ktesio
+- Publishing packages, binaries, containers, installers, or registry entries that appear to be official Ktesio releases
+- Using Ktesio as the main name of a company, product, hosted service, registry, marketplace, or commercial offering
+- Registering domains, accounts, organizations, app names, package names, or handles that imply official control of Ktesio
+- Using the Ktesio logo or visual identity for a product that is not officially maintained by the Ktesio project
+- Claiming or implying that your project is endorsed, certified, sponsored, or maintained by the Ktesio maintainers
 
 Not allowed without permission:
 
-- `skm Pro`
-- `skm Cloud`
-- `skm Registry`
-- `official-skm`
-- `skm-hosted`
-- `skm.dev`, `skm.run`, or similar official-looking domains, unless controlled or approved by the maintainers
-- Any fork that keeps the name `skm` as its primary product name
+- `Ktesio Pro`
+- `Ktesio Cloud`
+- `Ktesio Registry`
+- `official-ktesio`
+- `ktesio-hosted`
+- `ktesio.dev`, `ktesio.run`, or similar official-looking domains, unless controlled or approved by the maintainers
+- Any fork that keeps the name Ktesio as its primary product name
 
 ## 6. Forks and modified versions
 
 Forks are welcome.
 
-However, if you distribute a modified version of `skm`, you must avoid confusing users.
+However, if you distribute a modified version of Ktesio, you must avoid confusing users.
 
 A modified version should:
 
 - Use a different name
-- Clearly state that it is not the official `skm` project
-- Clearly state that it is based on or derived from `skm`
-- Avoid using the official `skm` logo or visual identity
+- Clearly state that it is not the official Ktesio project
+- Clearly state that it is based on or derived from Ktesio
+- Avoid using the official Ktesio logo or visual identity
 - Avoid using package names, binary names, registry names, or domains that make the fork look official
 
 Recommended wording:
 
-> This project is a fork of `skm`. It is not maintained, sponsored, or endorsed by the official `skm` project maintainers.
+> This project is a fork of Ktesio. It is not maintained, sponsored, or endorsed by the official Ktesio project maintainers.
 
 ## 7. Compatible projects, plugins, and skills
 
-You may describe your project as compatible with `skm` if that statement is true.
+You may describe your project as compatible with Ktesio if that statement is true.
 
 Good examples:
 
-- “Compatible with skm”
-- “A skill package for skm”
-- “A registry that can be used by skm”
-- “Tested with skm version X.Y.Z”
+- “Compatible with Ktesio”
+- “A skill package for Ktesio”
+- “A registry that can be used by Ktesio”
+- “Tested with Ktesio version X.Y.Z”
 
 Avoid names that make your project look official.
 
 Avoid:
 
-- `skm-official-plugin`
-- `skm-core-registry`
-- `skm-certified`
-- `skm-maintainers-registry`
+- `ktesio-official-plugin`
+- `ktesio-core-registry`
+- `ktesio-certified`
+- `ktesio-maintainers-registry`
 
 unless you have written permission.
 
 ## 8. Domains, package registries, and namespaces
 
-The maintainers reserve the right to control official-looking `skm` domains, package names, registry names, and release channels.
+The maintainers reserve the right to control official-looking Ktesio domains, package names, registry names, and release channels.
 
 This includes, but is not limited to:
 
@@ -139,31 +139,31 @@ This includes, but is not limited to:
 - Documentation sites
 - Package registries or marketplaces
 
-Do not register names that reasonably imply official ownership or endorsement by the `skm` project.
+Do not register names that reasonably imply official ownership or endorsement by the Ktesio project.
 
 ## 9. Community events and content
 
-You may use the `skm` name for community content when it is clear that the content is independent.
+You may use the Ktesio name for community content when it is clear that the content is independent.
 
 Allowed examples:
 
-- “Introduction to skm”
-- “Building skills with skm”
-- “My experience using skm”
-- “Community notes for skm users”
+- “Introduction to Ktesio”
+- “Building skills with Ktesio”
+- “My experience using Ktesio”
+- “Community notes for Ktesio users”
 
 Avoid titles that imply official status unless approved.
 
 Avoid:
 
-- “The Official skm Conference”
-- “skm Certification Program”
-- “skm Maintainer Training”
-- “Official skm Registry”
+- “The Official Ktesio Conference”
+- “Ktesio Certification Program”
+- “Ktesio Maintainer Training”
+- “Official Ktesio Registry”
 
 ## 10. Merchandise
 
-Do not create or sell merchandise using the skm Marks without written permission.
+Do not create or sell merchandise using the Ktesio Marks without written permission.
 
 This includes shirts, stickers, mugs, posters, badges, and similar items.
 
@@ -171,7 +171,7 @@ The maintainers may approve community merchandise on a case-by-case basis.
 
 ## 11. Reporting misuse
 
-If you see confusing or misleading use of the skm Marks, please report it to the maintainers.
+If you see confusing or misleading use of the Ktesio Marks, please report it to the maintainers.
 
 Include:
 
@@ -183,7 +183,7 @@ The maintainers may request changes, clarification, renaming, removal, or other 
 
 ## 12. No endorsement
 
-Use of the skm Marks does not imply endorsement, sponsorship, partnership, certification, or approval by the `skm` project maintainers.
+Use of the Ktesio Marks does not imply endorsement, sponsorship, partnership, certification, or approval by the Ktesio project maintainers.
 
 ## 13. Permission requests
 

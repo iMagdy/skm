@@ -1,17 +1,17 @@
 [package]
-name = "skm-rs"
+name = "ktesio"
 version = "0.1.0"
 edition = "2021"
 description = "Agentic skills package manager"
 license = "Apache-2.0"
-homepage = "https://github.com/iMagdy/skm"
-repository = "https://github.com/iMagdy/skm"
+homepage = "https://github.com/iMagdy/ktesio"
+repository = "https://github.com/iMagdy/ktesio"
 readme = "README.md"
 keywords = ["agentic", "skills", "package-manager", "cli"]
 categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
-name = "skm"
+name = "kt"
 path = "src/main.rs"
 
 [dependencies]

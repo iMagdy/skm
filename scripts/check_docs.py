@@ -26,7 +26,7 @@ STALE_PATTERNS = [
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 JSON_FENCE_RE = re.compile(r"```json\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 BASH_FENCE_RE = re.compile(r"```(?:bash|sh|shell)\s*(.*?)```", re.DOTALL | re.IGNORECASE)
-SKM_COMMANDS = {
+KT_COMMANDS = {
     "init",
     "install",
     "upgrade",
@@ -108,7 +108,7 @@ def validate_command_examples(
         line = raw_line.strip()
         if not line or line.startswith("#") or line.endswith("\\"):
             continue
-        if "skm" not in line:
+        if "kt" not in line:
             continue
         try:
             tokens = shlex.split(line)
@@ -127,21 +127,21 @@ def validate_command_examples(
             continue
 
         binary = tokens[command_index]
-        if not (binary == "skm" or binary.endswith("/skm") or binary.endswith("\\skm")):
+        if not (binary == "kt" or binary.endswith("/kt") or binary.endswith("\\kt")):
             continue
 
         if len(tokens) <= command_index + 1:
             errors.append(
-                f"{rel_path}: shell fence #{fence_index}, line {line_number}: `skm` example is missing a command"
+                f"{rel_path}: shell fence #{fence_index}, line {line_number}: `kt` example is missing a command"
             )
             continue
 
         command = tokens[command_index + 1]
         if command.startswith("-"):
             continue
-        if command not in SKM_COMMANDS:
+        if command not in KT_COMMANDS:
             errors.append(
-                f"{rel_path}: shell fence #{fence_index}, line {line_number}: unknown `skm` command `{command}`"
+                f"{rel_path}: shell fence #{fence_index}, line {line_number}: unknown `kt` command `{command}`"
             )
 
 

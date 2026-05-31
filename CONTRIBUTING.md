@@ -1,6 +1,6 @@
-# Contributing to skm
+# Contributing to Ktesio
 
-Thank you for your interest in contributing to `skm`.
+Thank you for your interest in contributing to Ktesio.
 
 This project aims to be useful, reliable, and easy to adopt. Contributions are welcome, but we want the project to stay clear, maintainable, and legally safe.
 
@@ -57,9 +57,9 @@ By contributing, you agree that your contribution may be used, modified, and red
 
 ## Project identity and trademarks
 
-The `skm` name and official project identity are controlled by the project maintainers.
+The Ktesio name and official project identity are controlled by the project maintainers.
 
-Forks are welcome, but modified versions should not present themselves as the official `skm` project.
+Forks are welcome, but modified versions should not present themselves as the official Ktesio project.
 
 See `TRADEMARK.md` for the trademark and brand policy.
 
@@ -121,12 +121,12 @@ Please do not open public issues for security vulnerabilities. Follow `SECURITY.
 
 ## Maintainer rights
 
-The maintainers are responsible for the direction, quality, releases, package publishing, and official project identity of `skm`.
+The maintainers are responsible for the direction, quality, releases, package publishing, and official project identity of Ktesio.
 
 The maintainers may close issues or pull requests that are out of scope, inactive, unsafe, legally unclear, or inconsistent with the project's goals.
 
 ## Release authority
 
-Only approved maintainers may publish official `skm` releases, binaries, packages, registry entries, or installation scripts.
+Only approved maintainers may publish official Ktesio releases, binaries, packages, registry entries, or installation scripts.
 
-Unofficial builds must be clearly labeled as unofficial and must not confuse users into thinking they are official `skm` releases.
+Unofficial builds must be clearly labeled as unofficial and must not confuse users into thinking they are official Ktesio releases.

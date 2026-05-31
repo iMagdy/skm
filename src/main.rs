@@ -19,10 +19,10 @@ const HELP_FOOTER: &str = concat!(
 const INIT_AFTER_HELP: &str = "\
 Details:
   Creates an empty manifest with skills and exports objects. If skills.json
-  already exists, skm leaves it untouched.
+  already exists, Ktesio leaves it untouched.
 
 Example:
-  skm init .";
+  kt init .";
 
 const INSTALL_AFTER_HELP: &str = "\
 Details:
@@ -30,8 +30,8 @@ Details:
   name:repo, adds one skill after the repo is fetched and copied successfully.
 
 Examples:
-  skm install
-  skm install docs:https://github.com/example/agent-docs.git";
+  kt install
+  kt install docs:https://github.com/example/agent-docs.git";
 
 const UPGRADE_AFTER_HELP: &str = "\
 Details:
@@ -39,7 +39,7 @@ Details:
   updates skills.lock. Per-skill failures are reported after the rest run.
 
 Example:
-  skm upgrade";
+  kt upgrade";
 
 const EXPORT_AFTER_HELP: &str = "\
 Details:
@@ -47,7 +47,7 @@ Details:
   untracked directories under .agents/skills using their local paths.
 
 Example:
-  skm export";
+  kt export";
 
 const LIST_AFTER_HELP: &str = "\
 Details:
@@ -55,7 +55,7 @@ Details:
   installed, missing, not locked, and orphaned.
 
 Example:
-  skm list";
+  kt list";
 
 const SHOW_AFTER_HELP: &str = "\
 Details:
@@ -63,7 +63,7 @@ Details:
   for one skill.
 
 Example:
-  skm show docs";
+  kt show docs";
 
 const UNINSTALL_AFTER_HELP: &str = "\
 Details:
@@ -71,12 +71,12 @@ Details:
   remove subcommand is an alias for uninstall.
 
 Examples:
-  skm uninstall docs
-  skm remove docs";
+  kt uninstall docs
+  kt remove docs";
 
 #[derive(Parser)]
 #[command(
-    name = "skm",
+    name = "kt",
     version,
     about = "Agentic skills package manager",
     after_help = HELP_FOOTER
@@ -191,12 +191,12 @@ mod tests {
     fn test_cli_help_includes_license_and_repository() {
         let help = Cli::command().render_help().to_string();
         assert!(help.contains("License: Apache-2.0"));
-        assert!(help.contains("Repository: https://github.com/iMagdy/skm"));
+        assert!(help.contains("Repository: https://github.com/iMagdy/ktesio"));
     }
 
     #[test]
     fn test_cli_without_subcommand_is_allowed_for_help_display() {
-        let cli = Cli::try_parse_from(["skm"]).expect("bare skm should parse");
+        let cli = Cli::try_parse_from(["kt"]).expect("bare kt should parse");
         assert!(cli.command.is_none());
     }
 

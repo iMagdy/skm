@@ -6,13 +6,13 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: Thanks for helping improve skm.
+      value: Thanks for helping improve Ktesio.
   - type: input
     id: version
     attributes:
-      label: skm version
-      description: Run `skm --version` if available.
-      placeholder: skm 0.1.0
+      label: Ktesio version
+      description: Run `kt --version` if available.
+      placeholder: kt 0.1.0
     validations:
       required: true
   - type: dropdown

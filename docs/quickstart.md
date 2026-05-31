@@ -1,23 +1,23 @@
 # Quickstart
 
-This guide gets `skm` running from source and shows the full local workflow.
+This guide gets Ktesio running from source and shows the full local workflow.
 
-## Build skm
+## Build Ktesio
 
 ```bash
-git clone https://github.com/iMagdy/skm.git
-cd skm
+git clone https://github.com/iMagdy/ktesio.git
+cd ktesio
 cargo install --path .
 ```
 
-This installs `skm` onto your Cargo binary path.
+This installs Ktesio onto your Cargo binary path.
 
 ## Create a Skills Manifest
 
 From the project where you want to use agent skills:
 
 ```bash
-skm init .
+kt init .
 ```
 
 This writes:
@@ -34,26 +34,26 @@ This writes:
 Add and install one skill with:
 
 ```bash
-skm install docs:https://github.com/example/agent-docs.git
+kt install docs:https://github.com/example/agent-docs.git
 ```
 
 Or edit `skills.json` manually and run:
 
 ```bash
-skm install
+kt install
 ```
 
 Installed files are placed under `.agents/skills/<name>/`, and `skills.lock` records the exact commit after a successful fetch and copy.
 
-Source repos normally declare installable paths in their own `skills.json` `exports`. If a source repo has no `skills.json`, `skm` warns, asks for confirmation, and can install one or more directories found under `skills/` or `SKILLS/`.
+Source repos normally declare installable paths in their own `skills.json` `exports`. If a source repo has no `skills.json`, Ktesio warns, asks for confirmation, and can install one or more directories found under `skills/` or `SKILLS/`.
 
-While installing, `skm` shows a progress bar for cloning and file copy work. Raw git clone output stays hidden unless a failure needs a short summary.
+While installing, Ktesio shows a progress bar for cloning and file copy work. Raw git clone output stays hidden unless a failure needs a short summary.
 
 ## Inspect Project State
 
 ```bash
-skm list
-skm show docs
+kt list
+kt show docs
 ```
 
 Status output is color-coded with small icons in terminals that support them.
@@ -63,17 +63,17 @@ Status output is color-coded with small icons in terminals that support them.
 If `.agents/skills/` and `skills.lock` already exist, rebuild `skills.json` with:
 
 ```bash
-skm export
+kt export
 ```
 
 ## Upgrade or Remove Skills
 
 ```bash
-skm upgrade
-skm remove docs
+kt upgrade
+kt remove docs
 ```
 
-`skm remove` is an alias for `skm uninstall`.
+`kt remove` is an alias for `kt uninstall`.
 
 ## Next Steps
 

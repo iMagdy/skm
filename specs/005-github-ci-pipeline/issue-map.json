@@ -1,22 +1,22 @@
 {
   "feature": "005-github-ci-pipeline",
-  "repo": "iMagdy/skm",
+  "repo": "iMagdy/ktesio",
   "created_at": "2026-05-30T00:00:00Z",
   "issues": {
     "US1": {
       "number": 2,
       "title": "[005-github-ci-pipeline] User Story 1: Automated Quality Gate on Pull Requests",
-      "url": "https://github.com/iMagdy/skm/issues/2"
+      "url": "https://github.com/iMagdy/ktesio/issues/2"
     },
     "US2": {
       "number": 3,
       "title": "[005-github-ci-pipeline] User Story 2: Branch Protection Enforcement",
-      "url": "https://github.com/iMagdy/skm/issues/3"
+      "url": "https://github.com/iMagdy/ktesio/issues/3"
     },
     "shared": {
       "number": 1,
       "title": "[005-github-ci-pipeline] Setup & Infrastructure",
-      "url": "https://github.com/iMagdy/skm/issues/1"
+      "url": "https://github.com/iMagdy/ktesio/issues/1"
     }
   },
   "task_to_issue": {

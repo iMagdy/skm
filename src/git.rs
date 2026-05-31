@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn test_is_installed() {
-        let dir = std::env::temp_dir().join("skm_test_is_installed");
+        let dir = std::env::temp_dir().join("ktesio_test_is_installed");
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
         assert!(is_installed(&dir, "test"));
         assert!(!is_installed(&dir, "other"));
@@ -355,29 +355,29 @@ mod tests {
 
     #[test]
     fn test_clone_invalid_url() {
-        let dir = std::env::temp_dir().join("skm_test_clone_invalid");
-        let result = clone("/definitely/not/a/skm/repo", &dir);
+        let dir = std::env::temp_dir().join("ktesio_test_clone_invalid");
+        let result = clone("/definitely/not/a/ktesio/repo", &dir);
         assert!(result.is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn test_fetch_invalid_dir() {
-        let dir = std::env::temp_dir().join("skm_test_fetch_invalid");
+        let dir = std::env::temp_dir().join("ktesio_test_fetch_invalid");
         let result = fetch(&dir);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_rev_parse_head_invalid_dir() {
-        let dir = std::env::temp_dir().join("skm_test_revparse_invalid");
+        let dir = std::env::temp_dir().join("ktesio_test_revparse_invalid");
         let result = rev_parse_head(&dir);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_resolve_default_branch_invalid_dir() {
-        let dir = std::env::temp_dir().join("skm_test_resolve_invalid");
+        let dir = std::env::temp_dir().join("ktesio_test_resolve_invalid");
         let result = resolve_default_branch(&dir);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "main");
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_resolve_default_branch_falls_back_to_local_main() {
-        let dir = std::env::temp_dir().join("skm_test_resolve_local_main");
+        let dir = std::env::temp_dir().join("ktesio_test_resolve_local_main");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         run_git(&dir, &["init", "-b", "main"]);
@@ -398,23 +398,23 @@ mod tests {
 
     #[test]
     fn test_checkout_default_branch_invalid_dir() {
-        let dir = std::env::temp_dir().join("skm_test_checkout_invalid");
+        let dir = std::env::temp_dir().join("ktesio_test_checkout_invalid");
         let result = checkout_default_branch(&dir);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_clone_to_existing_dir() {
-        let dir = std::env::temp_dir().join("skm_test_clone_existing");
+        let dir = std::env::temp_dir().join("ktesio_test_clone_existing");
         std::fs::create_dir_all(&dir).unwrap();
-        let result = clone("/definitely/not/a/skm/repo", &dir);
+        let result = clone("/definitely/not/a/ktesio/repo", &dir);
         assert!(result.is_err());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn test_fetch_non_git_dir() {
-        let dir = std::env::temp_dir().join("skm_test_fetch_non_git");
+        let dir = std::env::temp_dir().join("ktesio_test_fetch_non_git");
         std::fs::create_dir_all(&dir).unwrap();
         let result = fetch(&dir);
         assert!(result.is_err());

@@ -1,6 +1,6 @@
 # Architecture
 
-`skm` is a single-binary Rust CLI. It keeps domain logic small and file-based so users can understand and repair project state manually when needed.
+Ktesio is a single-binary Rust CLI. It keeps domain logic small and file-based so users can understand and repair project state manually when needed.
 
 ## Modules
 
@@ -35,7 +35,7 @@ for each skill:
 write skills.lock only when entries changed
 ```
 
-When no manifest is present, `skm install` looks for a local `skills/` directory and installs a discovered skill as a fallback.
+When no manifest is present, `kt install` looks for a local `skills/` directory and installs a discovered skill as a fallback.
 
 ### Export
 
@@ -61,8 +61,8 @@ write skills.lock
 
 ## Design Choices
 
-- `skm` shells out to `git` instead of using libgit2 so user SSH keys, credential helpers, proxies, and platform git config work normally.
-- Git clone, fetch, and checkout output is captured so users see `skm` progress bars instead of raw git progress. Failure messages include the useful git summary line.
+- Ktesio shells out to `git` instead of using libgit2 so user SSH keys, credential helpers, proxies, and platform git config work normally.
+- Git clone, fetch, and checkout output is captured so users see Ktesio progress bars instead of raw git progress. Failure messages include the useful git summary line.
 - The manifest and lockfile are JSON because they are easy to inspect, diff, and repair.
 - Partial failures are collected and reported after a command finishes processing remaining skills.
 - Tests use local temporary git repositories instead of network fixtures.

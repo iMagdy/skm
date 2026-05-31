@@ -5,14 +5,14 @@
 Run:
 
 ```bash
-skm init .
+kt init .
 ```
 
-Then add skills manually or with `skm install <name:repo>`.
+Then add skills manually or with `kt install <name:repo>`.
 
 ## Git Clone Fails
 
-`skm` hides raw git clone progress during normal installs, then prints the useful git error line when a clone fails.
+Ktesio hides raw git clone progress during normal installs, then prints the useful git error line when a clone fails.
 
 Check that:
 
@@ -25,12 +25,12 @@ If you need full git diagnostics, run the equivalent `git clone <repo-url>` manu
 
 ## Skill Is Listed as Missing
 
-`skm list` reports `missing` when `skills.lock` has an entry but `.agents/skills/<name>/` is absent.
+`kt list` reports `missing` when `skills.lock` has an entry but `.agents/skills/<name>/` is absent.
 
 Fix it with:
 
 ```bash
-skm install
+kt install
 ```
 
 ## Skill Is Listed as Orphaned
@@ -39,7 +39,7 @@ skm install
 
 Options:
 
-- Run `skm export` if the skill should be restored to the manifest.
+- Run `kt export` if the skill should be restored to the manifest.
 - Remove the stale lock entry by uninstalling or editing the lockfile.
 
 ## Release Workflow Did Not Update Docs
