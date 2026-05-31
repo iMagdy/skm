@@ -10,6 +10,8 @@ use crate::error::{LockfileInvalid, LockfileNotFound};
 pub struct LockEntry {
     pub commit: String,
     pub repo: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skill: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
@@ -113,6 +115,16 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_optional_source_skill() {
+        let content = r#"{"my-skill": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url", "skill": "upstream-skill"}}"#;
+        let lockfile = Lockfile::parse(content).unwrap();
+        assert_eq!(
+            lockfile.entry("my-skill").unwrap().skill.as_deref(),
+            Some("upstream-skill")
+        );
+    }
+
+    #[test]
     fn test_parse_empty() {
         let lockfile = Lockfile::parse("{}").unwrap();
         assert!(lockfile.entries.is_empty());
@@ -150,6 +162,7 @@ mod tests {
             LockEntry {
                 commit: "a".repeat(40),
                 repo: "url".to_string(),
+                skill: None,
             },
         );
         assert!(lockfile.entry("s").is_some());
@@ -168,6 +181,7 @@ mod tests {
             LockEntry {
                 commit: "a".repeat(40),
                 repo: "url".to_string(),
+                skill: None,
             },
         );
         assert!(lockfile.contains("s"));
@@ -181,6 +195,7 @@ mod tests {
             LockEntry {
                 commit: "a".repeat(40),
                 repo: "url".to_string(),
+                skill: None,
             },
         );
         assert!(lockfile.remove("s"));
@@ -201,6 +216,7 @@ mod tests {
             LockEntry {
                 commit: "a".repeat(40),
                 repo: "url".to_string(),
+                skill: None,
             },
         );
         assert!(lockfile.contains("s"));
@@ -214,6 +230,7 @@ mod tests {
             LockEntry {
                 commit: "a".repeat(40),
                 repo: "url".to_string(),
+                skill: None,
             },
         );
         assert_eq!(lockfile.entries().len(), 1);
@@ -227,6 +244,7 @@ mod tests {
             LockEntry {
                 commit: "a".repeat(40),
                 repo: "url".to_string(),
+                skill: None,
             },
         );
         let dir = std::env::temp_dir().join("ktesio_test_lockfile");

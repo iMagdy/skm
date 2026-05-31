@@ -10,6 +10,8 @@ use serde::Serialize;
 struct SkillStatus {
     name: String,
     repo: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    skill: Option<String>,
     commit: String,
     path: String,
     status: String,
@@ -103,6 +105,10 @@ fn collect_statuses(
         statuses.push(SkillStatus {
             name: name.clone(),
             repo: entry.repo.clone(),
+            skill: entry
+                .skill
+                .clone()
+                .or_else(|| lock.and_then(|l| l.skill.clone())),
             commit: commit.to_string(),
             path: dir.display().to_string(),
             status: status.to_string(),
@@ -114,6 +120,7 @@ fn collect_statuses(
             statuses.push(SkillStatus {
                 name: name.clone(),
                 repo: lock.repo.clone(),
+                skill: lock.skill.clone(),
                 commit: lock.commit.clone(),
                 path: git::skill_dir(project_root, name).display().to_string(),
                 status: "orphaned".to_string(),

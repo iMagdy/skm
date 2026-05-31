@@ -2,6 +2,29 @@
 
 All commands support `--help`. `kt --version` prints the package version.
 
+## `kt search <query>`
+
+Search public skill listings from skills.sh.
+
+```bash
+kt search tests
+kt search "react native" --limit 10
+kt search tests --json
+kt search tests --install
+```
+
+Behavior:
+
+- Uses the public skills.sh search endpoint by default.
+- Uses the documented authenticated skills.sh API when `KTESIO_SKILLS_SH_API_KEY` is set.
+- Prints install commands for GitHub-backed results, such as `kt install owner/repo/skill`.
+- Marks unsupported sources as `not installable yet`.
+- Retries rate limits, temporary service failures, and transient network errors up to 3 total attempts.
+- For `429 Too Many Requests`, respects `Retry-After` or `X-RateLimit-Reset` before falling back to short exponential backoff with jitter.
+- Shows friendly retry and final failure messages instead of raw HTTP or JSON errors.
+
+Ktesio uses the skills.sh public API responsibly as described in the skills.sh terms, respects rate limits, and will use the documented authenticated API once API access is available.
+
 ## `kt init <path>`
 
 Create a `skills.json` manifest in a directory.
@@ -40,11 +63,14 @@ Add one skill to `skills.json` and install it.
 
 ```bash
 kt install docs:https://github.com/example/agent-docs.git
+kt install docs:example/agent-docs
+kt install docs:example/agent-docs --ssh
+kt install docs:example/agent-docs/review
 ```
 
-The `repo` value can be an HTTPS URL, SSH URL, or local git path.
+The `repo` value can be an HTTPS URL, SSH URL, local git path, GitHub `owner/repo` shorthand, or GitHub `owner/repo/skill` shorthand. GitHub shorthand resolves to HTTPS by default; `--ssh` resolves shorthand to an SSH clone URL.
 
-Ktesio updates `skills.json` and `skills.lock` only after the repo is fetched and installable content is copied successfully. A bad target, failed clone, missing exports, cancelled fallback, or missing fallback `skills/` directory leaves those files unchanged.
+Ktesio updates `skills.json` and `skills.lock` only after the repo is fetched and installable content is copied successfully. A bad target, failed clone, missing exports, missing selected skill, cancelled fallback, or missing fallback `skills/` directory leaves those files unchanged.
 
 The single-skill install flow uses the same progress bar and quiet git output as bulk install.
 
@@ -54,6 +80,9 @@ Install one or more exports from a source repository without naming the package 
 
 ```bash
 kt install https://github.com/example/agent-docs.git
+kt install example/agent-docs
+kt install example/agent-docs/review
+kt install example/agent-docs --skill review
 kt install --all https://github.com/example/agent-docs.git
 ```
 
@@ -62,6 +91,7 @@ Behavior:
 - Reads the source repo's `skills.json` `exports` and derives destination names from export names.
 - Prompts when multiple exports are available.
 - `--all` installs every export without prompting.
+- `--skill <name>` installs one matching export or fallback-discovered skill.
 - `--yes` accepts safe defaults, such as a single obvious fallback skill.
 - `--no-input` fails instead of prompting when a choice is required.
 - Repos without `skills.json` can use fallback discovery from `.md` files or directories under `skills/` or `SKILLS/`.

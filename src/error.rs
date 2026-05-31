@@ -119,3 +119,10 @@ pub struct SkillsDirectoryEmpty {
 pub struct DoctorUnhealthy {
     pub message: String,
 }
+
+#[derive(Error, Diagnostic, Debug)]
+#[error("{}", message)]
+#[diagnostic(code(ktesio::search::failed))]
+pub struct SearchFailed {
+    pub message: String,
+}

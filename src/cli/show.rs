@@ -11,6 +11,8 @@ use serde::Serialize;
 struct SkillDetails {
     name: String,
     repo: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    skill: Option<String>,
     commit: String,
     path: String,
     status: String,
@@ -66,6 +68,9 @@ pub(crate) fn run_in_with_options(
         .map(|e| e.repo.as_str())
         .or_else(|| lock.map(|l| l.repo.as_str()))
         .unwrap_or("—");
+    let source_skill = entry
+        .and_then(|e| e.skill.clone())
+        .or_else(|| lock.and_then(|l| l.skill.clone()));
     let commit = lock.map(|l| l.commit.as_str()).unwrap_or("—");
     let dir = git::skill_dir(project_root, package_name);
     let status = if dir.exists() {
@@ -79,6 +84,7 @@ pub(crate) fn run_in_with_options(
     let details = SkillDetails {
         name: package_name.to_string(),
         repo: repo.to_string(),
+        skill: source_skill,
         commit: commit.to_string(),
         path: dir.display().to_string(),
         status: status.to_string(),
@@ -93,6 +99,9 @@ pub(crate) fn run_in_with_options(
             ui::skill_name(package_name)
         );
         println!("{} {}", ui::label("Repo   "), details.repo);
+        if let Some(source_skill) = &details.skill {
+            println!("{} {}", ui::label("Skill  "), source_skill);
+        }
         println!("{} {}", ui::label("Commit "), details.commit);
         println!("{} {}", ui::label("Path   "), details.path);
         println!(

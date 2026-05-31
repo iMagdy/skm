@@ -11,8 +11,10 @@ src/
 ├── discovery.rs     # fallback local skill discovery
 ├── error.rs         # miette/thiserror diagnostics
 ├── git.rs           # git CLI wrapper functions
+├── install_target.rs # git URL, local path, and GitHub shorthand resolution
 ├── lockfile.rs      # skills.lock load/save/validation
 ├── manifest.rs      # skills.json load/save/validation
+├── skills_sh.rs     # skills.sh search client, normalization, and retries
 ├── skill.rs         # copy and remove skill files
 └── ui.rs            # shared terminal colors, icons, statuses, and progress bars
 ```
@@ -36,6 +38,19 @@ write skills.lock only when entries changed
 ```
 
 When no manifest is present, `kt install` looks for a local `skills/` directory and installs a discovered skill as a fallback.
+
+GitHub shorthand such as `owner/repo` is resolved before cloning. Exact source skill selections from `owner/repo/skill` or `--skill` are stored in both manifest and lockfile entries so future installs reproduce the same source export.
+
+### Search
+
+```text
+read query and limit
+use authenticated skills.sh API when KTESIO_SKILLS_SH_API_KEY exists
+otherwise use the public skills.sh search endpoint
+retry 429, 503, and transient transport errors up to 3 total attempts
+normalize results into GitHub install targets when possible
+optionally install the selected result through the normal install flow
+```
 
 ### Export
 

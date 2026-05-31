@@ -87,6 +87,7 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
             let new_entry = crate::lockfile::LockEntry {
                 commit,
                 repo: entry.repo.clone(),
+                skill: entry.skill.clone(),
             };
             lockfile.insert(name.clone(), new_entry);
         }

@@ -9,6 +9,8 @@ use crate::error::{ManifestDuplicateName, ManifestInvalidName, ManifestNotFound}
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SkillEntry {
     pub repo: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skill: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -86,7 +88,11 @@ impl Manifest {
     }
 
     pub fn add_skill(&mut self, name: String, repo: String) {
-        self.skills.insert(name, SkillEntry { repo });
+        self.add_skill_with_source(name, repo, None);
+    }
+
+    pub fn add_skill_with_source(&mut self, name: String, repo: String, skill: Option<String>) {
+        self.skills.insert(name, SkillEntry { repo, skill });
     }
 
     pub fn remove_skill(&mut self, name: &str) -> bool {
@@ -175,6 +181,25 @@ mod tests {
         let path = Path::new("test.json");
         let manifest = Manifest::parse_str(content, path).unwrap();
         assert!(manifest.has_skill("my-skill"));
+    }
+
+    #[test]
+    fn test_parse_optional_source_skill() {
+        let content = r#"{
+            "skills": {
+                "my-skill": {
+                    "repo": "https://github.com/example/skills.git",
+                    "skill": "upstream-skill"
+                }
+            },
+            "exports": {}
+        }"#;
+        let path = Path::new("test.json");
+        let manifest = Manifest::parse_str(content, path).unwrap();
+        assert_eq!(
+            manifest.skills["my-skill"].skill.as_deref(),
+            Some("upstream-skill")
+        );
     }
 
     #[test]
@@ -269,6 +294,7 @@ mod tests {
             "test".to_string(),
             SkillEntry {
                 repo: "url2".to_string(),
+                skill: None,
             },
         );
         assert!(manifest.validate().is_ok()); // serde deduplicates

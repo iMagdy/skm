@@ -8,7 +8,8 @@
 {
   "docs": {
     "commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-    "repo": "https://github.com/example/agent-docs.git"
+    "repo": "https://github.com/example/agent-docs.git",
+    "skill": "docs"
   }
 }
 ```
@@ -18,6 +19,7 @@
 - Reproduce installs across machines.
 - Show exactly which commit is installed.
 - Preserve repo URLs for `kt export`.
+- Preserve the exact source export/fallback skill when a multi-skill repo is installed.
 
 ## Behavior
 
@@ -27,6 +29,8 @@
 - `kt list` flags entries not present in `skills.json` as `orphaned`.
 
 For locally discovered skills, Ktesio records a zero commit (`0000000000000000000000000000000000000000`) because there is no remote commit to lock.
+
+The optional `skill` field is omitted for legacy entries and installs that copy every export from the source repo.
 
 ## See Also
 
