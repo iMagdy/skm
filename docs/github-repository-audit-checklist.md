@@ -35,7 +35,8 @@ Evidence:
 - [x] At least one approving review is required.
 - [x] Stale approvals are dismissed after new pushes.
 - [x] Code owner review is required.
-- [x] Last push approval is required.
+- [x] Last push approval is intentionally disabled until the project has at
+  least two maintainers.
 - [x] Review conversations must be resolved.
 - [x] Required status checks are strict.
 - [x] Required checks include `dco`, `fmt`, `clippy`, `test`, `build`, `docs`, and `coverage`.
@@ -50,6 +51,10 @@ Evidence:
 - `gh api repos/iMagdy/skm/rulesets`
 - `gh api repos/iMagdy/skm/rulesets/17082021`
 - `gh api repos/iMagdy/skm/rulesets/17082811`
+
+Note: last push approval is useful when another maintainer can approve a
+maintainer-pushed fix. With only one direct maintainer, it turns normal reviewed
+contribution flow into routine admin bypass.
 
 ## GitHub Actions
 
