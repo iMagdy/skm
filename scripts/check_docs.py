@@ -28,6 +28,7 @@ JSON_FENCE_RE = re.compile(r"```json\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 BASH_FENCE_RE = re.compile(r"```(?:bash|sh|shell)\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 KT_COMMANDS = {
     "init",
+    "search",
     "install",
     "upgrade",
     "export",

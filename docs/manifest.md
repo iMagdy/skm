@@ -8,7 +8,8 @@
 {
   "skills": {
     "docs": {
-      "repo": "https://github.com/example/agent-docs.git"
+      "repo": "https://github.com/example/agent-docs.git",
+      "skill": "docs"
     }
   },
   "exports": {
@@ -26,6 +27,7 @@
 | `skills` | object | no | Skills this project imports; defaults to `{}` |
 | `exports` | object | no | Local files or directories this repo exposes to other projects; defaults to `{}` |
 | `skills.<name>.repo` | string | yes | Git clone URL or local git path |
+| `skills.<name>.skill` | string | no | Specific source export/fallback skill to install from a multi-skill repo |
 | `exports.<name>.path` | string | yes | Path inside this repo to copy when installed elsewhere |
 
 Skill names must match:
@@ -48,7 +50,8 @@ Skill names must match:
 {
   "skills": {
     "docs": {
-      "repo": "https://github.com/example/agent-docs.git"
+      "repo": "https://github.com/example/agent-docs.git",
+      "skill": "docs"
     },
     "review": {
       "repo": "git@github.com:example/review-skill.git"
@@ -57,6 +60,8 @@ Skill names must match:
   "exports": {}
 }
 ```
+
+The optional `skill` field is written when a command such as `kt install example/agent-docs/docs` or `kt install example/agent-docs --skill docs` installs one export from a multi-skill source. Older manifests without `skill` remain valid.
 
 ## Export Example
 

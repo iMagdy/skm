@@ -2,9 +2,11 @@ mod cli;
 mod discovery;
 mod error;
 mod git;
+mod install_target;
 mod lockfile;
 mod manifest;
 mod skill;
+mod skills_sh;
 mod ui;
 
 use clap::{CommandFactory, Parser, Subcommand};
@@ -29,12 +31,27 @@ Details:
   With no argument, installs every skill declared in skills.json. With
   name:repo, adds one skill after the repo is fetched and copied successfully.
   With a bare repo URL or local path, reads exports from that repo and lets you
-  choose which skills to install.
+  choose which skills to install. GitHub owner/repo shorthand resolves to an
+  HTTPS clone URL by default; use --ssh to prefer SSH. Add /skill or --skill to
+  install one export from a multi-skill repository.
 
 Examples:
   kt install
   kt install docs:https://github.com/example/agent-docs.git
+  kt install docs:hashicorp/agent-skills/run-acceptance-tests
   kt install --all https://github.com/example/agent-docs.git";
+
+const SEARCH_AFTER_HELP: &str = "\
+Details:
+  Searches skills.sh for public skill listings and prints install targets that
+  Ktesio can clone from git. Ktesio uses the skills.sh public API responsibly,
+  respects rate limits with bounded retries, and will use the documented
+  authenticated API when KTESIO_SKILLS_SH_API_KEY is configured.
+
+Examples:
+  kt search tests
+  kt search \"react native\" --limit 10
+  kt search tests --install";
 
 const UPGRADE_AFTER_HELP: &str = "\
 Details:
@@ -119,6 +136,12 @@ enum Commands {
         /// Install every discovered export from a repo target
         #[arg(long)]
         all: bool,
+        /// Resolve GitHub owner/repo shorthand to an SSH clone URL
+        #[arg(long)]
+        ssh: bool,
+        /// Install one named source skill/export from the target repo
+        #[arg(long)]
+        skill: Option<String>,
         /// Accept safe defaults for prompts
         #[arg(long)]
         yes: bool,
@@ -127,6 +150,28 @@ enum Commands {
         no_input: bool,
         /// Optional: skill name and repo URL (format: name:url)
         target: Option<String>,
+    },
+    /// Search public skill listings
+    #[command(
+        about = "Search public skill listings",
+        after_help = SEARCH_AFTER_HELP
+    )]
+    Search {
+        /// Emit machine-readable JSON
+        #[arg(long)]
+        json: bool,
+        /// Maximum number of results to return
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// Select and install one result after searching
+        #[arg(long)]
+        install: bool,
+        /// Fail instead of prompting for interactive choices
+        #[arg(long = "no-input")]
+        no_input: bool,
+        /// Search query
+        #[arg(required = true, num_args = 1..)]
+        query: Vec<String>,
     },
     /// Upgrade all installed skills to latest versions
     #[command(
@@ -195,19 +240,50 @@ enum ExportCommands {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
+    if let Err(err) = run_cli() {
+        ui::error(err);
+        std::process::exit(1);
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+fn run_cli() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
         Some(Commands::Init { path }) => cli::init::run(&path),
         Some(Commands::Install {
             all,
+            ssh,
+            skill,
             yes,
             no_input,
             target,
         }) => cli::install::run_with_options(
             target.as_deref(),
-            cli::install::InstallOptions { all, yes, no_input },
+            cli::install::InstallOptions {
+                all,
+                yes,
+                no_input,
+                ssh,
+                skill,
+            },
+        ),
+        Some(Commands::Search {
+            json,
+            limit,
+            install,
+            no_input,
+            query,
+        }) => cli::search::run_with_options(
+            &query.join(" "),
+            cli::search::SearchOptions {
+                json,
+                limit,
+                install,
+                no_input,
+            },
         ),
         Some(Commands::Upgrade) => cli::upgrade::run(),
         Some(Commands::Export { command }) => match command {
@@ -242,6 +318,7 @@ mod tests {
         let cmd = Cli::command();
         assert!(cmd.find_subcommand("init").is_some());
         assert!(cmd.find_subcommand("install").is_some());
+        assert!(cmd.find_subcommand("search").is_some());
         assert!(cmd.find_subcommand("upgrade").is_some());
         assert!(cmd.find_subcommand("export").is_some());
         assert!(cmd.find_subcommand("list").is_some());

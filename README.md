@@ -28,7 +28,8 @@ cargo install --path .
 
 # In another project:
 kt init .
-kt install docs:https://github.com/example/agent-docs.git
+kt install docs:example/agent-docs
+kt search tests
 kt list
 ```
 
@@ -71,6 +72,7 @@ brew install imagdy/tap/ktesio
 | Command | Purpose |
 |---------|---------|
 | `kt init <path>` | Create `skills.json` in a project |
+| `kt search <query>` | Search public skill listings from skills.sh |
 | `kt install` | Install every skill declared in `skills.json` |
 | `kt install <name:repo>` | Add and install one skill |
 | `kt install --all <repo>` | Install all exported skills from one repo |
@@ -91,7 +93,8 @@ brew install imagdy/tap/ktesio
 {
   "skills": {
     "docs": {
-      "repo": "https://github.com/example/agent-docs.git"
+      "repo": "https://github.com/example/agent-docs.git",
+      "skill": "docs"
     }
   },
   "exports": {}
@@ -117,6 +120,10 @@ When another repository installs a skill repo, that repo can use `exports` to ch
 ## Project Status
 
 Ktesio is early, useful, and intentionally conservative. The current package format is plain JSON plus git. Future work may add registries, richer metadata, and package signing without taking away the simple manifest workflow.
+
+## Thanks
+
+Thank you to [Skills.sh](https://www.skills.sh/) for providing public skill search, and to [Vercel](https://vercel.com/) for making Skills.sh available to the public.
 
 ## License
 

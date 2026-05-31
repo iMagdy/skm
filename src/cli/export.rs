@@ -30,7 +30,7 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
     let mut exported = 0usize;
 
     for (name, entry) in lockfile.entries() {
-        manifest.add_skill(name.clone(), entry.repo.clone());
+        manifest.add_skill_with_source(name.clone(), entry.repo.clone(), entry.skill.clone());
         exported += 1;
     }
 
@@ -165,6 +165,7 @@ mod tests {
             LockEntry {
                 commit: "a".repeat(40),
                 repo: "https://github.com/example/skill.git".to_string(),
+                skill: None,
             },
         );
         lockfile.save(&dir.join("skills.lock")).unwrap();

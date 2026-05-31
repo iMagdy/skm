@@ -6,16 +6,19 @@ use indicatif::{MultiProgress, ProgressBar};
 use crate::discovery::{self, DiscoveredSkill, SkillType};
 use crate::error::{InstallAlreadyExists, InstallInvalidFormat, SkillCopyFailed};
 use crate::git;
+use crate::install_target;
 use crate::lockfile::{LockEntry, Lockfile};
 use crate::manifest::Manifest;
 use crate::skill;
 use crate::ui;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct InstallOptions {
     pub all: bool,
     pub yes: bool,
     pub no_input: bool,
+    pub ssh: bool,
+    pub skill: Option<String>,
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -47,9 +50,17 @@ pub(crate) fn run_in_with_options(
     options: InstallOptions,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(t) = target {
-        return match parse_install_target(t)? {
-            InstallTarget::Named { name, repo } => run_single(project_root, &name, &repo),
-            InstallTarget::Repo(repo) => run_repo_target(project_root, &repo, options),
+        return match parse_install_target(t, &options)? {
+            InstallTarget::Named {
+                name,
+                repo,
+                source_skill,
+            } => run_single(project_root, &name, &repo, source_skill.as_deref()),
+            InstallTarget::Repo { repo, source_skill } => {
+                let mut options = options;
+                options.skill = source_skill;
+                run_repo_target(project_root, &repo, options)
+            }
         };
     }
 
@@ -73,26 +84,39 @@ fn run_bulk_with_manifest(
     project_root: &Path,
     manifest_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let manifest = Manifest::load(manifest_path)?;
+    let mut manifest = Manifest::load(manifest_path)?;
     let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
+    let entries = manifest
+        .skills
+        .iter()
+        .map(|(name, entry)| (name.clone(), entry.clone()))
+        .collect::<Vec<_>>();
 
     let mp = MultiProgress::new();
     let mut errors: Vec<String> = Vec::new();
     let mut lockfile_changed = false;
+    let mut manifest_changed = false;
 
-    for (name, entry) in &manifest.skills {
-        let skill_dir = git::skill_dir(project_root, name);
+    for (name, entry) in entries {
+        let skill_dir = git::skill_dir(project_root, &name);
 
-        if skill_dir.exists() && lockfile.contains(name) {
+        if skill_dir.exists() && lockfile.contains(&name) {
             ui::warning(format!(
                 "Skill {} already installed, skipping",
-                ui::skill_name(name)
+                ui::skill_name(&name)
             ));
             continue;
         }
 
-        let pb = ui::install_progress(&mp, name);
-        let commit = match install_repo_to_skill_dir(project_root, name, &entry.repo, &pb) {
+        let resolved = resolve_manifest_entry(&entry.repo, entry.skill.clone());
+        let pb = ui::install_progress(&mp, &name);
+        let commit = match install_repo_to_skill_dir(
+            project_root,
+            &name,
+            &resolved.repo,
+            resolved.source_skill.as_deref(),
+            &pb,
+        ) {
             Ok(commit) => commit,
             Err(e) => {
                 ui::finish_error(&pb, format!("Error installing {}: {}", name, e));
@@ -114,12 +138,25 @@ fn run_bulk_with_manifest(
             name.clone(),
             LockEntry {
                 commit,
-                repo: entry.repo.clone(),
+                repo: resolved.repo.clone(),
+                skill: resolved.source_skill.clone(),
             },
         );
         lockfile_changed = true;
+        if entry.repo != resolved.repo || entry.skill != resolved.source_skill {
+            manifest.add_skill_with_source(
+                name.clone(),
+                resolved.repo.clone(),
+                resolved.source_skill.clone(),
+            );
+            manifest_changed = true;
+        }
 
-        ui::finish_success(&pb, format!("Installed {}", ui::skill_name(name)));
+        ui::finish_success(&pb, format!("Installed {}", ui::skill_name(&name)));
+    }
+
+    if manifest_changed {
+        manifest.save(manifest_path)?;
     }
 
     if lockfile_changed {
@@ -270,6 +307,7 @@ fn install_discovered_skill(
         LockEntry {
             commit: "0".repeat(40), // Local discovery has no git commit to lock.
             repo: skill.path.to_string_lossy().to_string(),
+            skill: None,
         },
     );
     lockfile.save(&project_root.join("skills.lock"))?;
@@ -324,6 +362,7 @@ fn run_single(
     project_root: &Path,
     name: &str,
     repo_url: &str,
+    source_skill: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !is_valid_skill_name(name) {
         return Err(InstallInvalidFormat {
@@ -349,9 +388,13 @@ fn run_single(
     let mp = MultiProgress::new();
     let pb = ui::install_progress(&mp, name);
 
-    let commit = install_repo_to_skill_dir(project_root, name, repo_url, &pb)?;
+    let commit = install_repo_to_skill_dir(project_root, name, repo_url, source_skill, &pb)?;
 
-    manifest.add_skill(name.to_string(), repo_url.to_string());
+    manifest.add_skill_with_source(
+        name.to_string(),
+        repo_url.to_string(),
+        source_skill.map(str::to_string),
+    );
     manifest.save(&manifest_path)?;
 
     let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
@@ -360,6 +403,7 @@ fn run_single(
         LockEntry {
             commit,
             repo: repo_url.to_string(),
+            skill: source_skill.map(str::to_string),
         },
     );
     lockfile.save(&project_root.join("skills.lock"))?;
@@ -378,6 +422,7 @@ fn install_repo_to_skill_dir(
     project_root: &Path,
     name: &str,
     repo_url: &str,
+    source_skill: Option<&str>,
     pb: &ProgressBar,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let skill_dir = git::skill_dir(project_root, name);
@@ -401,7 +446,12 @@ fn install_repo_to_skill_dir(
     pb.set_position(92);
     pb.set_message(format!("Copying files for {}", ui::skill_name(name)));
     let prompter = DialoguerFallbackPrompter;
-    copy_repo_content_for_install(&workspace.clone_dir, &workspace.install_dir, &prompter)?;
+    copy_repo_content_for_install(
+        &workspace.clone_dir,
+        &workspace.install_dir,
+        source_skill,
+        &prompter,
+    )?;
 
     if let Some(parent) = skill_dir.parent() {
         std::fs::create_dir_all(parent)?;
@@ -416,8 +466,23 @@ fn install_repo_to_skill_dir(
 fn copy_repo_content_for_install(
     clone_dir: &Path,
     dest_dir: &Path,
+    source_skill: Option<&str>,
     prompter: &dyn FallbackPrompter,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(source_skill) = source_skill {
+        let installables = discover_repo_installables_for_exact(clone_dir)?;
+        let installable = installables
+            .iter()
+            .find(|installable| installable.name == source_skill)
+            .ok_or_else(|| SkillCopyFailed {
+                message: format!(
+                    "Source skill '{}' was not found in the repository",
+                    source_skill
+                ),
+            })?;
+        return copy_installable_path(&installable.path, dest_dir);
+    }
+
     if clone_dir.join("skills.json").exists() {
         return skill::copy_cloned_repo_to_dest(clone_dir, dest_dir);
     }
@@ -543,23 +608,71 @@ fn is_valid_skill_name(name: &str) -> bool {
 }
 
 enum InstallTarget {
-    Named { name: String, repo: String },
-    Repo(String),
+    Named {
+        name: String,
+        repo: String,
+        source_skill: Option<String>,
+    },
+    Repo {
+        repo: String,
+        source_skill: Option<String>,
+    },
 }
 
-fn parse_install_target(target: &str) -> Result<InstallTarget, Box<dyn std::error::Error>> {
+struct ResolvedManifestEntry {
+    repo: String,
+    source_skill: Option<String>,
+}
+
+fn resolve_manifest_entry(repo: &str, source_skill: Option<String>) -> ResolvedManifestEntry {
+    match install_target::resolve_repo_target(repo, false) {
+        Ok(resolved) => ResolvedManifestEntry {
+            repo: resolved.repo,
+            source_skill: source_skill.or(resolved.source_skill),
+        },
+        Err(_) => ResolvedManifestEntry {
+            repo: repo.to_string(),
+            source_skill,
+        },
+    }
+}
+
+fn parse_install_target(
+    target: &str,
+    options: &InstallOptions,
+) -> Result<InstallTarget, Box<dyn std::error::Error>> {
     if target.is_empty() {
         return Err(InstallInvalidFormat {
             message: "Install target cannot be empty".to_string(),
         }
         .into());
     }
-
-    if let Some((name, repo)) = parse_named_target(target)? {
-        return Ok(InstallTarget::Named { name, repo });
+    if let Some(source_skill) = options.skill.as_deref() {
+        if !install_target::is_valid_skill_name(source_skill) {
+            return Err(InstallInvalidFormat {
+                message: format!(
+                    "Invalid source skill '{}': must match [a-zA-Z0-9_-]+",
+                    source_skill
+                ),
+            }
+            .into());
+        }
     }
 
-    Ok(InstallTarget::Repo(target.to_string()))
+    if let Some((name, repo)) = parse_named_target(target)? {
+        let resolved = install_target::resolve_repo_target(&repo, options.ssh)?;
+        return Ok(InstallTarget::Named {
+            name,
+            repo: resolved.repo,
+            source_skill: options.skill.clone().or(resolved.source_skill),
+        });
+    }
+
+    let resolved = install_target::resolve_repo_target(target, options.ssh)?;
+    Ok(InstallTarget::Repo {
+        repo: resolved.repo,
+        source_skill: options.skill.clone().or(resolved.source_skill),
+    })
 }
 
 fn parse_named_target(
@@ -595,6 +708,35 @@ struct SourceInstallable {
     path: PathBuf,
 }
 
+fn discover_repo_installables_for_exact(
+    clone_dir: &Path,
+) -> Result<Vec<SourceInstallable>, Box<dyn std::error::Error>> {
+    let manifest_path = clone_dir.join("skills.json");
+    if manifest_path.exists() {
+        return discover_manifest_installables(clone_dir, &manifest_path);
+    }
+
+    let skills_dir =
+        discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
+            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+        })?;
+    let fallback = discover_fallback_skill_dirs(&skills_dir)?;
+    if fallback.is_empty() {
+        return Err(SkillCopyFailed {
+            message: "Source skills directory does not contain skill directories".to_string(),
+        }
+        .into());
+    }
+
+    Ok(fallback
+        .into_iter()
+        .map(|skill| SourceInstallable {
+            name: skill.name,
+            path: skill.path,
+        })
+        .collect())
+}
+
 fn run_repo_target(
     project_root: &Path,
     repo_url: &str,
@@ -609,8 +751,12 @@ fn run_repo_target(
     let commit = git::rev_parse_head(&workspace.clone_dir).unwrap_or_default();
 
     let prompter = DialoguerFallbackPrompter;
-    let installables = discover_repo_installables(&workspace.clone_dir, options, &prompter)?;
-    let selected_indexes = select_repo_installables(&installables, options, &prompter)?;
+    let installables = if options.skill.is_some() {
+        discover_repo_installables_for_exact(&workspace.clone_dir)?
+    } else {
+        discover_repo_installables(&workspace.clone_dir, options.clone(), &prompter)?
+    };
+    let selected_indexes = select_repo_installables(&installables, options.clone(), &prompter)?;
 
     if selected_indexes.is_empty() {
         return Err(SkillCopyFailed {
@@ -662,12 +808,17 @@ fn run_repo_target(
     for installable in &staged {
         let dest = git::skill_dir(project_root, &installable.name);
         std::fs::rename(workspace.install_dir.join(&installable.name), &dest)?;
-        manifest.add_skill(installable.name.clone(), repo_url.to_string());
+        manifest.add_skill_with_source(
+            installable.name.clone(),
+            repo_url.to_string(),
+            Some(installable.name.clone()),
+        );
         lockfile.insert(
             installable.name.clone(),
             LockEntry {
                 commit: commit.clone(),
                 repo: repo_url.to_string(),
+                skill: Some(installable.name.clone()),
             },
         );
     }
@@ -694,46 +845,7 @@ fn discover_repo_installables(
 ) -> Result<Vec<SourceInstallable>, Box<dyn std::error::Error>> {
     let manifest_path = clone_dir.join("skills.json");
     if manifest_path.exists() {
-        let manifest = Manifest::load(&manifest_path)?;
-        if manifest.exports.is_empty() {
-            return Err(SkillCopyFailed {
-                message: "Source skills.json does not declare any exports".to_string(),
-            }
-            .into());
-        }
-
-        let mut installables = manifest
-            .exports
-            .iter()
-            .map(|(name, export)| SourceInstallable {
-                name: name.clone(),
-                path: clone_dir.join(&export.path),
-            })
-            .collect::<Vec<_>>();
-        installables.sort_by(|a, b| a.name.cmp(&b.name));
-
-        for installable in &installables {
-            if !is_valid_skill_name(&installable.name) {
-                return Err(SkillCopyFailed {
-                    message: format!(
-                        "Source export name '{}' is invalid: must match [a-zA-Z0-9_-]+",
-                        installable.name
-                    ),
-                }
-                .into());
-            }
-            if !installable.path.exists() {
-                return Err(SkillCopyFailed {
-                    message: format!(
-                        "Source export path '{}' does not exist",
-                        installable.path.display()
-                    ),
-                }
-                .into());
-            }
-        }
-
-        return Ok(installables);
+        return discover_manifest_installables(clone_dir, &manifest_path);
     }
 
     if options.no_input && !options.yes && !options.all {
@@ -772,11 +884,70 @@ fn discover_repo_installables(
         .collect())
 }
 
+fn discover_manifest_installables(
+    clone_dir: &Path,
+    manifest_path: &Path,
+) -> Result<Vec<SourceInstallable>, Box<dyn std::error::Error>> {
+    let manifest = Manifest::load(manifest_path)?;
+    if manifest.exports.is_empty() {
+        return Err(SkillCopyFailed {
+            message: "Source skills.json does not declare any exports".to_string(),
+        }
+        .into());
+    }
+
+    let mut installables = manifest
+        .exports
+        .iter()
+        .map(|(name, export)| SourceInstallable {
+            name: name.clone(),
+            path: clone_dir.join(&export.path),
+        })
+        .collect::<Vec<_>>();
+    installables.sort_by(|a, b| a.name.cmp(&b.name));
+
+    for installable in &installables {
+        if !is_valid_skill_name(&installable.name) {
+            return Err(SkillCopyFailed {
+                message: format!(
+                    "Source export name '{}' is invalid: must match [a-zA-Z0-9_-]+",
+                    installable.name
+                ),
+            }
+            .into());
+        }
+        if !installable.path.exists() {
+            return Err(SkillCopyFailed {
+                message: format!(
+                    "Source export path '{}' does not exist",
+                    installable.path.display()
+                ),
+            }
+            .into());
+        }
+    }
+
+    Ok(installables)
+}
+
 fn select_repo_installables(
     installables: &[SourceInstallable],
     options: InstallOptions,
     prompter: &dyn FallbackPrompter,
 ) -> Result<Vec<usize>, Box<dyn std::error::Error>> {
+    if let Some(source_skill) = options.skill.as_deref() {
+        let index = installables
+            .iter()
+            .position(|installable| installable.name == source_skill)
+            .ok_or_else(|| SkillCopyFailed {
+                message: format!(
+                    "Source skill '{}' was not found in the repository",
+                    source_skill
+                ),
+            })?;
+        return Ok(vec![index]);
+    }
+
     if options.all || installables.len() == 1 {
         return Ok((0..installables.len()).collect());
     }
@@ -1016,7 +1187,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
-        let result = run_single(&dir, "bad name", "url");
+        let result = run_single(&dir, "bad name", "url", None);
 
         assert!(result.is_err());
         assert!(!dir.join("skills.json").exists());
@@ -1031,7 +1202,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let repo = create_local_repo(&dir, "source");
 
-        let result = run_single(&dir, "source", repo.to_str().unwrap());
+        let result = run_single(&dir, "source", repo.to_str().unwrap(), None);
 
         assert!(result.is_ok());
         assert!(dir.join("skills.json").exists());
@@ -1074,7 +1245,7 @@ mod tests {
             confirm: false,
             selections: vec![],
         };
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_err());
         assert!(!dst.exists());
@@ -1097,7 +1268,7 @@ mod tests {
             confirm: true,
             selections: vec![1],
         };
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_ok());
         assert!(!dst.join("alpha").exists());
@@ -1119,7 +1290,7 @@ mod tests {
             confirm: true,
             selections: vec![],
         };
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_ok());
         assert!(dst.join("only/SKILL.md").exists());
@@ -1139,7 +1310,7 @@ mod tests {
             confirm: true,
             selections: vec![],
         };
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_ok());
         assert!(dst.join("file-skill/file-skill.md").exists());
@@ -1338,7 +1509,7 @@ mod tests {
         std::fs::create_dir_all(git::skill_dir(&dir, "docs")).unwrap();
         let progress = ProgressBar::hidden();
 
-        let result = install_repo_to_skill_dir(&dir, "docs", "unused", &progress);
+        let result = install_repo_to_skill_dir(&dir, "docs", "unused", None, &progress);
 
         assert!(result.is_err());
         assert!(result
@@ -1360,7 +1531,7 @@ mod tests {
             selections: vec![],
         };
 
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("no skills.json"));
@@ -1379,7 +1550,7 @@ mod tests {
             selections: vec![],
         };
 
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_err());
         assert!(result
@@ -1402,7 +1573,7 @@ mod tests {
             selections: vec![],
         };
 
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_err());
         assert!(result
@@ -1425,7 +1596,7 @@ mod tests {
             selections: vec![99],
         };
 
-        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
 
         assert!(result.is_err());
         assert!(result
@@ -1516,22 +1687,59 @@ mod tests {
 
     #[test]
     fn test_parse_install_target_recognizes_named_and_repo_targets() {
-        match parse_install_target("docs:https://example.com/repo.git").unwrap() {
-            InstallTarget::Named { name, repo } => {
+        let options = InstallOptions::default();
+        match parse_install_target("docs:https://example.com/repo.git", &options).unwrap() {
+            InstallTarget::Named {
+                name,
+                repo,
+                source_skill,
+            } => {
                 assert_eq!(name, "docs");
                 assert_eq!(repo, "https://example.com/repo.git");
+                assert_eq!(source_skill, None);
             }
-            InstallTarget::Repo(_) => panic!("expected named target"),
+            InstallTarget::Repo { .. } => panic!("expected named target"),
         }
 
-        match parse_install_target("https://example.com/repo.git").unwrap() {
-            InstallTarget::Repo(repo) => assert_eq!(repo, "https://example.com/repo.git"),
+        match parse_install_target("https://example.com/repo.git", &options).unwrap() {
+            InstallTarget::Repo { repo, source_skill } => {
+                assert_eq!(repo, "https://example.com/repo.git");
+                assert_eq!(source_skill, None);
+            }
             InstallTarget::Named { .. } => panic!("expected repo target"),
         }
 
-        assert!(parse_install_target("bad name:url").is_err());
-        assert!(parse_install_target("name:").is_err());
-        assert!(parse_install_target("").is_err());
+        match parse_install_target("docs:hashicorp/agent-skills/run-tests", &options).unwrap() {
+            InstallTarget::Named {
+                name,
+                repo,
+                source_skill,
+            } => {
+                assert_eq!(name, "docs");
+                assert_eq!(repo, "https://github.com/hashicorp/agent-skills.git");
+                assert_eq!(source_skill.as_deref(), Some("run-tests"));
+            }
+            InstallTarget::Repo { .. } => panic!("expected named target"),
+        }
+
+        assert!(parse_install_target("bad name:url", &options).is_err());
+        assert!(parse_install_target("name:", &options).is_err());
+        assert!(parse_install_target("", &options).is_err());
+    }
+
+    #[test]
+    fn test_resolve_manifest_entry_canonicalizes_github_shorthand() {
+        let resolved = resolve_manifest_entry("hashicorp/agent-skills/run-tests", None);
+
+        assert_eq!(
+            resolved.repo,
+            "https://github.com/hashicorp/agent-skills.git"
+        );
+        assert_eq!(resolved.source_skill.as_deref(), Some("run-tests"));
+
+        let explicit_skill =
+            resolve_manifest_entry("hashicorp/agent-skills/run-tests", Some("lint".to_string()));
+        assert_eq!(explicit_skill.source_skill.as_deref(), Some("lint"));
     }
 
     #[test]
@@ -1803,6 +2011,57 @@ mod tests {
     }
 
     #[test]
+    fn test_run_repo_target_installs_exact_source_skill() {
+        let dir = std::env::temp_dir().join("ktesio_test_run_repo_target_exact_skill");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = create_multi_local_repo(&dir, "source");
+
+        let result = run_repo_target(
+            &dir,
+            repo.to_str().unwrap(),
+            InstallOptions {
+                skill: Some("beta".to_string()),
+                ..InstallOptions::default()
+            },
+        );
+
+        assert!(result.is_ok());
+        assert!(!dir.join(".agents/skills/alpha").exists());
+        assert!(dir.join(".agents/skills/beta/SKILL.md").exists());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert_eq!(manifest.skills["beta"].skill.as_deref(), Some("beta"));
+        let lockfile = Lockfile::load(&dir.join("skills.lock")).unwrap();
+        assert_eq!(
+            lockfile.entry("beta").unwrap().skill.as_deref(),
+            Some("beta")
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_single_installs_exact_source_skill_into_named_destination() {
+        let dir = std::env::temp_dir().join("ktesio_test_run_single_exact_skill");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = create_multi_local_repo(&dir, "source");
+
+        let result = run_single(&dir, "docs", repo.to_str().unwrap(), Some("beta"));
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/docs/SKILL.md").exists());
+        assert!(!dir.join(".agents/skills/docs/beta/SKILL.md").exists());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert_eq!(manifest.skills["docs"].skill.as_deref(), Some("beta"));
+        let lockfile = Lockfile::load(&dir.join("skills.lock")).unwrap();
+        assert_eq!(
+            lockfile.entry("docs").unwrap().skill.as_deref(),
+            Some("beta")
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_run_repo_target_skips_existing_and_errors_when_nothing_installable() {
         let dir = std::env::temp_dir().join("ktesio_test_run_repo_target_existing");
         let _ = std::fs::remove_dir_all(&dir);
@@ -1838,6 +2097,36 @@ mod tests {
                 r#"{{"skills": {{}}, "exports": {{"{}": {{"path": "skills/{}"}}}}}}"#,
                 name, name
             ),
+        )
+        .unwrap();
+        run_git(&repo, &["init"]);
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=ktesio tests",
+                "-c",
+                "user.email=ktesio-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "initial fixture",
+            ],
+        );
+        repo
+    }
+
+    fn create_multi_local_repo(root: &Path, name: &str) -> std::path::PathBuf {
+        let repo = root.join(name);
+        std::fs::create_dir_all(repo.join("skills/alpha")).unwrap();
+        std::fs::create_dir_all(repo.join("skills/beta")).unwrap();
+        std::fs::write(repo.join("skills/alpha/SKILL.md"), "# Alpha").unwrap();
+        std::fs::write(repo.join("skills/beta/SKILL.md"), "# Beta").unwrap();
+        std::fs::write(
+            repo.join("skills.json"),
+            r#"{"skills": {}, "exports": {"alpha": {"path": "skills/alpha"}, "beta": {"path": "skills/beta"}}}"#,
         )
         .unwrap();
         run_git(&repo, &["init"]);

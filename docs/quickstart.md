@@ -35,14 +35,26 @@ Add and install one skill with:
 
 ```bash
 kt install docs:https://github.com/example/agent-docs.git
+kt install docs:example/agent-docs
 ```
 
 If the source repo declares multiple exports, install from the repo directly:
 
 ```bash
 kt install https://github.com/example/agent-docs.git
+kt install example/agent-docs/docs
+kt install example/agent-docs --skill docs
 kt install --all https://github.com/example/agent-docs.git
 ```
+
+Search public skill listings with:
+
+```bash
+kt search tests
+kt search tests --install
+```
+
+Search uses skills.sh for discovery and still installs by cloning git repositories. Ktesio respects skills.sh rate limits with bounded retries.
 
 Or edit `skills.json` manually and run:
 
