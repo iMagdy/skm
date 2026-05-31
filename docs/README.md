@@ -20,5 +20,6 @@ Welcome to the `skm` docs. These pages explain how to install, use, contribute t
 - [Testing](testing.md)
 - [Contributing](contributing.md)
 - [Release process](release-process.md)
+- [GitHub repository audit checklist](github-repository-audit-checklist.md)
 - [GitHub project sync](github-project-sync.md)
 - [Release notes](RELEASE_NOTES.md)
