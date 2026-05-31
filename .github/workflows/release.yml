@@ -251,7 +251,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md docs/RELEASE_NOTES.md
-          git commit -m "docs: update release notes for ${tag}"
+          git commit -s -m "docs: update release notes for ${tag}"
           git push --force-with-lease origin "$branch"
           if gh pr view "$branch" >/dev/null 2>&1; then
             gh pr edit "$branch" --title "docs: update release notes for ${tag}" --body "Updates generated release documentation for ${tag}."
