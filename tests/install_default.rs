@@ -1,6 +1,6 @@
 mod helpers;
 
-use helpers::{run_skm_command, run_skm_command_output, TestContext};
+use helpers::{run_kt_command, run_kt_command_output, TestContext};
 
 #[test]
 fn test_install_single_skill_creates_directory() {
@@ -24,9 +24,9 @@ fn test_install_single_skill_creates_directory() {
     )
     .unwrap();
 
-    // Run skm install
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    // Run kt install
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
     // Verify skill directory was created
     let skill_dir = ctx.skills_dir().join("awesome-copilot");
@@ -55,9 +55,9 @@ fn test_install_single_skill_updates_lockfile() {
     )
     .unwrap();
 
-    // Run skm install
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    // Run kt install
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
     // Verify lockfile was created and contains the skill
     assert!(ctx.lockfile().exists(), "Lockfile should exist");
@@ -91,12 +91,12 @@ fn test_export_creates_skills_json() {
     .unwrap();
 
     // Install first
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
-    // Run skm export
-    let result = run_skm_command(&["export"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm export failed: {:?}", result.err());
+    // Run kt export
+    let result = run_kt_command(&["export"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt export failed: {:?}", result.err());
 
     // Verify skills.json exists and contains the skill
     assert!(ctx.manifest().exists(), "skills.json should exist");
@@ -130,10 +130,10 @@ fn test_install_completes_within_30_seconds() {
     .unwrap();
 
     let start = std::time::Instant::now();
-    let result = run_skm_command(&["install"], &ctx.project_dir);
+    let result = run_kt_command(&["install"], &ctx.project_dir);
     let duration = start.elapsed();
 
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
     assert!(
         duration.as_secs() < 30,
         "Install should complete within 30 seconds, took {:?}",
@@ -163,9 +163,9 @@ fn test_install_clones_correct_content() {
     )
     .unwrap();
 
-    // Run skm install
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    // Run kt install
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
     // Verify skill directory contains files
     let skill_dir = ctx.skills_dir().join("awesome-copilot");
@@ -207,7 +207,7 @@ fn test_install_hides_raw_git_clone_output() {
     .unwrap();
 
     let output =
-        run_skm_command_output(&["install"], &ctx.project_dir).expect("skm install should succeed");
+        run_kt_command_output(&["install"], &ctx.project_dir).expect("kt install should succeed");
 
     assert!(
         !output.stderr.contains("Cloning into"),
@@ -248,9 +248,9 @@ fn test_install_does_not_modify_existing_skills() {
     )
     .unwrap();
 
-    // Run skm install
-    let result = run_skm_command(&["install"], &ctx.project_dir);
-    assert!(result.is_ok(), "skm install failed: {:?}", result.err());
+    // Run kt install
+    let result = run_kt_command(&["install"], &ctx.project_dir);
+    assert!(result.is_ok(), "kt install failed: {:?}", result.err());
 
     // Verify existing skill was not modified
     assert!(

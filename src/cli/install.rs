@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     fn test_run_invalid_format() {
-        let dir = std::env::temp_dir().join("skm_test_install_invalid");
+        let dir = std::env::temp_dir().join("ktesio_test_install_invalid");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir, Some("invalidformat"));
         assert!(result.is_err());
@@ -597,7 +597,7 @@ mod tests {
 
     #[test]
     fn test_run_invalid_format_no_colon() {
-        let dir = std::env::temp_dir().join("skm_test_install_nocolon");
+        let dir = std::env::temp_dir().join("ktesio_test_install_nocolon");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir, Some("nameonly"));
         assert!(result.is_err());
@@ -606,7 +606,7 @@ mod tests {
 
     #[test]
     fn test_run_invalid_format_empty_name() {
-        let dir = std::env::temp_dir().join("skm_test_install_ename");
+        let dir = std::env::temp_dir().join("ktesio_test_install_ename");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir, Some(":url"));
         assert!(result.is_err());
@@ -615,7 +615,7 @@ mod tests {
 
     #[test]
     fn test_run_invalid_format_empty_url() {
-        let dir = std::env::temp_dir().join("skm_test_install_eurl");
+        let dir = std::env::temp_dir().join("ktesio_test_install_eurl");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir, Some("name:"));
         assert!(result.is_err());
@@ -624,7 +624,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_empty() {
-        let dir = std::env::temp_dir().join("skm_test_install_empty");
+        let dir = std::env::temp_dir().join("ktesio_test_install_empty");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         let result = run_in(&dir, None);
@@ -634,7 +634,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_already_installed() {
-        let dir = std::env::temp_dir().join("skm_test_install_already");
+        let dir = std::env::temp_dir().join("ktesio_test_install_already");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -654,7 +654,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_clone_fails() {
-        let dir = std::env::temp_dir().join("skm_test_install_clonefail");
+        let dir = std::env::temp_dir().join("ktesio_test_install_clonefail");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let missing_repo = dir.join("missing-repo");
@@ -674,7 +674,7 @@ mod tests {
 
     #[test]
     fn test_run_single_already_exists() {
-        let dir = std::env::temp_dir().join("skm_test_install_single_exists");
+        let dir = std::env::temp_dir().join("ktesio_test_install_single_exists");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -688,7 +688,7 @@ mod tests {
 
     #[test]
     fn test_run_single_clone_fails() {
-        let dir = std::env::temp_dir().join("skm_test_install_single_clonefail");
+        let dir = std::env::temp_dir().join("ktesio_test_install_single_clonefail");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
@@ -705,7 +705,7 @@ mod tests {
 
     #[test]
     fn test_run_single_invalid_name_does_not_write_metadata() {
-        let dir = std::env::temp_dir().join("skm_test_install_single_invalid_name");
+        let dir = std::env::temp_dir().join("ktesio_test_install_single_invalid_name");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let target = format!("bad name:{}", dir.join("repo").display());
@@ -718,7 +718,7 @@ mod tests {
 
     #[test]
     fn test_run_single_success_with_local_repo() {
-        let dir = std::env::temp_dir().join("skm_test_install_single_success");
+        let dir = std::env::temp_dir().join("ktesio_test_install_single_success");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
@@ -739,7 +739,7 @@ mod tests {
 
     #[test]
     fn test_copy_repo_content_for_install_requires_confirmation_without_manifest() {
-        let dir = std::env::temp_dir().join("skm_test_repo_content_decline");
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_decline");
         let _ = std::fs::remove_dir_all(&dir);
         let src = dir.join("src");
         let dst = dir.join("dst");
@@ -759,7 +759,7 @@ mod tests {
 
     #[test]
     fn test_copy_repo_content_for_install_multiselects_fallback_directories() {
-        let dir = std::env::temp_dir().join("skm_test_repo_content_multiselect");
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_multiselect");
         let _ = std::fs::remove_dir_all(&dir);
         let src = dir.join("src");
         let dst = dir.join("dst");
@@ -784,7 +784,7 @@ mod tests {
 
     #[test]
     fn test_copy_repo_content_for_install_auto_selects_single_fallback_directory() {
-        let dir = std::env::temp_dir().join("skm_test_repo_content_single_fallback");
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_single_fallback");
         let _ = std::fs::remove_dir_all(&dir);
         let src = dir.join("src");
         let dst = dir.join("dst");
@@ -804,7 +804,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_fallback_no_skills_dir() {
-        let dir = std::env::temp_dir().join("skm_test_install_fallback_nodir");
+        let dir = std::env::temp_dir().join("ktesio_test_install_fallback_nodir");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir, None);
         assert!(result.is_err());
@@ -813,7 +813,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_fallback_empty_skills_dir() {
-        let dir = std::env::temp_dir().join("skm_test_install_fallback_empty");
+        let dir = std::env::temp_dir().join("ktesio_test_install_fallback_empty");
         std::fs::create_dir_all(dir.join("skills")).unwrap();
         let result = run_in(&dir, None);
         assert!(result.is_err());
@@ -822,7 +822,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_fallback_single_skill() {
-        let dir = std::env::temp_dir().join("skm_test_install_fallback_single");
+        let dir = std::env::temp_dir().join("ktesio_test_install_fallback_single");
         std::fs::create_dir_all(dir.join("skills")).unwrap();
         std::fs::write(dir.join("skills/test-skill.md"), "# Test Skill").unwrap();
         let result = run_in(&dir, None);
@@ -834,8 +834,8 @@ mod tests {
 
     #[test]
     fn test_copy_dir_recursive_creates_dst() {
-        let src = std::env::temp_dir().join("skm_test_copy_create_dst_src");
-        let dst = std::env::temp_dir().join("skm_test_copy_create_dst_dst");
+        let src = std::env::temp_dir().join("ktesio_test_copy_create_dst_src");
+        let dst = std::env::temp_dir().join("ktesio_test_copy_create_dst_dst");
         std::fs::create_dir_all(&src).unwrap();
         std::fs::write(src.join("file.txt"), "content").unwrap();
         let result = copy_dir_recursive(&src, &dst);
@@ -847,8 +847,8 @@ mod tests {
 
     #[test]
     fn test_copy_dir_recursive_nested() {
-        let src = std::env::temp_dir().join("skm_test_copy_nested_src");
-        let dst = std::env::temp_dir().join("skm_test_copy_nested_dst");
+        let src = std::env::temp_dir().join("ktesio_test_copy_nested_src");
+        let dst = std::env::temp_dir().join("ktesio_test_copy_nested_dst");
         std::fs::create_dir_all(src.join("a/b/c")).unwrap();
         std::fs::write(src.join("a/b/c/file.txt"), "deep").unwrap();
         let result = copy_dir_recursive(&src, &dst);
@@ -860,8 +860,8 @@ mod tests {
 
     #[test]
     fn test_copy_dir_recursive_skips_directories() {
-        let src = std::env::temp_dir().join("skm_test_copy_skip_src");
-        let dst = std::env::temp_dir().join("skm_test_copy_skip_dst");
+        let src = std::env::temp_dir().join("ktesio_test_copy_skip_src");
+        let dst = std::env::temp_dir().join("ktesio_test_copy_skip_dst");
         std::fs::create_dir_all(src.join(".git/objects")).unwrap();
         std::fs::create_dir_all(src.join("target/debug")).unwrap();
         std::fs::create_dir_all(src.join("node_modules/pkg")).unwrap();
@@ -878,7 +878,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_manifest_success() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_manifest_success");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_success");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
@@ -888,7 +888,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_manifest_empty() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_manifest_empty");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_empty");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
@@ -898,7 +898,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_manifest_invalid() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_manifest_invalid");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_invalid");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), "not json").unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
@@ -908,7 +908,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_fallback_no_skills_dir() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_fallback_nodir");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_fallback_nodir");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_bulk_with_fallback(&dir);
         assert!(result.is_err());
@@ -917,7 +917,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_fallback_empty() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_fallback_empty2");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_fallback_empty2");
         std::fs::create_dir_all(dir.join("skills")).unwrap();
         let result = run_bulk_with_fallback(&dir);
         assert!(result.is_err());
@@ -926,7 +926,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_manifest_already_installed() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_manifest_installed");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_installed");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -946,7 +946,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_manifest_installs_local_repo() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_manifest_local_repo");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_local_repo");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let repo = create_local_repo(&dir, "source");
@@ -969,7 +969,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_with_manifest_clone_fails() {
-        let dir = std::env::temp_dir().join("skm_test_bulk_manifest_clonefail");
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_clonefail");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let missing_repo = dir.join("missing-repo");
@@ -989,7 +989,7 @@ mod tests {
 
     #[test]
     fn test_install_repo_to_skill_dir_rejects_existing_destination() {
-        let dir = std::env::temp_dir().join("skm_test_install_existing_destination");
+        let dir = std::env::temp_dir().join("ktesio_test_install_existing_destination");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(git::skill_dir(&dir, "docs")).unwrap();
         let progress = ProgressBar::hidden();
@@ -1006,7 +1006,7 @@ mod tests {
 
     #[test]
     fn test_copy_repo_content_for_install_errors_without_skills_dir() {
-        let dir = std::env::temp_dir().join("skm_test_repo_content_no_skills_dir");
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_no_skills_dir");
         let _ = std::fs::remove_dir_all(&dir);
         let src = dir.join("src");
         let dst = dir.join("dst");
@@ -1025,7 +1025,7 @@ mod tests {
 
     #[test]
     fn test_copy_repo_content_for_install_errors_for_empty_skills_dir() {
-        let dir = std::env::temp_dir().join("skm_test_repo_content_empty_skills_dir");
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_empty_skills_dir");
         let _ = std::fs::remove_dir_all(&dir);
         let src = dir.join("src");
         let dst = dir.join("dst");
@@ -1047,7 +1047,7 @@ mod tests {
 
     #[test]
     fn test_copy_repo_content_for_install_errors_for_empty_selection() {
-        let dir = std::env::temp_dir().join("skm_test_repo_content_empty_selection");
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_empty_selection");
         let _ = std::fs::remove_dir_all(&dir);
         let src = dir.join("src");
         let dst = dir.join("dst");
@@ -1070,7 +1070,7 @@ mod tests {
 
     #[test]
     fn test_copy_repo_content_for_install_errors_for_invalid_selection() {
-        let dir = std::env::temp_dir().join("skm_test_repo_content_invalid_selection");
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_invalid_selection");
         let _ = std::fs::remove_dir_all(&dir);
         let src = dir.join("src");
         let dst = dir.join("dst");
@@ -1093,7 +1093,7 @@ mod tests {
 
     #[test]
     fn test_run_bulk_fallback_directory_skill() {
-        let dir = std::env::temp_dir().join("skm_test_install_fallback_directory_skill");
+        let dir = std::env::temp_dir().join("ktesio_test_install_fallback_directory_skill");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
         std::fs::write(dir.join("skills/docs/SKILL.md"), "# Docs").unwrap();
@@ -1108,7 +1108,7 @@ mod tests {
 
     #[test]
     fn test_discover_fallback_skill_dirs_filters_and_sorts() {
-        let dir = std::env::temp_dir().join("skm_test_fallback_skill_dir_filter");
+        let dir = std::env::temp_dir().join("ktesio_test_fallback_skill_dir_filter");
         let _ = std::fs::remove_dir_all(&dir);
         let skills = dir.join("skills");
         std::fs::create_dir_all(skills.join("beta")).unwrap();
@@ -1132,7 +1132,7 @@ mod tests {
 
     #[test]
     fn test_install_workspace_sanitizes_name() {
-        let dir = std::env::temp_dir().join("skm_test_install_workspace_sanitize");
+        let dir = std::env::temp_dir().join("ktesio_test_install_workspace_sanitize");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -1150,7 +1150,7 @@ mod tests {
 
     #[test]
     fn test_install_workspace_errors_after_collisions() {
-        let dir = std::env::temp_dir().join("skm_test_install_workspace_collisions");
+        let dir = std::env::temp_dir().join("ktesio_test_install_workspace_collisions");
         let _ = std::fs::remove_dir_all(&dir);
         let temp_parent = dir.join(".agents").join(".tmp");
         std::fs::create_dir_all(&temp_parent).unwrap();
@@ -1188,9 +1188,9 @@ mod tests {
             &repo,
             &[
                 "-c",
-                "user.name=skm tests",
+                "user.name=ktesio tests",
                 "-c",
-                "user.email=skm-tests@example.com",
+                "user.email=ktesio-tests@example.com",
                 "-c",
                 "commit.gpgsign=false",
                 "commit",

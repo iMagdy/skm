@@ -5,16 +5,16 @@
 
 ## Command Interface
 
-The `skm install` command behavior is modified. No new CLI arguments are added.
+The `kt install` command behavior is modified. No new CLI arguments are added.
 
 ### Existing Behavior (Unchanged)
 
 ```bash
 # Install all skills from manifest
-skm install
+kt install
 
 # Install single skill from URL
-skm install name:url
+kt install name:url
 ```
 
 ### New Behavior (Fallback)
@@ -23,7 +23,7 @@ When `skills.json` is not found:
 
 ```bash
 # Triggers fallback discovery
-skm install
+kt install
 ```
 
 ## Output Contract

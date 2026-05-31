@@ -35,7 +35,7 @@ impl Manifest {
     pub fn load(path: &Path) -> Result<Self, ManifestNotFound> {
         let content = fs::read_to_string(path).map_err(|_| ManifestNotFound {
             message: format!(
-                "No skills.json found at {}. Run 'skm init .' to create one.",
+                "No skills.json found at {}. Run 'kt init .' to create one.",
                 path.display()
             ),
         })?;
@@ -244,7 +244,7 @@ mod tests {
     fn test_save_and_load() {
         let mut manifest = Manifest::new();
         manifest.add_skill("test".to_string(), "url".to_string());
-        let dir = std::env::temp_dir().join("skm_test_manifest");
+        let dir = std::env::temp_dir().join("ktesio_test_manifest");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("skills.json");
         manifest.save(&path).unwrap();
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_save_and_load_roundtrip() {
-        let dir = std::env::temp_dir().join("skm_test_manifest_roundtrip");
+        let dir = std::env::temp_dir().join("ktesio_test_manifest_roundtrip");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("skills.json");
 

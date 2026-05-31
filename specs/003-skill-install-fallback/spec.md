@@ -3,7 +3,7 @@
 **Feature Branch**: `003-skill-install-fallback`
 **Created**: Sat May 30 2026
 **Status**: Draft
-**Input**: User description: "When installing a skill from a repo, and if skills.json file does not exist on that repo, skm should fallback to skills (or SKILLS) directory if exists in that remote repo, and then if there are many .md files (many skills) or many dirs in that skills/ folder, prompt the user to select which skill from the available skills they want to install. Also show a warning that this remote repo does not have skills.json file, and that skm is currently trying to auto discover skills in that repo."
+**Input**: User description: "When installing a skill from a repo, and if skills.json file does not exist on that repo, Ktesio should fallback to skills (or SKILLS) directory if exists in that remote repo, and then if there are many .md files (many skills) or many dirs in that skills/ folder, prompt the user to select which skill from the available skills they want to install. Also show a warning that this remote repo does not have skills.json file, and that Ktesio is currently trying to auto discover skills in that repo."
 
 ## User Scenarios & Testing *(mandatory)*
 

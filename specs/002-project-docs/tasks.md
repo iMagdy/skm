@@ -30,7 +30,7 @@
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
 - [X] T004 [P] Write installation guide covering all supported platforms in docs/installation.md
-- [X] T005 [P] Write command reference documenting all skm subcommands in docs/commands.md
+- [X] T005 [P] Write command reference documenting all Ktesio subcommands in docs/commands.md
 - [X] T006 [P] Write manifest format documentation with field descriptions in docs/manifest.md
 - [X] T007 [P] Write lockfile format documentation with field descriptions in docs/lockfile.md
 
@@ -40,7 +40,7 @@
 
 ## Phase 3: User Story 1 - Discover and Navigate Documentation (Priority: P1) 🎯 MVP
 
-**Goal**: A developer new to skm can find, read, and navigate the documentation to understand what skm does, how to install it, and how to use it.
+**Goal**: A developer new to Ktesio can find, read, and navigate the documentation to understand what Ktesio does, how to install it, and how to use it.
 
 **Independent Test**: Verify docs/ contains a table of contents, all linked files exist, and each document covers its stated topic without gaps.
 
@@ -75,15 +75,15 @@
 
 ## Phase 5: User Story 3 - Understand the Architecture (Priority: P3)
 
-**Goal**: A developer extending skm can understand the codebase architecture, module structure, and data flows to make informed contributions.
+**Goal**: A developer extending Ktesio can understand the codebase architecture, module structure, and data flows to make informed contributions.
 
 **Independent Test**: Verify architecture docs accurately describe the module layout, data flow between manifest/lockfile/git operations, and key design patterns.
 
 ### Implementation for User Story 3
 
 - [X] T015 [P] [US3] Write architecture guide describing module structure and data flows in docs/architecture.md
-- [X] T016 [US3] Document data flow for `skm install` command sequence in docs/architecture.md
-- [X] T017 [US3] Document data flow for `skm upgrade` command sequence in docs/architecture.md
+- [X] T016 [US3] Document data flow for `kt install` command sequence in docs/architecture.md
+- [X] T017 [US3] Document data flow for `kt upgrade` command sequence in docs/architecture.md
 
 **Checkpoint**: All user stories should now be independently functional
 

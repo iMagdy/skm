@@ -41,9 +41,9 @@ class Story:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--feature-dir", type=Path, default=None)
-    parser.add_argument("--repo", default="iMagdy/skm")
+    parser.add_argument("--repo", default="iMagdy/ktesio")
     parser.add_argument("--project-owner", default="iMagdy")
-    parser.add_argument("--project-title", default="skm")
+    parser.add_argument("--project-title", default="Ktesio")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 

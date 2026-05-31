@@ -49,7 +49,7 @@ The docs check validates:
 
 - Root and `docs/` Markdown links.
 - JSON fenced code blocks.
-- Documented `skm` command examples.
+- Documented `kt` command examples.
 - Stale links to old repository names or generated spec quickstarts.
 
 ## Release Script Checks

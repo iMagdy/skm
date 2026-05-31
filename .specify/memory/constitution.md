@@ -12,13 +12,13 @@ Templates requiring updates:
 Follow-up TODOs: None
 -->
 
-# Skills Package Manager Constitution
+# Ktesio Constitution
 
 ## Core Principles
 
 ### I. CLI-First
 
-Every feature MUST be accessible via the `skm` command-line interface.
+Every feature MUST be accessible via the `kt` command-line interface.
 No feature may exist only as a library API without a corresponding CLI subcommand.
 CLI output MUST go to stdout; errors and diagnostics MUST go to stderr.
 All commands MUST support `--help` and `--version` flags (provided by clap).

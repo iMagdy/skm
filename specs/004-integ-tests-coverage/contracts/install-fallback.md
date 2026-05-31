@@ -6,7 +6,7 @@
 ## Command Interface
 
 ```bash
-skm install <source>
+kt install <source>
 ```
 
 ### Parameters

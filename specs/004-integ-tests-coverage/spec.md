@@ -33,9 +33,9 @@ Integration tests MUST validate the core install and export workflows against a 
 
 **Acceptance Scenarios**:
 
-1. **Given** a fresh project with no installed skills, **When** user runs `skm install` targeting `awesome-copilot`, **Then** the skill is cloned to `.agents/skills/` and appears in `skills.lock`
-2. **Given** a project with skills installed, **When** user runs `skm export`, **Then** `skills.json` is generated/updated listing all locally available skills
-3. **Given** a project with a valid `skills.json`, **When** user runs `skm install`, **Then** all listed skills are installed successfully from their remote sources
+1. **Given** a fresh project with no installed skills, **When** user runs `kt install` targeting `awesome-copilot`, **Then** the skill is cloned to `.agents/skills/` and appears in `skills.lock`
+2. **Given** a project with skills installed, **When** user runs `kt export`, **Then** `skills.json` is generated/updated listing all locally available skills
+3. **Given** a project with a valid `skills.json`, **When** user runs `kt install`, **Then** all listed skills are installed successfully from their remote sources
 4. **Given** network connectivity, **When** install operation completes, **Then** the operation finishes within 30 seconds for a single skill
 
 ---
@@ -50,7 +50,7 @@ Integration tests MUST validate the fallback skill discovery mechanism when `ski
 
 **Acceptance Scenarios**:
 
-1. **Given** a fresh project, **When** user runs `skm install` targeting `agent-skills` (no `skills.json`), **Then** system displays warning about missing manifest and auto-discovers skills from `skills/` directory
+1. **Given** a fresh project, **When** user runs `kt install` targeting `agent-skills` (no `skills.json`), **Then** system displays warning about missing manifest and auto-discovers skills from `skills/` directory
 2. **Given** auto-discovery triggered, **When** multiple `.md` files exist in `skills/`, **Then** user is prompted to select which skill to install
 3. **Given** auto-discovery triggered, **When** exactly one skill is found, **Then** installation proceeds without prompting
 4. **Given** auto-discovery, **When** skill is selected and installed, **Then** the skill appears in `.agents/skills/` and is functional

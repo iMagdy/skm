@@ -1,6 +1,6 @@
-# skm Documentation
+# Ktesio Documentation
 
-Welcome to the `skm` docs. These pages explain how to install, use, contribute to, test, and release the skills package manager.
+Welcome to the Ktesio docs. These pages explain how to install, use, contribute to, test, and release the skills package manager.
 
 ## Start Here
 

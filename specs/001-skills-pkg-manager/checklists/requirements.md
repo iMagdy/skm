@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Skills Package Manager CLI
+# Specification Quality Checklist: Ktesio CLI
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-05-30

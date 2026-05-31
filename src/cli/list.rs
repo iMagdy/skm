@@ -24,7 +24,7 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
     let lockfile = Lockfile::load(&lockfile_path)?;
 
     if manifest.skills.is_empty() && lockfile.entries().is_empty() {
-        ui::info("No skills installed. Run 'skm install' to add skills.");
+        ui::info("No skills installed. Run 'kt install' to add skills.");
         return Ok(());
     }
 
@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn test_list_empty() {
-        let dir = std::env::temp_dir().join("skm_test_list_empty");
+        let dir = std::env::temp_dir().join("ktesio_test_list_empty");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir);
         assert!(result.is_ok());
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_list_with_manifest() {
-        let dir = std::env::temp_dir().join("skm_test_list_manifest");
+        let dir = std::env::temp_dir().join("ktesio_test_list_manifest");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_list_with_lockfile() {
-        let dir = std::env::temp_dir().join("skm_test_list_lockfile");
+        let dir = std::env::temp_dir().join("ktesio_test_list_lockfile");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_list_orphaned() {
-        let dir = std::env::temp_dir().join("skm_test_list_orphaned");
+        let dir = std::env::temp_dir().join("ktesio_test_list_orphaned");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         std::fs::write(
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_list_missing_status() {
-        let dir = std::env::temp_dir().join("skm_test_list_missing");
+        let dir = std::env::temp_dir().join("ktesio_test_list_missing");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_list_not_locked_status() {
-        let dir = std::env::temp_dir().join("skm_test_list_notlocked");
+        let dir = std::env::temp_dir().join("ktesio_test_list_notlocked");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),

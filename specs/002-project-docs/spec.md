@@ -3,13 +3,13 @@
 **Feature Branch**: `002-project-docs`  
 **Created**: 2026-05-30  
 **Status**: Draft  
-**Input**: User description: "Create docs/ folder and organize its content in an easy to navigate way for an open source project, should cover everything about skm. Additionally, ensure overall code test coverage aligns with constitution requirement."
+**Input**: User description: "Create docs/ folder and organize its content in an easy to navigate way for an open source project, should cover everything about Ktesio. Additionally, ensure overall code test coverage aligns with constitution requirement."
 
 ## User Scenarios & Testing
 
 ### User Story 1 - Discover and Navigate Documentation (Priority: P1)
 
-A developer new to skm visits the project repository and wants to understand what the tool does, how to install it, and how to use it. They navigate to the `docs/` folder and find a clear table of contents that links to organized documentation covering installation, usage, commands, and contributing guidelines.
+A developer new to Ktesio visits the project repository and wants to understand what the tool does, how to install it, and how to use it. They navigate to the `docs/` folder and find a clear table of contents that links to organized documentation covering installation, usage, commands, and contributing guidelines.
 
 **Why this priority**: Documentation is the first point of contact for new users. Without discoverable, organized docs, adoption will be low regardless of feature quality.
 
@@ -18,8 +18,8 @@ A developer new to skm visits the project repository and wants to understand wha
 **Acceptance Scenarios**:
 
 1. **Given** a developer viewing the `docs/` directory, **When** they open the main index or README, **Then** they see a table of contents linking to all major documentation sections.
-2. **Given** a developer reading the installation guide, **When** they follow the steps, **Then** they can successfully install skm on their platform.
-3. **Given** a developer reading the command reference, **When** they look up any `skm` subcommand, **Then** they find usage syntax, options, and examples for that command.
+2. **Given** a developer reading the installation guide, **When** they follow the steps, **Then** they can successfully install Ktesio on their platform.
+3. **Given** a developer reading the command reference, **When** they look up any Ktesio subcommand, **Then** they find usage syntax, options, and examples for that command.
 
 ---
 
@@ -41,7 +41,7 @@ An open source contributor wants to understand the project's architecture, devel
 
 ### User Story 3 - Understand the Architecture (Priority: P3)
 
-A developer extending skm with new features needs to understand the codebase architecture — module structure, key data flows, and design decisions. They find architecture documentation that maps the `src/` directory structure and explains how components interact.
+A developer extending Ktesio with new features needs to understand the codebase architecture — module structure, key data flows, and design decisions. They find architecture documentation that maps the `src/` directory structure and explains how components interact.
 
 **Why this priority**: Architecture docs enable deeper contributions and reduce time spent reverse-engineering code. Less critical for first-time users but essential for maintainers.
 
@@ -50,7 +50,7 @@ A developer extending skm with new features needs to understand the codebase arc
 **Acceptance Scenarios**:
 
 1. **Given** a developer reading the architecture guide, **When** they examine the `src/` directory, **Then** the docs accurately describe each module's responsibility.
-2. **Given** a developer reading about data flow, **When** they trace a command like `skm install`, **Then** the docs explain the sequence of operations (parse manifest → clone → copy exports → update lockfile).
+2. **Given** a developer reading about data flow, **When** they trace a command like `kt install`, **Then** the docs explain the sequence of operations (parse manifest → clone → copy exports → update lockfile).
 
 ---
 
@@ -84,7 +84,7 @@ A maintainer wants to ensure the project meets the constitution's requirement of
 - **FR-001**: System MUST provide a `docs/` directory at the project root containing all project documentation.
 - **FR-002**: System MUST include a `docs/README.md` or `docs/index.md` that serves as a table of contents linking to all documentation sections.
 - **FR-003**: System MUST include an installation guide (`docs/installation.md`) covering installation methods for all supported platforms.
-- **FR-004**: System MUST include a command reference (`docs/commands.md`) documenting every `skm` subcommand with usage syntax, options, and examples.
+- **FR-004**: System MUST include a command reference (`docs/commands.md`) documenting every Ktesio subcommand with usage syntax, options, and examples.
 - **FR-005**: System MUST include a `docs/contributing.md` explaining the development setup, coding standards, testing requirements, and PR workflow.
 - **FR-006**: System MUST include an architecture guide (`docs/architecture.md`) describing the module structure, key data flows, and design decisions.
 - **FR-007**: System MUST include a testing guide (`docs/testing.md`) explaining how to run tests, measure coverage, and interpret results.
@@ -110,7 +110,7 @@ A maintainer wants to ensure the project meets the constitution's requirement of
 
 ### Measurable Outcomes
 
-- **SC-001**: A new developer can understand what skm does and install it within 5 minutes of reading the docs.
+- **SC-001**: A new developer can understand what Ktesio does and install it within 5 minutes of reading the docs.
 - **SC-002**: A new contributor can set up the development environment, run tests, and submit a PR by following the docs alone.
 - **SC-003**: All CLI commands documented in `docs/commands.md` have at least one usage example.
 - **SC-004**: The `docs/` directory contains at least 6 distinct documentation files (README/index, installation, commands, contributing, architecture, testing).

@@ -9,7 +9,7 @@
 
 **Decision**: Single `docs/` directory with flat file structure (no subdirectories).
 
-**Rationale**: The skm project has ~8 CLI commands and a straightforward architecture. A flat structure with topic-specific files (installation.md, commands.md, etc.) is easier to navigate than nested directories for this scale. Each file is self-contained with cross-references via relative links.
+**Rationale**: The Ktesio project has ~8 CLI commands and a straightforward architecture. A flat structure with topic-specific files (installation.md, commands.md, etc.) is easier to navigate than nested directories for this scale. Each file is self-contained with cross-references via relative links.
 
 **Alternatives considered**:
 - Nested directories per audience (user/, contributor/, maintainer/): Rejected — adds navigation overhead for a small doc set.

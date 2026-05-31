@@ -3,112 +3,112 @@ use thiserror::Error;
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::init::path_not_found))]
+#[diagnostic(code(ktesio::init::path_not_found))]
 pub struct InitPathNotFound {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::manifest::not_found))]
+#[diagnostic(code(ktesio::manifest::not_found))]
 pub struct ManifestNotFound {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::manifest::duplicate_name))]
+#[diagnostic(code(ktesio::manifest::duplicate_name))]
 pub struct ManifestDuplicateName {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::manifest::invalid_name))]
+#[diagnostic(code(ktesio::manifest::invalid_name))]
 pub struct ManifestInvalidName {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::lockfile::not_found))]
+#[diagnostic(code(ktesio::lockfile::not_found))]
 pub struct LockfileNotFound {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::lockfile::invalid))]
+#[diagnostic(code(ktesio::lockfile::invalid))]
 pub struct LockfileInvalid {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::git::clone_failed))]
+#[diagnostic(code(ktesio::git::clone_failed))]
 pub struct GitCloneFailed {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::git::fetch_failed))]
+#[diagnostic(code(ktesio::git::fetch_failed))]
 pub struct GitFetchFailed {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::git::checkout_failed))]
+#[diagnostic(code(ktesio::git::checkout_failed))]
 pub struct GitCheckoutFailed {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::git::rev_parse_failed))]
+#[diagnostic(code(ktesio::git::rev_parse_failed))]
 pub struct GitRevParseFailed {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::skill::copy_failed))]
+#[diagnostic(code(ktesio::skill::copy_failed))]
 pub struct SkillCopyFailed {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::skill::not_found))]
+#[diagnostic(code(ktesio::skill::not_found))]
 pub struct SkillNotFound {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::install::invalid_format))]
+#[diagnostic(code(ktesio::install::invalid_format))]
 pub struct InstallInvalidFormat {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::install::already_exists))]
+#[diagnostic(code(ktesio::install::already_exists))]
 pub struct InstallAlreadyExists {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::discovery::error))]
+#[diagnostic(code(ktesio::discovery::error))]
 pub struct DiscoveryError {
     pub message: String,
 }
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::discovery::skills_directory_empty))]
+#[diagnostic(code(ktesio::discovery::skills_directory_empty))]
 pub struct SkillsDirectoryEmpty {
     pub message: String,
 }

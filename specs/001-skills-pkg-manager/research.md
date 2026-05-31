@@ -1,4 +1,4 @@
-# Research: Skills Package Manager CLI
+# Research: Ktesio CLI
 
 **Feature**: 001-skills-pkg-manager
 **Date**: 2026-05-30
@@ -86,7 +86,7 @@ use thiserror::Error;
 
 #[derive(Error, Diagnostic, Debug)]
 #[error("{}", message)]
-#[diagnostic(code(skm::init::already_exists))]
+#[diagnostic(code(ktesio::init::already_exists))]
 pub struct InitError {
     message: String,
     #[source_code]

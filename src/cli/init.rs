@@ -38,7 +38,7 @@ mod tests {
 
     #[test]
     fn test_init_new() {
-        let dir = std::env::temp_dir().join("skm_test_init_new");
+        let dir = std::env::temp_dir().join("ktesio_test_init_new");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run(dir.to_str().unwrap());
         assert!(result.is_ok());
@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn test_init_already_exists() {
-        let dir = std::env::temp_dir().join("skm_test_init_exists");
+        let dir = std::env::temp_dir().join("ktesio_test_init_exists");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), "{}").unwrap();
         let result = run(dir.to_str().unwrap());

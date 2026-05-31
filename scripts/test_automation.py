@@ -74,20 +74,20 @@ class SpeckitSyncTests(unittest.TestCase):
         original_gh = sync_issues.gh
         try:
             sync_issues.gh = lambda *args, **kwargs: json.dumps(
-                {"projects": [{"title": "skm", "number": 3}]}
+                {"projects": [{"title": "Ktesio", "number": 3}]}
             )
-            self.assertEqual(3, sync_issues.find_project_number("iMagdy", "skm"))
+            self.assertEqual(3, sync_issues.find_project_number("iMagdy", "Ktesio"))
 
             sync_issues.gh = lambda *args, **kwargs: json.dumps(
                 {
                     "projects": [
-                        {"title": "skm", "number": 3},
-                        {"title": "skm", "number": 4},
+                        {"title": "Ktesio", "number": 3},
+                        {"title": "Ktesio", "number": 4},
                     ]
                 }
             )
             with self.assertRaises(SystemExit):
-                sync_issues.find_project_number("iMagdy", "skm")
+                sync_issues.find_project_number("iMagdy", "Ktesio")
         finally:
             sync_issues.gh = original_gh
 
@@ -109,9 +109,9 @@ class ReleaseDocsTests(unittest.TestCase):
         table = "\n".join(release_docs.render_asset_table("v1.2.3"))
 
         for _platform, target, extension in release_docs.TARGETS:
-            self.assertIn(f"skm-v1.2.3-{target}.{extension}", table)
-            self.assertIn(f"skm-v1.2.3-{target}.{extension}.sha256", table)
-        self.assertIn("skm-v1.2.3-checksums.txt", table)
+            self.assertIn(f"ktesio-v1.2.3-{target}.{extension}", table)
+            self.assertIn(f"ktesio-v1.2.3-{target}.{extension}.sha256", table)
+        self.assertIn("ktesio-v1.2.3-checksums.txt", table)
 
     def test_changelog_groups_conventional_commits(self) -> None:
         grouped = release_docs.group_commits(
@@ -152,15 +152,15 @@ class ReleaseDocsTests(unittest.TestCase):
 
     def test_homebrew_formula_uses_release_assets_and_checksums(self) -> None:
         checksums = {
-            "skm-v1.2.3-x86_64-apple-darwin.tar.gz": "a" * 64,
-            "skm-v1.2.3-aarch64-apple-darwin.tar.gz": "b" * 64,
-            "skm-v1.2.3-x86_64-unknown-linux-gnu.tar.gz": "c" * 64,
-            "skm-v1.2.3-x86_64-pc-windows-msvc.zip": "d" * 64,
+            "ktesio-v1.2.3-x86_64-apple-darwin.tar.gz": "a" * 64,
+            "ktesio-v1.2.3-aarch64-apple-darwin.tar.gz": "b" * 64,
+            "ktesio-v1.2.3-x86_64-unknown-linux-gnu.tar.gz": "c" * 64,
+            "ktesio-v1.2.3-x86_64-pc-windows-msvc.zip": "d" * 64,
         }
 
         formula = homebrew_formula.render_formula("v1.2.3", checksums)
 
-        self.assertIn('class Skm < Formula', formula)
+        self.assertIn('class Ktesio < Formula', formula)
         self.assertIn('version "1.2.3"', formula)
         self.assertIn('depends_on "git"', formula)
         self.assertIn("on_macos do", formula)
@@ -171,20 +171,20 @@ class ReleaseDocsTests(unittest.TestCase):
         self.assertIn("on_linux do", formula)
         self.assertIn("x86_64-unknown-linux-gnu", formula)
         self.assertNotIn("x86_64-pc-windows-msvc", formula)
-        self.assertIn('bin.install "skm"', formula)
+        self.assertIn('bin.install "kt"', formula)
 
     def test_homebrew_checksum_parser_accepts_sha256sum_lines(self) -> None:
         checksums = homebrew_formula.parse_checksums(
             "\n".join(
                 [
-                    f"{'A' * 64}  skm-v1.2.3-x86_64-apple-darwin.tar.gz",
-                    f"{'b' * 64} *skm-v1.2.3-aarch64-apple-darwin.tar.gz",
+                    f"{'A' * 64}  ktesio-v1.2.3-x86_64-apple-darwin.tar.gz",
+                    f"{'b' * 64} *ktesio-v1.2.3-aarch64-apple-darwin.tar.gz",
                 ]
             )
         )
 
-        self.assertEqual("a" * 64, checksums["skm-v1.2.3-x86_64-apple-darwin.tar.gz"])
-        self.assertEqual("b" * 64, checksums["skm-v1.2.3-aarch64-apple-darwin.tar.gz"])
+        self.assertEqual("a" * 64, checksums["ktesio-v1.2.3-x86_64-apple-darwin.tar.gz"])
+        self.assertEqual("b" * 64, checksums["ktesio-v1.2.3-aarch64-apple-darwin.tar.gz"])
 
     def test_ci_runs_coverage_after_primary_gates(self) -> None:
         ci = (release_docs.ROOT / ".github" / "workflows" / "ci.yml").read_text(

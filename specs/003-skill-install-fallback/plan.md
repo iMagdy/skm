@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add fallback discovery mechanism to `skm install` that enables installing skills from repositories lacking `skills.json` manifest. When a manifest is not found, the system searches for a `skills/` directory (case-insensitive), discovers available skills from `.md` files and subdirectories, deduplicates by name, and prompts the user to select which skill to install.
+Add fallback discovery mechanism to `kt install` that enables installing skills from repositories lacking `skills.json` manifest. When a manifest is not found, the system searches for a `skills/` directory (case-insensitive), discovers available skills from `.md` files and subdirectories, deduplicates by name, and prompts the user to select which skill to install.
 
 ## Technical Context
 
@@ -25,7 +25,7 @@ Add fallback discovery mechanism to `skm install` that enables installing skills
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| I. CLI-First | ✅ | Feature is CLI-driven via `skm install` |
+| I. CLI-First | ✅ | Feature is CLI-driven via `kt install` |
 | II. Git-Based Storage | ✅ | Skills remain git repositories |
 | III. Manifest-Driven | ⚠️ | **JUSTIFIED**: Adds fallback when manifest is missing; existing manifest flow unchanged |
 | IV. Graceful Degradation | ✅ | Error handling for empty dirs, cancelled prompts |

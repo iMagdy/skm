@@ -1,11 +1,11 @@
-# skm
+# Ktesio
 
-[![CI](https://github.com/iMagdy/skm/actions/workflows/ci.yml/badge.svg)](https://github.com/iMagdy/skm/actions/workflows/ci.yml)
+[![CI](https://github.com/iMagdy/ktesio/actions/workflows/ci.yml/badge.svg)](https://github.com/iMagdy/ktesio/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-`skm` is a tiny Rust CLI for installing and sharing agent skills. It makes reusable agent instructions portable across projects by keeping a simple `skills.json` manifest, a reproducible `skills.lock`, and installed skills under `.agents/skills/`.
+Ktesio is a tiny Rust CLI for installing and sharing agent skills. It makes reusable agent instructions portable across projects by keeping a simple `skills.json` manifest, a reproducible `skills.lock`, and installed skills under `.agents/skills/`.
 
-## Why skm?
+## Why Ktesio?
 
 - **Portable skills**: move agent workflows between repositories without manual copy-paste.
 - **Git-native distribution**: install skills from normal HTTPS or SSH git repositories.
@@ -17,14 +17,14 @@
 ## 60-Second Quickstart
 
 ```bash
-git clone https://github.com/iMagdy/skm.git
-cd skm
+git clone https://github.com/iMagdy/ktesio.git
+cd ktesio
 cargo install --path .
 
 # In another project:
-skm init .
-skm install docs:https://github.com/example/agent-docs.git
-skm list
+kt init .
+kt install docs:https://github.com/example/agent-docs.git
+kt list
 ```
 
 This creates:
@@ -35,45 +35,45 @@ skills.lock
 .agents/skills/
 ```
 
-During install and upgrade, `skm` shows progress bars for long-running git work and hides raw `git clone` or `git fetch` output unless an error needs to be summarized.
+During install and upgrade, Ktesio shows progress bars for long-running git work and hides raw `git clone` or `git fetch` output unless an error needs to be summarized.
 
 ## Install
 
 From source:
 
 ```bash
-git clone https://github.com/iMagdy/skm.git
-cd skm
+git clone https://github.com/iMagdy/ktesio.git
+cd ktesio
 cargo install --path .
 ```
 
 From crates.io:
 
 ```bash
-cargo install skm-rs
+cargo install ktesio
 ```
 
-From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/skm/releases), unpack it, and place `skm` on your `PATH`.
+From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/ktesio/releases), unpack it, and place `kt` on your `PATH`.
 
 With Homebrew, install from the tap once a release is published:
 
 ```bash
-brew install imagdy/tap/skm
+brew install imagdy/tap/ktesio
 ```
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `skm init <path>` | Create `skills.json` in a project |
-| `skm install` | Install every skill declared in `skills.json` |
-| `skm install <name:repo>` | Add and install one skill |
-| `skm export` | Rebuild `skills.json` from installed skills |
-| `skm upgrade` | Fetch latest commits for installed skills |
-| `skm list` | Show installed, missing, and orphaned skills |
-| `skm show <name>` | Show one skill's repo, commit, path, and status |
-| `skm uninstall <name>` | Remove a skill from manifest, lockfile, and disk |
-| `skm remove <name>` | Alias for `skm uninstall <name>` |
+| `kt init <path>` | Create `skills.json` in a project |
+| `kt install` | Install every skill declared in `skills.json` |
+| `kt install <name:repo>` | Add and install one skill |
+| `kt export` | Rebuild `skills.json` from installed skills |
+| `kt upgrade` | Fetch latest commits for installed skills |
+| `kt list` | Show installed, missing, and orphaned skills |
+| `kt show <name>` | Show one skill's repo, commit, path, and status |
+| `kt uninstall <name>` | Remove a skill from manifest, lockfile, and disk |
+| `kt remove <name>` | Alias for `kt uninstall <name>` |
 
 ## Manifest
 
@@ -90,7 +90,7 @@ brew install imagdy/tap/skm
 }
 ```
 
-When another repository installs a skill repo, that repo can use `exports` to choose which local files or folders become installable skills. The top-level `skills` and `exports` keys are optional and default to empty objects. `skm` installs only exported paths; if the source repo has no `skills.json`, it asks before falling back to selectable directories under `skills/` or `SKILLS/`.
+When another repository installs a skill repo, that repo can use `exports` to choose which local files or folders become installable skills. The top-level `skills` and `exports` keys are optional and default to empty objects. Ktesio installs only exported paths; if the source repo has no `skills.json`, it asks before falling back to selectable directories under `skills/` or `SKILLS/`.
 
 ## Documentation
 
@@ -108,7 +108,7 @@ When another repository installs a skill repo, that repo can use `exports` to ch
 
 ## Project Status
 
-`skm` is early, useful, and intentionally conservative. The current package format is plain JSON plus git. Future work may add registries, richer metadata, and package signing without taking away the simple manifest workflow.
+Ktesio is early, useful, and intentionally conservative. The current package format is plain JSON plus git. Future work may add registries, richer metadata, and package signing without taking away the simple manifest workflow.
 
 ## License
 

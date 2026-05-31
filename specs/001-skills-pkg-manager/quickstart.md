@@ -1,4 +1,4 @@
-# Quickstart: Skills Package Manager CLI
+# Quickstart: Ktesio CLI
 
 **Feature**: 001-skills-pkg-manager
 **Date**: 2026-05-30

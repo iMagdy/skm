@@ -1,6 +1,6 @@
 # GitHub Project Sync
 
-Speckit story and task files can be synced to GitHub issues and the GitHub Project titled `skm`.
+Speckit story and task files can be synced to GitHub issues and the GitHub Project titled Ktesio.
 
 ## Default Mapping
 
@@ -14,17 +14,17 @@ The generated map keeps enough GitHub metadata for later runs to update instead 
 ```json
 {
   "feature": "006-example",
-  "repo": "iMagdy/skm",
+  "repo": "iMagdy/ktesio",
   "project": {
     "owner": "iMagdy",
-    "title": "skm",
+    "title": "Ktesio",
     "number": 1
   },
   "issues": {
     "US1": {
       "number": 12,
       "title": "[006-example] US1: Example Story",
-      "url": "https://github.com/iMagdy/skm/issues/12",
+      "url": "https://github.com/iMagdy/ktesio/issues/12",
       "project_item_id": "PVTI_example"
     }
   },
@@ -47,12 +47,12 @@ python3 scripts/speckit_sync_issues.py --feature-dir specs/<active-feature> --dr
 ```bash
 python3 scripts/speckit_sync_issues.py \
   --feature-dir specs/<active-feature> \
-  --repo iMagdy/skm \
+  --repo iMagdy/ktesio \
   --project-owner iMagdy \
-  --project-title skm
+  --project-title Ktesio
 ```
 
-The script verifies that the current GitHub remote matches `iMagdy/skm` before creating or editing issues.
+The script verifies that the current GitHub remote matches `iMagdy/ktesio` before creating or editing issues.
 
 ## GitHub Auth
 

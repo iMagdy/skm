@@ -2,7 +2,7 @@
 
 Status date: 2026-05-31.
 
-This checklist tracks repository-level hardening for the public `iMagdy/skm`
+This checklist tracks repository-level hardening for the public `iMagdy/ktesio`
 repository. Treat the GitHub API, workflow results, and repository files as the
 source of truth.
 
@@ -23,8 +23,8 @@ source of truth.
 
 Evidence:
 
-- `gh api repos/iMagdy/skm`
-- `gh api repos/iMagdy/skm/license`
+- `gh api repos/iMagdy/ktesio`
+- `gh api repos/iMagdy/ktesio/license`
 
 ## Branch And Tag Rulesets
 
@@ -48,9 +48,9 @@ Evidence:
 
 Evidence:
 
-- `gh api repos/iMagdy/skm/rulesets`
-- `gh api repos/iMagdy/skm/rulesets/17082021`
-- `gh api repos/iMagdy/skm/rulesets/17082811`
+- `gh api repos/iMagdy/ktesio/rulesets`
+- `gh api repos/iMagdy/ktesio/rulesets/17082021`
+- `gh api repos/iMagdy/ktesio/rulesets/17082811`
 
 Note: last push approval is useful when another maintainer can approve a
 maintainer-pushed fix. With only one direct maintainer, it turns normal reviewed
@@ -71,9 +71,9 @@ contribution flow into routine admin bypass.
 
 Evidence:
 
-- `gh api repos/iMagdy/skm/actions/permissions`
-- `gh api repos/iMagdy/skm/actions/permissions/selected-actions`
-- `gh api repos/iMagdy/skm/actions/permissions/workflow`
+- `gh api repos/iMagdy/ktesio/actions/permissions`
+- `gh api repos/iMagdy/ktesio/actions/permissions/selected-actions`
+- `gh api repos/iMagdy/ktesio/actions/permissions/workflow`
 - `.github/workflows/ci.yml`
 - `.github/workflows/release.yml`
 
@@ -92,13 +92,13 @@ Evidence:
 
 Evidence:
 
-- `gh api repos/iMagdy/skm/private-vulnerability-reporting`
-- `gh api -i repos/iMagdy/skm/vulnerability-alerts`
-- `gh api repos/iMagdy/skm/automated-security-fixes`
-- `gh api repos/iMagdy/skm/code-scanning/default-setup`
-- `gh api repos/iMagdy/skm/code-scanning/alerts`
-- `gh api repos/iMagdy/skm/secret-scanning/alerts`
-- `gh api repos/iMagdy/skm/dependabot/alerts`
+- `gh api repos/iMagdy/ktesio/private-vulnerability-reporting`
+- `gh api -i repos/iMagdy/ktesio/vulnerability-alerts`
+- `gh api repos/iMagdy/ktesio/automated-security-fixes`
+- `gh api repos/iMagdy/ktesio/code-scanning/default-setup`
+- `gh api repos/iMagdy/ktesio/code-scanning/alerts`
+- `gh api repos/iMagdy/ktesio/secret-scanning/alerts`
+- `gh api repos/iMagdy/ktesio/dependabot/alerts`
 
 ## Open Source Community Files
 
@@ -119,8 +119,8 @@ Evidence:
 
 Evidence:
 
-- `gh api repos/iMagdy/skm/community/profile`
-- `gh api repos/iMagdy/skm/contents/.github/ISSUE_TEMPLATE`
+- `gh api repos/iMagdy/ktesio/community/profile`
+- `gh api repos/iMagdy/ktesio/contents/.github/ISSUE_TEMPLATE`
 - Local files in the repository root and `.github/`
 
 ## Dependency And Maintenance Automation
@@ -136,8 +136,8 @@ Evidence:
 Evidence:
 
 - `.github/dependabot.yml`
-- `gh pr list --repo iMagdy/skm --state open`
-- `gh api repos/iMagdy/skm/labels`
+- `gh pr list --repo iMagdy/ktesio --state open`
+- `gh api repos/iMagdy/ktesio/labels`
 
 ## Release Readiness
 
@@ -149,9 +149,9 @@ Evidence:
 
 Evidence:
 
-- `gh api repos/iMagdy/skm/environments`
-- `gh api repos/iMagdy/skm/environments/release/secrets`
-- `gh api repos/iMagdy/skm/actions/variables`
+- `gh api repos/iMagdy/ktesio/environments`
+- `gh api repos/iMagdy/ktesio/environments/release/secrets`
+- `gh api repos/iMagdy/ktesio/actions/variables`
 
 The unchecked release secrets are intentionally not filled with placeholder
 values. They require real credentials with publish access to crates.io and the
@@ -168,4 +168,4 @@ Homebrew tap repository.
 Evidence:
 
 - Local command output from the hardening work.
-- `gh api repos/iMagdy/skm/commits/main/check-runs`
+- `gh api repos/iMagdy/ktesio/commits/main/check-runs`

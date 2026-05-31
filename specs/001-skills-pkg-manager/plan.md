@@ -1,11 +1,11 @@
-# Implementation Plan: Skills Package Manager CLI
+# Implementation Plan: Ktesio CLI
 
 **Branch**: `001-skills-pkg-manager` | **Date**: 2026-05-30 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/001-skills-pkg-manager/spec.md`
 
 ## Summary
 
-Build a Rust CLI tool (`skm`) that manages agentic skills as git-based packages. The tool reads a `skills.json` manifest to declare skill imports (git repos) and exports (local dirs), clones skill repos, uses the source repo's exports to determine which files to copy into `.agents/skills/`, and maintains a `skills.lock` file for reproducible installations. Commands: `init`, `install`, `upgrade`, `list`, `show`, `uninstall`/`remove`.
+Build a Rust CLI tool (Ktesio) that manages agentic skills as git-based packages. The tool reads a `skills.json` manifest to declare skill imports (git repos) and exports (local dirs), clones skill repos, uses the source repo's exports to determine which files to copy into `.agents/skills/`, and maintains a `skills.lock` file for reproducible installations. Commands: `init`, `install`, `upgrade`, `list`, `show`, `uninstall`/`remove`.
 
 ## Technical Context
 
@@ -46,12 +46,12 @@ src/
 ├── main.rs              # Entry point, CLI arg parsing with clap
 ├── cli/
 │   ├── mod.rs
-│   ├── init.rs          # skm init command
-│   ├── install.rs       # skm install (bulk + single)
-│   ├── upgrade.rs       # skm upgrade command
-│   ├── list.rs          # skm list command
-│   ├── show.rs          # skm show command
-│   └── uninstall.rs     # skm uninstall/remove command
+│   ├── init.rs          # kt init command
+│   ├── install.rs       # kt install (bulk + single)
+│   ├── upgrade.rs       # kt upgrade command
+│   ├── list.rs          # kt list command
+│   ├── show.rs          # kt show command
+│   └── uninstall.rs     # kt uninstall/remove command
 ├── manifest.rs          # skills.json parsing and serialization
 ├── lockfile.rs          # skills.lock parsing and serialization
 ├── git.rs               # Git operations (clone, fetch, checkout, resolve HEAD)

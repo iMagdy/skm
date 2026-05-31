@@ -54,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_uninstall_no_manifest() {
-        let dir = std::env::temp_dir().join("skm_test_uninstall_nomanifest");
+        let dir = std::env::temp_dir().join("ktesio_test_uninstall_nomanifest");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir, "test");
         assert!(result.is_err());
@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_uninstall_not_found() {
-        let dir = std::env::temp_dir().join("skm_test_uninstall_notfound");
+        let dir = std::env::temp_dir().join("ktesio_test_uninstall_notfound");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
         let result = run_in(&dir, "nonexistent");
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_uninstall_success() {
-        let dir = std::env::temp_dir().join("skm_test_uninstall_success");
+        let dir = std::env::temp_dir().join("ktesio_test_uninstall_success");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_uninstall_without_lockfile() {
-        let dir = std::env::temp_dir().join("skm_test_uninstall_nolock");
+        let dir = std::env::temp_dir().join("ktesio_test_uninstall_nolock");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),

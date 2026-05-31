@@ -40,12 +40,12 @@ The index document linking to all documentation sections.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| title | heading | "skm Documentation" |
+| title | heading | "Ktesio Documentation" |
 | sections | list | Categorized links to documentation files |
 
 **Structure**:
 ```markdown
-# skm Documentation
+# Ktesio Documentation
 
 ## Getting Started
 - [Installation](installation.md)
@@ -68,7 +68,7 @@ The project entry point that links into `docs/`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| overview | paragraph | What skm does (1-2 sentences) |
+| overview | paragraph | What Ktesio does (1-2 sentences) |
 | quick_start | section | Minimal setup instructions |
 | docs_link | link | "For detailed documentation, see [docs/](docs/)" |
 

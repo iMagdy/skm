@@ -5,7 +5,7 @@
 
 ## Summary
 
-Create a comprehensive `docs/` directory for the skm project containing user-facing and contributor-facing documentation. The documentation set covers installation, command reference, contributing guidelines, architecture, testing, manifest format, and lockfile format. Documentation is written in plain Markdown (no frontmatter), targets intermediate developers, and is validated by a CI job checking for broken links and required file presence. The root README.md serves as a concise entry point linking into `docs/`.
+Create a comprehensive `docs/` directory for the Ktesio project containing user-facing and contributor-facing documentation. The documentation set covers installation, command reference, contributing guidelines, architecture, testing, manifest format, and lockfile format. Documentation is written in plain Markdown (no frontmatter), targets intermediate developers, and is validated by a CI job checking for broken links and required file presence. The root README.md serves as a concise entry point linking into `docs/`.
 
 ## Technical Context
 

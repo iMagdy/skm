@@ -1,6 +1,6 @@
 # Release Process
 
-`skm` releases are driven by git tags.
+Ktesio releases are driven by git tags.
 
 ## Tag Format
 
@@ -26,7 +26,7 @@ When a `v*` tag is pushed, `.github/workflows/release.yml`:
 3. Generates per-asset `.sha256` files and one aggregate checksum file.
 4. Creates a draft GitHub Release for the tag.
 5. Uploads all release assets.
-6. Publishes the `skm-rs` crate to crates.io.
+6. Publishes the `ktesio` crate to crates.io.
 7. Publishes the release archives to GitHub Packages through the GitHub Container Registry.
 8. Publishes the GitHub Release with a clean asset table.
 9. Updates the Homebrew tap formula for macOS Intel, macOS Apple Silicon, and Linux x64.
@@ -39,18 +39,18 @@ The docs PR happens after the tag because a tag points at an existing commit. Th
 Release tags publish the crate package to crates.io as:
 
 ```text
-skm-rs
+ktesio
 ```
 
-The installed binary remains `skm`, so users can install it with:
+The installed binary is `kt`, so users can install it with:
 
 ```bash
-cargo install skm-rs
+cargo install ktesio
 ```
 
 Configure this repository secret before publishing a tag:
 
-- `CARGO_REGISTRY_TOKEN`: crates.io API token with publish access to the `skm-rs` crate.
+- `CARGO_REGISTRY_TOKEN`: crates.io API token with publish access to the `ktesio` crate.
 
 The workflow verifies that `Cargo.toml` version matches the tag without the leading `v`. If the crate version is already published, the workflow skips the publish step so release reruns stay safe.
 
@@ -59,8 +59,8 @@ The workflow verifies that `Cargo.toml` version matches the tag without the lead
 Release archives are mirrored to GitHub Packages as an OCI artifact in the GitHub Container Registry:
 
 ```text
-ghcr.io/imagdy/skm:<tag>
-ghcr.io/imagdy/skm:latest
+ghcr.io/imagdy/ktesio:<tag>
+ghcr.io/imagdy/ktesio:latest
 ```
 
 The workflow uses the built-in `GITHUB_TOKEN` and requires `packages: write` permission. The package contains the same archives, per-asset `.sha256` files, and aggregate checksum file that are attached to the GitHub Release.
@@ -70,7 +70,7 @@ The workflow uses the built-in `GITHUB_TOKEN` and requires `packages: write` per
 Homebrew publishing updates a tap formula from the release checksums. By default, the workflow writes:
 
 ```text
-Formula/skm.rb
+Formula/ktesio.rb
 ```
 
 to:
@@ -104,9 +104,9 @@ python3 scripts/generate_release_docs.py v0.1.0 --update-files
 ## Asset Names
 
 ```text
-skm-<tag>-x86_64-apple-darwin.tar.gz
-skm-<tag>-aarch64-apple-darwin.tar.gz
-skm-<tag>-x86_64-pc-windows-msvc.zip
-skm-<tag>-x86_64-unknown-linux-gnu.tar.gz
-skm-<tag>-checksums.txt
+ktesio-<tag>-x86_64-apple-darwin.tar.gz
+ktesio-<tag>-aarch64-apple-darwin.tar.gz
+ktesio-<tag>-x86_64-pc-windows-msvc.zip
+ktesio-<tag>-x86_64-unknown-linux-gnu.tar.gz
+ktesio-<tag>-checksums.txt
 ```

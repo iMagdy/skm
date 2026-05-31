@@ -5,8 +5,8 @@ This page is the hands-on development guide. For project rules and DCO details, 
 ## Setup
 
 ```bash
-git clone https://github.com/iMagdy/skm.git
-cd skm
+git clone https://github.com/iMagdy/ktesio.git
+cd ktesio
 cargo build
 cargo test --all-targets
 ```

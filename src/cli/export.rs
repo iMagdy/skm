@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_export_creates_manifest_when_empty() {
-        let dir = std::env::temp_dir().join("skm_test_export_empty");
+        let dir = std::env::temp_dir().join("ktesio_test_export_empty");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_export_uses_lockfile_entries() {
-        let dir = std::env::temp_dir().join("skm_test_export_lockfile");
+        let dir = std::env::temp_dir().join("ktesio_test_export_lockfile");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_export_keeps_existing_exports() {
-        let dir = std::env::temp_dir().join("skm_test_export_keeps_exports");
+        let dir = std::env::temp_dir().join("ktesio_test_export_keeps_exports");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_export_adds_untracked_skill_directory() {
-        let dir = std::env::temp_dir().join("skm_test_export_untracked");
+        let dir = std::env::temp_dir().join("ktesio_test_export_untracked");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join(".agents/skills/local")).unwrap();
 
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_export_skips_files_in_skills_directory() {
-        let dir = std::env::temp_dir().join("skm_test_export_skips_files");
+        let dir = std::env::temp_dir().join("ktesio_test_export_skips_files");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join(".agents/skills")).unwrap();
         std::fs::write(dir.join(".agents/skills/not-a-skill.md"), "# no").unwrap();
