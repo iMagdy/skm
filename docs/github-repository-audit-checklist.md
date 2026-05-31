@@ -1,0 +1,166 @@
+# GitHub Repository Audit Checklist
+
+Status date: 2026-05-31.
+
+This checklist tracks repository-level hardening for the public `iMagdy/skm`
+repository. Treat the GitHub API, workflow results, and repository files as the
+source of truth.
+
+## Repository Settings
+
+- [x] Repository is public and default branch is `main`.
+- [x] Issues are enabled.
+- [x] Wiki is disabled.
+- [x] Discussions are enabled for community Q&A.
+- [x] Projects are disabled until a public roadmap project is intentionally used.
+- [x] Forking remains enabled for open source contribution.
+- [x] Web commit sign-off is required.
+- [x] Delete branch on merge is enabled.
+- [x] Auto-merge and update-branch support are enabled.
+- [x] Merge commits and rebase merges are disabled.
+- [x] Squash merge is the only allowed merge method.
+- [x] Repository license is detected by GitHub as Apache-2.0.
+
+Evidence:
+
+- `gh api repos/iMagdy/skm`
+- `gh api repos/iMagdy/skm/license`
+
+## Branch And Tag Rulesets
+
+- [x] Default branch ruleset is active.
+- [x] Default branch cannot be deleted.
+- [x] Default branch cannot be force-pushed.
+- [x] Pull requests are required for default branch changes.
+- [x] At least one approving review is required.
+- [x] Stale approvals are dismissed after new pushes.
+- [x] Code owner review is required.
+- [x] Last push approval is required.
+- [x] Review conversations must be resolved.
+- [x] Required status checks are strict.
+- [x] Required checks include `dco`, `fmt`, `clippy`, `test`, `build`, `docs`, and `coverage`.
+- [x] CodeQL code scanning is required for high-or-higher security alerts and errors.
+- [x] Code quality errors are blocked.
+- [x] Release tag ruleset is active for `v*` tags.
+- [x] Release tags cannot be deleted or force-pushed.
+- [x] Release tag creation is restricted through the ruleset with maintainer bypass.
+
+Evidence:
+
+- `gh api repos/iMagdy/skm/rulesets`
+- `gh api repos/iMagdy/skm/rulesets/17082021`
+- `gh api repos/iMagdy/skm/rulesets/17082811`
+
+## GitHub Actions
+
+- [x] Actions are enabled.
+- [x] Allowed Actions are restricted to selected actions.
+- [x] SHA pinning is required.
+- [x] GitHub-owned actions are allowed.
+- [x] Third-party action allowlist is limited to `oras-project/setup-oras@*`.
+- [x] Default workflow token permissions are read-only.
+- [x] Workflows request write permissions only where needed.
+- [x] Third-party workflow actions are pinned by SHA.
+- [x] CI validates formatting, clippy, tests, build, docs, DCO, and coverage.
+- [x] Release workflow uses the protected `release` environment.
+
+Evidence:
+
+- `gh api repos/iMagdy/skm/actions/permissions`
+- `gh api repos/iMagdy/skm/actions/permissions/selected-actions`
+- `gh api repos/iMagdy/skm/actions/permissions/workflow`
+- `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
+
+## Security
+
+- [x] Security policy exists.
+- [x] Private vulnerability reporting is enabled.
+- [x] Dependabot vulnerability alerts are enabled.
+- [x] Dependabot security updates are enabled.
+- [x] Secret scanning is enabled.
+- [x] Secret scanning push protection is enabled.
+- [x] CodeQL default setup is configured for Actions, Python, and Rust.
+- [x] Code scanning alerts are currently clear.
+- [x] Secret scanning alerts are currently clear.
+- [x] Dependabot alerts are currently clear.
+
+Evidence:
+
+- `gh api repos/iMagdy/skm/private-vulnerability-reporting`
+- `gh api -i repos/iMagdy/skm/vulnerability-alerts`
+- `gh api repos/iMagdy/skm/automated-security-fixes`
+- `gh api repos/iMagdy/skm/code-scanning/default-setup`
+- `gh api repos/iMagdy/skm/code-scanning/alerts`
+- `gh api repos/iMagdy/skm/secret-scanning/alerts`
+- `gh api repos/iMagdy/skm/dependabot/alerts`
+
+## Open Source Community Files
+
+- [x] `README.md` exists.
+- [x] `LICENSE` exists and is canonical Apache-2.0 text.
+- [x] `SECURITY.md` exists.
+- [x] `CONTRIBUTING.md` exists.
+- [x] `CODE_OF_CONDUCT.md` exists.
+- [x] `DCO.md` exists.
+- [x] `TRADEMARK.md` exists.
+- [x] `SUPPORT.md` exists.
+- [x] `SPONSORS.md` exists.
+- [x] `.github/CODEOWNERS` exists.
+- [x] `.github/pull_request_template.md` exists.
+- [x] Issue forms exist for bugs, features, and questions.
+- [x] `.github/FUNDING.yml` exists.
+- [x] Community health profile reports 100%.
+
+Evidence:
+
+- `gh api repos/iMagdy/skm/community/profile`
+- `gh api repos/iMagdy/skm/contents/.github/ISSUE_TEMPLATE`
+- Local files in the repository root and `.github/`
+
+## Dependency And Maintenance Automation
+
+- [x] Dependabot config exists for Cargo.
+- [x] Dependabot config exists for GitHub Actions.
+- [x] Dependabot labels exist: `dependencies`, `rust`, and `github-actions`.
+- [x] Maintenance labels exist for areas, security, breaking changes, and repro needs.
+- [x] Dependabot PR #8 was opened for GitHub Actions updates.
+- [x] Dependabot PR #9 was opened for Cargo updates.
+- [x] Dependabot PR #9 clippy compatibility fix was pushed to its branch.
+
+Evidence:
+
+- `.github/dependabot.yml`
+- `gh pr list --repo iMagdy/skm --state open`
+- `gh api repos/iMagdy/skm/labels`
+
+## Release Readiness
+
+- [x] `release` environment exists.
+- [x] `release` environment requires `iMagdy` approval.
+- [x] Homebrew tap variables are configured.
+- [ ] `CARGO_REGISTRY_TOKEN` is configured as a `release` environment secret.
+- [ ] `HOMEBREW_TAP_TOKEN` is configured as a `release` environment secret.
+
+Evidence:
+
+- `gh api repos/iMagdy/skm/environments`
+- `gh api repos/iMagdy/skm/environments/release/secrets`
+- `gh api repos/iMagdy/skm/actions/variables`
+
+The unchecked release secrets are intentionally not filled with placeholder
+values. They require real credentials with publish access to crates.io and the
+Homebrew tap repository.
+
+## Verification Commands
+
+- [x] `cargo fmt --check`
+- [x] `cargo clippy --all-targets -- -D warnings`
+- [x] `cargo test --all-targets`
+- [x] `python3 scripts/check_docs.py`
+- [x] Latest `main` CI and CodeQL checks are green.
+
+Evidence:
+
+- Local command output from the hardening work.
+- `gh api repos/iMagdy/skm/commits/main/check-runs`
