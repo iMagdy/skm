@@ -1,0 +1,18 @@
+name: Question
+description: Ask a usage, design, or project-direction question.
+title: "question: "
+labels:
+  - question
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to understand or decide?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include the command, repository shape, or docs page involved.

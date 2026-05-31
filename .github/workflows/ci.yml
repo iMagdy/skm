@@ -10,18 +10,61 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
+  dco:
+    name: dco
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check commit sign-offs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" > commits.json
+          python3 - <<'PY'
+          import json
+          import re
+          import sys
+
+          with open("commits.json", encoding="utf-8") as fh:
+              pages = json.load(fh)
+
+          commits = [commit for page in pages for commit in page]
+          signoff = re.compile(r"^Signed-off-by: .+ <[^>]+>$", re.IGNORECASE | re.MULTILINE)
+          missing = []
+
+          for commit in commits:
+              message = commit["commit"]["message"]
+              subject = message.splitlines()[0] if message.splitlines() else "(no subject)"
+              if not signoff.search(message):
+                  missing.append(f"{commit['sha'][:12]} {subject}")
+
+          if missing:
+              print("The following commits are missing DCO Signed-off-by lines:")
+              for item in missing:
+                  print(f"- {item}")
+              print("\nUse `git commit --amend --signoff` or `git rebase --signoff` and push again.")
+              sys.exit(1)
+          PY
+
   fmt:
     name: fmt
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
+        run: rustup toolchain install stable --profile minimal --component rustfmt
       - name: Check formatting
         run: cargo fmt --check
 
@@ -31,13 +74,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
+        run: rustup toolchain install stable --profile minimal --component clippy
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
@@ -54,11 +95,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        run: rustup toolchain install stable --profile minimal
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
@@ -75,11 +116,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        run: rustup toolchain install stable --profile minimal
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
@@ -96,7 +137,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
       - name: Validate docs
@@ -115,11 +156,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        run: rustup toolchain install stable --profile minimal
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |

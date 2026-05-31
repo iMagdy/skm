@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/iMagdy/skm/security
+    about: Please report vulnerabilities privately through GitHub security reporting.
+  - name: Support
+    url: https://github.com/iMagdy/skm/blob/main/SUPPORT.md
+    about: Start here for troubleshooting and support guidance.

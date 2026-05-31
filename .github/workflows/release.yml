@@ -6,9 +6,7 @@ on:
       - "v*"
 
 permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+  contents: read
 
 jobs:
   build:
@@ -37,11 +35,9 @@ jobs:
             binary: skm
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+        run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Package Unix
@@ -74,7 +70,7 @@ jobs:
           $hash = (Get-FileHash "dist/$asset" -Algorithm SHA256).Hash.ToLower()
           "$hash  $asset" | Out-File -Encoding ascii "dist/$asset.sha256"
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: skm-${{ github.ref_name }}-${{ matrix.target }}
           path: dist/*
@@ -84,15 +80,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        run: rustup toolchain install stable --profile minimal
       - name: Download release assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: dist
           merge-multiple: true
@@ -175,7 +176,7 @@ jobs:
           fi
           gh release upload "$tag" dist/* --clobber
       - name: Set up ORAS
-        uses: oras-project/setup-oras@v1
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
         with:
           version: 1.3.0
       - name: Publish GitHub Package
@@ -207,7 +208,7 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           gh release edit "$tag" --draft=false --latest
       - name: Checkout Homebrew tap
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{ steps.homebrew.outputs.repository }}
           ref: ${{ steps.homebrew.outputs.branch }}

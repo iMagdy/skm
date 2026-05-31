@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a focused improvement or new capability.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the behavior you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention workarounds or other designs if relevant.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility notes
+      description: Call out manifest, lockfile, CLI, or release implications.

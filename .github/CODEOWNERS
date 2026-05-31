@@ -1,0 +1,12 @@
+# Default ownership for repository changes.
+* @iMagdy
+
+# Security-sensitive project automation.
+/.github/ @iMagdy
+/scripts/ @iMagdy
+
+# Core CLI implementation and package metadata.
+/src/ @iMagdy
+/tests/ @iMagdy
+/Cargo.toml @iMagdy
+/Cargo.lock @iMagdy

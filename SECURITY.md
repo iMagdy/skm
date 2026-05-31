@@ -2,7 +2,8 @@
 
 Please do not report security vulnerabilities through public GitHub issues.
 
-Until a private GitHub security advisory channel is enabled, contact the maintainer through the repository owner profile and include:
+Use GitHub's private vulnerability reporting or open a private security advisory
+from the repository's Security tab. Include:
 
 - A short description of the vulnerability.
 - A minimal reproduction or affected command.
