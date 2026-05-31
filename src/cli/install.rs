@@ -945,6 +945,29 @@ mod tests {
     }
 
     #[test]
+    fn test_run_bulk_with_manifest_installs_local_repo() {
+        let dir = std::env::temp_dir().join("skm_test_bulk_manifest_local_repo");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = create_local_repo(&dir, "source");
+        std::fs::write(
+            dir.join("skills.json"),
+            format!(
+                r#"{{"skills": {{"docs": {{"repo": "{}"}}}}, "exports": {{}}}}"#,
+                repo.display()
+            ),
+        )
+        .unwrap();
+
+        let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/docs/source/SKILL.md").exists());
+        assert!(dir.join("skills.lock").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_run_bulk_with_manifest_clone_fails() {
         let dir = std::env::temp_dir().join("skm_test_bulk_manifest_clonefail");
         let _ = std::fs::remove_dir_all(&dir);
@@ -961,6 +984,188 @@ mod tests {
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
         assert!(!dir.join("skills.lock").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_install_repo_to_skill_dir_rejects_existing_destination() {
+        let dir = std::env::temp_dir().join("skm_test_install_existing_destination");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(git::skill_dir(&dir, "docs")).unwrap();
+        let progress = ProgressBar::hidden();
+
+        let result = install_repo_to_skill_dir(&dir, "docs", "unused", &progress);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Destination skill directory already exists"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_copy_repo_content_for_install_errors_without_skills_dir() {
+        let dir = std::env::temp_dir().join("skm_test_repo_content_no_skills_dir");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(&src).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("no skills.json"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_copy_repo_content_for_install_errors_for_empty_skills_dir() {
+        let dir = std::env::temp_dir().join("skm_test_repo_content_empty_skills_dir");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("skills")).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("does not contain skill directories"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_copy_repo_content_for_install_errors_for_empty_selection() {
+        let dir = std::env::temp_dir().join("skm_test_repo_content_empty_selection");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("skills/alpha")).unwrap();
+        std::fs::create_dir_all(src.join("skills/beta")).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No fallback skills selected"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_copy_repo_content_for_install_errors_for_invalid_selection() {
+        let dir = std::env::temp_dir().join("skm_test_repo_content_invalid_selection");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("skills/alpha")).unwrap();
+        std::fs::create_dir_all(src.join("skills/beta")).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![99],
+        };
+
+        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Selected fallback skill index 99 is invalid"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_fallback_directory_skill() {
+        let dir = std::env::temp_dir().join("skm_test_install_fallback_directory_skill");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
+        std::fs::write(dir.join("skills/docs/SKILL.md"), "# Docs").unwrap();
+
+        let result = run_in(&dir, None);
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/docs/SKILL.md").exists());
+        assert!(dir.join("skills.lock").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_fallback_skill_dirs_filters_and_sorts() {
+        let dir = std::env::temp_dir().join("skm_test_fallback_skill_dir_filter");
+        let _ = std::fs::remove_dir_all(&dir);
+        let skills = dir.join("skills");
+        std::fs::create_dir_all(skills.join("beta")).unwrap();
+        std::fs::create_dir_all(skills.join("alpha")).unwrap();
+        std::fs::create_dir_all(skills.join(".hidden")).unwrap();
+        std::fs::create_dir_all(skills.join("target")).unwrap();
+        std::fs::create_dir_all(skills.join("node_modules")).unwrap();
+        std::fs::write(skills.join("README.md"), "not a skill dir").unwrap();
+
+        let result = discover_fallback_skill_dirs(&skills).unwrap();
+
+        assert_eq!(
+            vec!["alpha".to_string(), "beta".to_string()],
+            result
+                .into_iter()
+                .map(|skill| skill.name)
+                .collect::<Vec<_>>()
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_install_workspace_sanitizes_name() {
+        let dir = std::env::temp_dir().join("skm_test_install_workspace_sanitize");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let workspace = InstallWorkspace::create(&dir, "bad/name").unwrap();
+
+        assert!(workspace
+            .root
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .contains("bad_name"));
+        drop(workspace);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_install_workspace_errors_after_collisions() {
+        let dir = std::env::temp_dir().join("skm_test_install_workspace_collisions");
+        let _ = std::fs::remove_dir_all(&dir);
+        let temp_parent = dir.join(".agents").join(".tmp");
+        std::fs::create_dir_all(&temp_parent).unwrap();
+        let pid = std::process::id();
+        for attempt in 0..100 {
+            std::fs::create_dir_all(temp_parent.join(format!("install-full-{}-{}", pid, attempt)))
+                .unwrap();
+        }
+
+        let result = InstallWorkspace::create(&dir, "full");
+
+        match result {
+            Ok(_) => panic!("workspace creation should fail after all names collide"),
+            Err(err) => assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists),
+        }
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

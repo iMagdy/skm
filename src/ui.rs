@@ -124,6 +124,7 @@ mod tests {
         assert!(status_label("missing").contains("missing"));
         assert!(status_label("not locked").contains("not locked"));
         assert!(status_label("orphaned").contains("orphaned"));
+        assert_eq!(status_label("custom"), "custom");
     }
 
     #[test]
