@@ -307,6 +307,49 @@ mod tests {
     }
 
     #[test]
+    fn test_copy_skill_files_file_export_reports_copy_error() {
+        let source = std::env::temp_dir().join("skm_test_file_export_error_src");
+        let dest = std::env::temp_dir().join("skm_test_file_export_error_dst");
+        let _ = std::fs::remove_dir_all(&source);
+        let _ = std::fs::remove_dir_all(&dest);
+        std::fs::create_dir_all(&source).unwrap();
+        std::fs::write(source.join("skill.md"), "content").unwrap();
+        let mut manifest = Manifest::new();
+        manifest.exports.insert(
+            "my-skill".to_string(),
+            ExportEntry {
+                path: "skill.md".to_string(),
+            },
+        );
+
+        let result = copy_skill_files(&source, &dest, &manifest);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Failed to copy"));
+        std::fs::remove_dir_all(&source).unwrap();
+    }
+
+    #[test]
+    fn test_copy_cloned_repo_with_empty_exports_manifest() {
+        let src = std::env::temp_dir().join("skm_test_clone_empty_exports_src");
+        let dst = std::env::temp_dir().join("skm_test_clone_empty_exports_dst");
+        let _ = std::fs::remove_dir_all(&src);
+        let _ = std::fs::remove_dir_all(&dst);
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+
+        let result = copy_cloned_repo_to_dest(&src, &dst);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("does not declare any exports"));
+        std::fs::remove_dir_all(&src).unwrap();
+        let _ = std::fs::remove_dir_all(&dst);
+    }
+
+    #[test]
     fn test_copy_dir_recursive_skips_node_modules() {
         let src = std::env::temp_dir().join("skm_test_skip_nm_src");
         let dst = std::env::temp_dir().join("skm_test_skip_nm_dst");
