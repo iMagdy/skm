@@ -26,10 +26,66 @@ When a `v*` tag is pushed, `.github/workflows/release.yml`:
 3. Generates per-asset `.sha256` files and one aggregate checksum file.
 4. Creates a draft GitHub Release for the tag.
 5. Uploads all release assets.
-6. Publishes the GitHub Release with a clean asset table.
-7. Opens a pull request updating `CHANGELOG.md` and `docs/RELEASE_NOTES.md`.
+6. Publishes the `skm-rs` crate to crates.io.
+7. Publishes the release archives to GitHub Packages through the GitHub Container Registry.
+8. Publishes the GitHub Release with a clean asset table.
+9. Updates the Homebrew tap formula for macOS Intel, macOS Apple Silicon, and Linux x64.
+10. Opens a pull request updating `CHANGELOG.md` and `docs/RELEASE_NOTES.md`.
 
 The docs PR happens after the tag because a tag points at an existing commit. The release page is updated immediately; repository docs are refreshed through the follow-up pull request.
+
+## crates.io
+
+Release tags publish the crate package to crates.io as:
+
+```text
+skm-rs
+```
+
+The installed binary remains `skm`, so users can install it with:
+
+```bash
+cargo install skm-rs
+```
+
+Configure this repository secret before publishing a tag:
+
+- `CARGO_REGISTRY_TOKEN`: crates.io API token with publish access to the `skm-rs` crate.
+
+The workflow verifies that `Cargo.toml` version matches the tag without the leading `v`. If the crate version is already published, the workflow skips the publish step so release reruns stay safe.
+
+## GitHub Packages
+
+Release archives are mirrored to GitHub Packages as an OCI artifact in the GitHub Container Registry:
+
+```text
+ghcr.io/imagdy/skm:<tag>
+ghcr.io/imagdy/skm:latest
+```
+
+The workflow uses the built-in `GITHUB_TOKEN` and requires `packages: write` permission. The package contains the same archives, per-asset `.sha256` files, and aggregate checksum file that are attached to the GitHub Release.
+
+## Homebrew
+
+Homebrew publishing updates a tap formula from the release checksums. By default, the workflow writes:
+
+```text
+Formula/skm.rb
+```
+
+to:
+
+```text
+iMagdy/homebrew-tap
+```
+
+Configure these repository settings before publishing a tag:
+
+- `HOMEBREW_TAP_TOKEN` secret: token with write access to the tap repository.
+- `HOMEBREW_TAP_REPOSITORY` variable: optional `owner/repo` override. Defaults to `<release-owner>/homebrew-tap`.
+- `HOMEBREW_TAP_BRANCH` variable: optional target branch override. Defaults to `main`.
+
+The generated formula installs the prebuilt macOS or Linux archive for the user's platform and declares `git` as a runtime dependency.
 
 ## Local Dry Run
 

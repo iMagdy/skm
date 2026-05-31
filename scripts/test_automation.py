@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 import generate_release_docs as release_docs
+import generate_homebrew_formula as homebrew_formula
 import speckit_sync_issues as sync_issues
 
 
@@ -142,6 +143,48 @@ class ReleaseDocsTests(unittest.TestCase):
         self.assertIn("gh release create", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("gh pr create", workflow)
+        self.assertIn("packages: write", workflow)
+        self.assertIn("oras push", workflow)
+        self.assertIn("generate_homebrew_formula.py", workflow)
+        self.assertIn("HOMEBREW_TAP_TOKEN", workflow)
+        self.assertIn("CARGO_REGISTRY_TOKEN", workflow)
+        self.assertIn("cargo publish --locked", workflow)
+
+    def test_homebrew_formula_uses_release_assets_and_checksums(self) -> None:
+        checksums = {
+            "skm-v1.2.3-x86_64-apple-darwin.tar.gz": "a" * 64,
+            "skm-v1.2.3-aarch64-apple-darwin.tar.gz": "b" * 64,
+            "skm-v1.2.3-x86_64-unknown-linux-gnu.tar.gz": "c" * 64,
+            "skm-v1.2.3-x86_64-pc-windows-msvc.zip": "d" * 64,
+        }
+
+        formula = homebrew_formula.render_formula("v1.2.3", checksums)
+
+        self.assertIn('class Skm < Formula', formula)
+        self.assertIn('version "1.2.3"', formula)
+        self.assertIn('depends_on "git"', formula)
+        self.assertIn("on_macos do", formula)
+        self.assertIn("on_arm do", formula)
+        self.assertIn("on_intel do", formula)
+        self.assertIn("x86_64-apple-darwin", formula)
+        self.assertIn("aarch64-apple-darwin", formula)
+        self.assertIn("on_linux do", formula)
+        self.assertIn("x86_64-unknown-linux-gnu", formula)
+        self.assertNotIn("x86_64-pc-windows-msvc", formula)
+        self.assertIn('bin.install "skm"', formula)
+
+    def test_homebrew_checksum_parser_accepts_sha256sum_lines(self) -> None:
+        checksums = homebrew_formula.parse_checksums(
+            "\n".join(
+                [
+                    f"{'A' * 64}  skm-v1.2.3-x86_64-apple-darwin.tar.gz",
+                    f"{'b' * 64} *skm-v1.2.3-aarch64-apple-darwin.tar.gz",
+                ]
+            )
+        )
+
+        self.assertEqual("a" * 64, checksums["skm-v1.2.3-x86_64-apple-darwin.tar.gz"])
+        self.assertEqual("b" * 64, checksums["skm-v1.2.3-aarch64-apple-darwin.tar.gz"])
 
     def test_ci_runs_coverage_after_primary_gates(self) -> None:
         ci = (release_docs.ROOT / ".github" / "workflows" / "ci.yml").read_text(
@@ -154,4 +197,3 @@ class ReleaseDocsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
-

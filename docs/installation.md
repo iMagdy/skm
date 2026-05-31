@@ -22,6 +22,14 @@ skm --version
 skm --help
 ```
 
+## Install from crates.io
+
+```bash
+cargo install skm-rs
+```
+
+The crates.io package is named `skm-rs`; it installs the `skm` binary.
+
 ## Install from a Release
 
 Download the archive for your platform from [GitHub Releases](https://github.com/iMagdy/skm/releases), then unpack it and place the `skm` binary on your `PATH`.
@@ -34,6 +42,16 @@ skm-<tag>-<target>.zip
 ```
 
 Each release also includes `.sha256` files and an aggregate checksum file.
+
+## Install with Homebrew
+
+After a release is published to the Homebrew tap:
+
+```bash
+brew install imagdy/tap/skm
+```
+
+The formula installs the prebuilt macOS or Linux release archive for your platform.
 
 ## Platform Notes
 
