@@ -26,12 +26,33 @@ When a `v*` tag is pushed, `.github/workflows/release.yml`:
 3. Generates per-asset `.sha256` files and one aggregate checksum file.
 4. Creates a draft GitHub Release for the tag.
 5. Uploads all release assets.
-6. Publishes the release archives to GitHub Packages through the GitHub Container Registry.
-7. Publishes the GitHub Release with a clean asset table.
-8. Updates the Homebrew tap formula for macOS Intel, macOS Apple Silicon, and Linux x64.
-9. Opens a pull request updating `CHANGELOG.md` and `docs/RELEASE_NOTES.md`.
+6. Publishes the `skm-rs` crate to crates.io.
+7. Publishes the release archives to GitHub Packages through the GitHub Container Registry.
+8. Publishes the GitHub Release with a clean asset table.
+9. Updates the Homebrew tap formula for macOS Intel, macOS Apple Silicon, and Linux x64.
+10. Opens a pull request updating `CHANGELOG.md` and `docs/RELEASE_NOTES.md`.
 
 The docs PR happens after the tag because a tag points at an existing commit. The release page is updated immediately; repository docs are refreshed through the follow-up pull request.
+
+## crates.io
+
+Release tags publish the crate package to crates.io as:
+
+```text
+skm-rs
+```
+
+The installed binary remains `skm`, so users can install it with:
+
+```bash
+cargo install skm-rs
+```
+
+Configure this repository secret before publishing a tag:
+
+- `CARGO_REGISTRY_TOKEN`: crates.io API token with publish access to the `skm-rs` crate.
+
+The workflow verifies that `Cargo.toml` version matches the tag without the leading `v`. If the crate version is already published, the workflow skips the publish step so release reruns stay safe.
 
 ## GitHub Packages
 

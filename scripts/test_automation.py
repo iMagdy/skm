@@ -147,6 +147,8 @@ class ReleaseDocsTests(unittest.TestCase):
         self.assertIn("oras push", workflow)
         self.assertIn("generate_homebrew_formula.py", workflow)
         self.assertIn("HOMEBREW_TAP_TOKEN", workflow)
+        self.assertIn("CARGO_REGISTRY_TOKEN", workflow)
+        self.assertIn("cargo publish --locked", workflow)
 
     def test_homebrew_formula_uses_release_assets_and_checksums(self) -> None:
         checksums = {

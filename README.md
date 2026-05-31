@@ -47,6 +47,12 @@ cd skm
 cargo install --path .
 ```
 
+From crates.io:
+
+```bash
+cargo install skm-rs
+```
+
 From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/skm/releases), unpack it, and place `skm` on your `PATH`.
 
 With Homebrew, install from the tap once a release is published:
