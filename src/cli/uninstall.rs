@@ -4,6 +4,7 @@ use crate::error::SkillNotFound;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
 use crate::skill;
+use crate::ui;
 
 #[cfg(not(tarpaulin_include))]
 pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -43,7 +44,7 @@ pub(crate) fn run_in(
 
     skill::remove_skill_dir(project_root, package_name)?;
 
-    println!("Uninstalled {}", package_name);
+    ui::success(format!("Uninstalled {}", ui::skill_name(package_name)));
     Ok(())
 }
 

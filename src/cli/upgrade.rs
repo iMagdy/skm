@@ -1,10 +1,11 @@
 use std::path::Path;
 
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::MultiProgress;
 
 use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
+use crate::ui;
 
 #[cfg(not(tarpaulin_include))]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -39,7 +40,7 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
     };
 
     if skills_to_upgrade.is_empty() {
-        println!("No skills to upgrade.");
+        ui::info("No skills to upgrade.");
         return Ok(());
     }
 
@@ -54,29 +55,33 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
                 "Error upgrading {}: directory does not exist",
                 name
             ));
+            ui::warning(format!(
+                "Skipping {} because the skill directory is missing",
+                ui::skill_name(name)
+            ));
             continue;
         }
 
-        let pb = mp.add(ProgressBar::new_spinner());
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
-        pb.set_message(format!("Upgrading {}...", name));
+        let pb = ui::upgrade_progress(&mp, name);
+        pb.set_position(15);
+        pb.set_message(format!("Fetching {}", ui::skill_name(name)));
 
         if let Err(e) = git::fetch(&skill_dir) {
-            pb.finish_with_message(format!("Error fetching {}: {}", name, e));
+            ui::finish_error(&pb, format!("Error fetching {}: {}", name, e));
             errors.push(format!("Error fetching {}: {}", name, e));
             continue;
         }
 
+        pb.set_position(65);
+        pb.set_message(format!("Checking out {}", ui::skill_name(name)));
         if let Err(e) = git::checkout_default_branch(&skill_dir) {
-            pb.finish_with_message(format!("Error checking out {}: {}", name, e));
+            ui::finish_error(&pb, format!("Error checking out {}: {}", name, e));
             errors.push(format!("Error checking out {}: {}", name, e));
             continue;
         }
 
+        pb.set_position(90);
+        pb.set_message(format!("Recording {}", ui::skill_name(name)));
         let commit = git::rev_parse_head(&skill_dir).unwrap_or_default();
         if let Some(entry) = lockfile.entry(name) {
             let new_entry = crate::lockfile::LockEntry {
@@ -86,13 +91,14 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
             lockfile.insert(name.clone(), new_entry);
         }
 
-        pb.finish_with_message(format!("Upgraded {}", name));
+        ui::finish_success(&pb, format!("Upgraded {}", ui::skill_name(name)));
     }
 
     lockfile.save(&lockfile_path)?;
 
     if !errors.is_empty() {
-        eprintln!("\nErrors encountered:");
+        eprintln!();
+        ui::error("Errors encountered:");
         for err in &errors {
             eprintln!("  {}", err);
         }

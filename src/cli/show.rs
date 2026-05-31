@@ -4,6 +4,7 @@ use crate::error::SkillNotFound;
 use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
+use crate::ui;
 
 #[cfg(not(tarpaulin_include))]
 pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -50,11 +51,15 @@ pub(crate) fn run_in(
         "not installed"
     };
 
-    println!("Name:    {}", package_name);
-    println!("Repo:    {}", repo);
-    println!("Commit:  {}", commit);
-    println!("Path:    {}", dir.display());
-    println!("Status:  {}", status);
+    println!(
+        "{} {}",
+        ui::table_header("Skill"),
+        ui::skill_name(package_name)
+    );
+    println!("{} {}", ui::label("Repo   "), repo);
+    println!("{} {}", ui::label("Commit "), commit);
+    println!("{} {}", ui::label("Path   "), dir.display());
+    println!("{} {}", ui::label("Status "), ui::status_label(status));
 
     Ok(())
 }

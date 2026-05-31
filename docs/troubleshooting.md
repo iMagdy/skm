@@ -12,12 +12,16 @@ Then add skills manually or with `skm install <name:repo>`.
 
 ## Git Clone Fails
 
+`skm` hides raw git clone progress during normal installs, then prints the useful git error line when a clone fails.
+
 Check that:
 
 - `git` is installed and on `PATH`.
 - The repo URL is correct.
 - SSH keys or credential helpers are configured for private repositories.
 - Your network can reach the remote.
+
+If you need full git diagnostics, run the equivalent `git clone <repo-url>` manually from the same shell.
 
 ## Skill Is Listed as Missing
 

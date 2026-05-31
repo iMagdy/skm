@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use dialoguer::{Confirm, MultiSelect, Select};
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar};
 
 use crate::discovery::{self, DiscoveredSkill, SkillType};
 use crate::error::{InstallAlreadyExists, InstallInvalidFormat, SkillCopyFailed};
@@ -9,6 +9,7 @@ use crate::git;
 use crate::lockfile::{LockEntry, Lockfile};
 use crate::manifest::Manifest;
 use crate::skill;
+use crate::ui;
 
 #[cfg(not(tarpaulin_include))]
 pub fn run(target: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
@@ -55,27 +56,28 @@ fn run_bulk_with_manifest(
         let skill_dir = git::skill_dir(project_root, name);
 
         if skill_dir.exists() && lockfile.contains(name) {
-            eprintln!("Skill '{}' already installed, skipping", name);
+            ui::warning(format!(
+                "Skill {} already installed, skipping",
+                ui::skill_name(name)
+            ));
             continue;
         }
 
-        let pb = mp.add(ProgressBar::new_spinner());
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
+        let pb = ui::install_progress(&mp, name);
         let commit = match install_repo_to_skill_dir(project_root, name, &entry.repo, &pb) {
             Ok(commit) => commit,
             Err(e) => {
-                pb.finish_with_message(format!("Error installing {}: {}", name, e));
+                ui::finish_error(&pb, format!("Error installing {}: {}", name, e));
                 errors.push(format!("Error installing {}: {}", name, e));
                 continue;
             }
         };
 
         if !skill_dir.exists() {
-            pb.finish_with_message(format!("Error installing {}: destination missing", name));
+            ui::finish_error(
+                &pb,
+                format!("Error installing {}: destination missing", name),
+            );
             errors.push(format!("Error installing {}: destination missing", name));
             continue;
         }
@@ -89,7 +91,7 @@ fn run_bulk_with_manifest(
         );
         lockfile_changed = true;
 
-        pb.finish_with_message(format!("Installed {}", name));
+        ui::finish_success(&pb, format!("Installed {}", ui::skill_name(name)));
     }
 
     if lockfile_changed {
@@ -97,7 +99,8 @@ fn run_bulk_with_manifest(
     }
 
     if !errors.is_empty() {
-        eprintln!("\nErrors encountered:");
+        eprintln!();
+        ui::error("Errors encountered:");
         for err in &errors {
             eprintln!("  {}", err);
         }
@@ -109,8 +112,8 @@ fn run_bulk_with_manifest(
 /// T010, T011, T012, T013, T014, T015: Fallback discovery when manifest not found
 fn run_bulk_with_fallback(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // T011: Display warning messages
-    eprintln!("Warning: No skills.json found. Auto-discovering skills...");
-    eprintln!("Discovering skills in repository...");
+    ui::warning("No skills.json found. Auto-discovering skills...");
+    ui::info("Discovering skills in repository...");
 
     // T004: Find skills directory
     let skills_dir = match discovery::find_skills_directory(project_root) {
@@ -129,7 +132,7 @@ fn run_bulk_with_fallback(project_root: &Path) -> Result<(), Box<dyn std::error:
 
     // Display any warnings from discovery
     for warning in &result.warnings {
-        eprintln!("{}", warning);
+        ui::warning(warning);
     }
 
     // T013: Handle empty skills directory
@@ -158,11 +161,14 @@ fn run_bulk_with_fallback(project_root: &Path) -> Result<(), Box<dyn std::error:
 fn prompt_user_selection(
     skills: &[DiscoveredSkill],
 ) -> Result<DiscoveredSkill, Box<dyn std::error::Error>> {
-    println!("\nMultiple skills found in repository:\n");
+    println!(
+        "\n{}\n",
+        ui::table_header("Multiple skills found in repository")
+    );
 
     // Display numbered list
     for (i, skill) in skills.iter().enumerate() {
-        println!("  {}. {}", i + 1, skill.name);
+        println!("  {}. {}", i + 1, ui::skill_name(&skill.name));
     }
 
     // T014: Handle user cancellation
@@ -179,7 +185,7 @@ fn prompt_user_selection(
         Some(index) => Ok(skills[index].clone()),
         None => {
             // User pressed Ctrl+C or Esc
-            eprintln!("Installation cancelled");
+            ui::warning("Installation cancelled");
             std::process::exit(3);
         }
     }
@@ -201,12 +207,7 @@ fn install_discovered_skill(
     skill: &DiscoveredSkill,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mp = MultiProgress::new();
-    let pb = mp.add(ProgressBar::new_spinner());
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.green} {msg}")
-            .unwrap(),
-    );
+    let pb = ui::install_progress(&mp, &skill.name);
 
     // For discovered skills, we need to clone from a URL
     // Since discovery finds skills in a local directory, we need to handle this differently
@@ -216,7 +217,11 @@ fn install_discovered_skill(
     let skill_dir = git::skill_dir(project_root, &skill.name);
     std::fs::create_dir_all(&skill_dir)?;
 
-    pb.set_message(format!("Installing {}...", skill.name));
+    pb.set_position(40);
+    pb.set_message(format!(
+        "Copying discovered skill {}",
+        ui::skill_name(&skill.name)
+    ));
 
     // Copy the skill from the discovered location
     match skill.skill_type {
@@ -241,8 +246,8 @@ fn install_discovered_skill(
     );
     lockfile.save(&project_root.join("skills.lock"))?;
 
-    pb.finish_with_message(format!("Installed {}", skill.name));
-    println!("Installed {}", skill.name);
+    ui::finish_success(&pb, format!("Installed {}", ui::skill_name(&skill.name)));
+    ui::success(format!("Installed {}", ui::skill_name(&skill.name)));
 
     Ok(())
 }
@@ -309,12 +314,7 @@ fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::erro
     }
 
     let mp = MultiProgress::new();
-    let pb = mp.add(ProgressBar::new_spinner());
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.green} {msg}")
-            .unwrap(),
-    );
+    let pb = ui::install_progress(&mp, &name);
 
     let commit = install_repo_to_skill_dir(project_root, &name, &repo_url, &pb)?;
 
@@ -331,8 +331,12 @@ fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::erro
     );
     lockfile.save(&project_root.join("skills.lock"))?;
 
-    pb.finish_with_message(format!("Installed {}", name));
-    println!("Installed {} from {}", name, project_root.display());
+    ui::finish_success(&pb, format!("Installed {}", ui::skill_name(&name)));
+    ui::success(format!(
+        "Installed {} from {}",
+        ui::skill_name(&name),
+        project_root.display()
+    ));
 
     Ok(())
 }
@@ -356,18 +360,21 @@ fn install_repo_to_skill_dir(
 
     let workspace = InstallWorkspace::create(project_root, name)?;
 
-    pb.set_message(format!("Cloning {}...", name));
-    git::clone(repo_url, &workspace.clone_dir)?;
+    pb.set_message(format!("Cloning {}", ui::skill_name(name)));
+    git::clone_with_progress(repo_url, &workspace.clone_dir, pb)?;
 
     let commit = git::rev_parse_head(&workspace.clone_dir).unwrap_or_default();
 
-    pb.set_message(format!("Copying files for {}...", name));
+    pb.set_position(92);
+    pb.set_message(format!("Copying files for {}", ui::skill_name(name)));
     let prompter = DialoguerFallbackPrompter;
     copy_repo_content_for_install(&workspace.clone_dir, &workspace.install_dir, &prompter)?;
 
     if let Some(parent) = skill_dir.parent() {
         std::fs::create_dir_all(parent)?;
     }
+    pb.set_position(96);
+    pb.set_message(format!("Finalizing {}", ui::skill_name(name)));
     std::fs::rename(&workspace.install_dir, &skill_dir)?;
 
     Ok(commit)
@@ -442,7 +449,7 @@ struct DialoguerFallbackPrompter;
 
 impl FallbackPrompter for DialoguerFallbackPrompter {
     fn confirm_missing_manifest(&self) -> Result<bool, Box<dyn std::error::Error>> {
-        eprintln!("Warning: source repo has no skills.json file.");
+        ui::warning("Source repo has no skills.json file.");
         Ok(Confirm::new()
             .with_prompt("Fetch skill directories from skills/SKILLS if present?")
             .default(false)

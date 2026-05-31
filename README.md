@@ -11,6 +11,7 @@
 - **Git-native distribution**: install skills from normal HTTPS or SSH git repositories.
 - **Reproducible installs**: lock every installed skill to the exact commit that was fetched.
 - **Friendly project state**: list, inspect, upgrade, export, and remove skills from one CLI.
+- **Polished terminal UX**: color-coded statuses, icons, and progress bars keep git work readable.
 - **Agent-ready layout**: installed content lands where coding agents already look for skills.
 
 ## 60-Second Quickstart
@@ -33,6 +34,8 @@ skills.json
 skills.lock
 .agents/skills/
 ```
+
+During install and upgrade, `skm` shows progress bars for long-running git work and hides raw `git clone` or `git fetch` output unless an error needs to be summarized.
 
 ## Install
 

@@ -3,6 +3,13 @@ use std::process::Command;
 
 use tempfile::TempDir;
 
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct SkmCommandOutput {
+    pub stdout: String,
+    pub stderr: String,
+}
+
 pub struct TestContext {
     _temp_dir: TempDir,
     pub project_dir: PathBuf,
@@ -92,6 +99,13 @@ pub fn create_local_skill_repo(path: &Path, name: &str, with_manifest: bool) {
 }
 
 pub fn run_skm_command(args: &[&str], working_dir: &Path) -> Result<String, String> {
+    run_skm_command_output(args, working_dir).map(|output| output.stdout)
+}
+
+pub fn run_skm_command_output(
+    args: &[&str],
+    working_dir: &Path,
+) -> Result<SkmCommandOutput, String> {
     let output = Command::new(env!("CARGO_BIN_EXE_skm"))
         .args(args)
         .current_dir(working_dir)
@@ -105,7 +119,7 @@ pub fn run_skm_command(args: &[&str], working_dir: &Path) -> Result<String, Stri
         return Err(format!("skm failed: {}\n{}", stdout, stderr));
     }
 
-    Ok(stdout)
+    Ok(SkmCommandOutput { stdout, stderr })
 }
 
 fn run_git(repo_dir: &Path, args: &[&str]) {

@@ -13,7 +13,8 @@ src/
 ├── git.rs           # git CLI wrapper functions
 ├── lockfile.rs      # skills.lock load/save/validation
 ├── manifest.rs      # skills.json load/save/validation
-└── skill.rs         # copy and remove skill files
+├── skill.rs         # copy and remove skill files
+└── ui.rs            # shared terminal colors, icons, statuses, and progress bars
 ```
 
 ## Command Flow
@@ -23,7 +24,7 @@ src/
 ```text
 read skills.json
 for each skill:
-  clone repo into a temporary workspace
+  clone repo into a temporary workspace with quiet git output and progress updates
   read source skills.json
   copy only exported paths into a staged install directory
   if source skills.json is missing:
@@ -51,7 +52,7 @@ save skills.json
 ```text
 read skills.lock or skills.json
 for each skill directory:
-  git fetch origin
+  git fetch origin with quiet git output
   resolve default branch
   checkout origin/<default-branch>
   update commit in skills.lock
@@ -61,6 +62,7 @@ write skills.lock
 ## Design Choices
 
 - `skm` shells out to `git` instead of using libgit2 so user SSH keys, credential helpers, proxies, and platform git config work normally.
+- Git clone, fetch, and checkout output is captured so users see `skm` progress bars instead of raw git progress. Failure messages include the useful git summary line.
 - The manifest and lockfile are JSON because they are easy to inspect, diff, and repair.
 - Partial failures are collected and reported after a command finishes processing remaining skills.
 - Tests use local temporary git repositories instead of network fixtures.

@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crate::error::{GitCheckoutFailed, GitCloneFailed, GitFetchFailed, GitRevParseFailed};
+use indicatif::ProgressBar;
 
 #[cfg(test)]
 pub fn is_git_available() -> bool {
@@ -12,19 +13,74 @@ pub fn is_git_available() -> bool {
         .unwrap_or(false)
 }
 
+#[cfg(test)]
 pub fn clone(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let status = Command::new("git")
+    clone_inner(url, dest, None)
+}
+
+pub fn clone_with_progress(
+    url: &str,
+    dest: &Path,
+    progress: &ProgressBar,
+) -> Result<(), Box<dyn std::error::Error>> {
+    progress.set_position(5);
+    progress.set_message("Cloning repository");
+    clone_inner(url, dest, Some(progress))?;
+    progress.set_position(90);
+    progress.set_message("Clone complete");
+    Ok(())
+}
+
+fn clone_inner(
+    url: &str,
+    dest: &Path,
+    progress: Option<&ProgressBar>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut child = Command::new("git")
         .arg("clone")
+        .arg("--progress")
         .arg(url)
         .arg(dest)
-        .status()
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
         .map_err(|e| GitCloneFailed {
             message: format!("Failed to run git clone: {}", e),
         })?;
 
+    let mut stderr = child.stderr.take().ok_or_else(|| GitCloneFailed {
+        message: "Failed to capture git clone progress".to_string(),
+    })?;
+    let mut stderr_output = Vec::new();
+    let mut progress_buffer = String::new();
+    let mut buffer = [0_u8; 4096];
+
+    loop {
+        let bytes_read =
+            std::io::Read::read(&mut stderr, &mut buffer).map_err(|e| GitCloneFailed {
+                message: format!("Failed to read git clone output: {}", e),
+            })?;
+        if bytes_read == 0 {
+            break;
+        }
+
+        stderr_output.extend_from_slice(&buffer[..bytes_read]);
+        if let Some(progress) = progress {
+            observe_progress(progress, &buffer[..bytes_read], &mut progress_buffer);
+        }
+    }
+
+    let status = child.wait().map_err(|e| GitCloneFailed {
+        message: format!("Failed to wait for git clone: {}", e),
+    })?;
+
     if !status.success() {
         return Err(GitCloneFailed {
-            message: format!("git clone failed for {}", url),
+            message: format!(
+                "git clone failed for {}: {}",
+                url,
+                summarize_git_failure(&stderr_output)
+            ),
         }
         .into());
     }
@@ -33,19 +89,23 @@ pub fn clone(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn fetch(repo_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let status = Command::new("git")
+    let output = Command::new("git")
         .arg("-C")
         .arg(repo_dir)
         .arg("fetch")
         .arg("origin")
-        .status()
+        .output()
         .map_err(|e| GitFetchFailed {
             message: format!("Failed to run git fetch: {}", e),
         })?;
 
-    if !status.success() {
+    if !output.status.success() {
         return Err(GitFetchFailed {
-            message: format!("git fetch failed in {}", repo_dir.display()),
+            message: format!(
+                "git fetch failed in {}: {}",
+                repo_dir.display(),
+                summarize_git_failure(&output.stderr)
+            ),
         }
         .into());
     }
@@ -56,22 +116,23 @@ pub fn fetch(repo_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 pub fn checkout_default_branch(repo_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let default_branch = resolve_default_branch(repo_dir)?;
 
-    let status = Command::new("git")
+    let output = Command::new("git")
         .arg("-C")
         .arg(repo_dir)
         .arg("checkout")
         .arg(format!("origin/{}", default_branch))
-        .status()
+        .output()
         .map_err(|e| GitCheckoutFailed {
             message: format!("Failed to run git checkout: {}", e),
         })?;
 
-    if !status.success() {
+    if !output.status.success() {
         return Err(GitCheckoutFailed {
             message: format!(
-                "git checkout origin/{} failed in {}",
+                "git checkout origin/{} failed in {}: {}",
                 default_branch,
-                repo_dir.display()
+                repo_dir.display(),
+                summarize_git_failure(&output.stderr)
             ),
         }
         .into());
@@ -143,6 +204,123 @@ pub fn resolve_default_branch(repo_dir: &Path) -> Result<String, Box<dyn std::er
 
 pub fn skill_dir(project_root: &Path, name: &str) -> PathBuf {
     project_root.join(".agents").join("skills").join(name)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GitProgressStage {
+    Counting,
+    Compressing,
+    Receiving,
+    Resolving,
+    Updating,
+}
+
+impl GitProgressStage {
+    fn label(self) -> &'static str {
+        match self {
+            GitProgressStage::Counting => "Counting objects",
+            GitProgressStage::Compressing => "Compressing objects",
+            GitProgressStage::Receiving => "Receiving objects",
+            GitProgressStage::Resolving => "Resolving deltas",
+            GitProgressStage::Updating => "Writing files",
+        }
+    }
+
+    fn mapped_position(self, percent: u64) -> u64 {
+        let percent = percent.min(100);
+        match self {
+            GitProgressStage::Counting => 5 + (percent * 15 / 100),
+            GitProgressStage::Compressing => 20 + (percent * 20 / 100),
+            GitProgressStage::Receiving => 40 + (percent * 35 / 100),
+            GitProgressStage::Resolving => 75 + (percent * 15 / 100),
+            GitProgressStage::Updating => 90 + (percent * 5 / 100),
+        }
+    }
+}
+
+fn observe_progress(progress: &ProgressBar, bytes: &[u8], progress_buffer: &mut String) {
+    progress_buffer.push_str(&String::from_utf8_lossy(bytes));
+
+    while let Some(index) = progress_buffer.find(['\r', '\n']) {
+        let line: String = progress_buffer.drain(..=index).collect();
+        update_progress_from_line(progress, &line);
+    }
+
+    if progress_buffer.len() > 4096 {
+        update_progress_from_line(progress, progress_buffer);
+        progress_buffer.clear();
+    }
+}
+
+fn update_progress_from_line(progress: &ProgressBar, line: &str) {
+    if let Some((stage, percent)) = parse_git_progress(line) {
+        progress.set_position(stage.mapped_position(percent));
+        progress.set_message(format!("{} {}%", stage.label(), percent));
+    }
+}
+
+fn parse_git_progress(line: &str) -> Option<(GitProgressStage, u64)> {
+    let cleaned = line
+        .trim_matches(|ch| ch == '\r' || ch == '\n')
+        .trim()
+        .strip_prefix("remote:")
+        .map(str::trim)
+        .unwrap_or_else(|| line.trim());
+
+    let stage = if cleaned.starts_with("Counting objects:") {
+        GitProgressStage::Counting
+    } else if cleaned.starts_with("Compressing objects:") {
+        GitProgressStage::Compressing
+    } else if cleaned.starts_with("Receiving objects:") {
+        GitProgressStage::Receiving
+    } else if cleaned.starts_with("Resolving deltas:") {
+        GitProgressStage::Resolving
+    } else if cleaned.starts_with("Updating files:") {
+        GitProgressStage::Updating
+    } else {
+        return None;
+    };
+
+    let percent = parse_percent(cleaned)?;
+    Some((stage, percent))
+}
+
+fn parse_percent(line: &str) -> Option<u64> {
+    let percent_index = line.find('%')?;
+    let digits_reversed: String = line[..percent_index]
+        .chars()
+        .rev()
+        .skip_while(|ch| ch.is_whitespace())
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect();
+
+    if digits_reversed.is_empty() {
+        return None;
+    }
+
+    digits_reversed
+        .chars()
+        .rev()
+        .collect::<String>()
+        .parse()
+        .ok()
+}
+
+fn summarize_git_failure(stderr: &[u8]) -> String {
+    let text = String::from_utf8_lossy(stderr).replace('\r', "\n");
+    let lines = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .filter(|line| parse_git_progress(line).is_none())
+        .filter(|line| !line.starts_with("Cloning into "))
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+
+    lines
+        .last()
+        .cloned()
+        .unwrap_or_else(|| "git exited without a detailed error".to_string())
 }
 
 #[cfg(test)]
@@ -228,5 +406,24 @@ mod tests {
         let result = fetch(&dir);
         assert!(result.is_err());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_parse_git_progress_from_remote_line() {
+        let parsed = parse_git_progress("remote: Counting objects: 42% (42/100)");
+        assert_eq!(parsed, Some((GitProgressStage::Counting, 42)));
+    }
+
+    #[test]
+    fn test_parse_git_progress_from_carriage_return_line() {
+        let parsed = parse_git_progress("Receiving objects:  7% (7/100)\r");
+        assert_eq!(parsed, Some((GitProgressStage::Receiving, 7)));
+    }
+
+    #[test]
+    fn test_summarize_git_failure_skips_progress_noise() {
+        let stderr =
+            b"Cloning into 'repo'...\nReceiving objects: 100% (1/1)\nfatal: repository not found\n";
+        assert_eq!(summarize_git_failure(stderr), "fatal: repository not found");
     }
 }

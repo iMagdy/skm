@@ -47,12 +47,16 @@ Installed files are placed under `.agents/skills/<name>/`, and `skills.lock` rec
 
 Source repos normally declare installable paths in their own `skills.json` `exports`. If a source repo has no `skills.json`, `skm` warns, asks for confirmation, and can install one or more directories found under `skills/` or `SKILLS/`.
 
+While installing, `skm` shows a progress bar for cloning and file copy work. Raw git clone output stays hidden unless a failure needs a short summary.
+
 ## Inspect Project State
 
 ```bash
 skm list
 skm show docs
 ```
+
+Status output is color-coded with small icons in terminals that support them.
 
 ## Export Installed Skills
 

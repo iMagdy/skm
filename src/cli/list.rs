@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
+use crate::ui;
 
 #[cfg(not(tarpaulin_include))]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -23,11 +24,17 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
     let lockfile = Lockfile::load(&lockfile_path)?;
 
     if manifest.skills.is_empty() && lockfile.entries().is_empty() {
-        println!("No skills installed. Run 'skm install' to add skills.");
+        ui::info("No skills installed. Run 'skm install' to add skills.");
         return Ok(());
     }
 
-    println!("{:<20} {:<45} {:<42} STATUS", "NAME", "REPO", "COMMIT");
+    println!(
+        "{} {} {} {}",
+        ui::padded(ui::table_header("NAME"), "NAME", 20),
+        ui::padded(ui::table_header("REPO"), "REPO", 45),
+        ui::padded(ui::table_header("COMMIT"), "COMMIT", 42),
+        ui::table_header("STATUS")
+    );
     println!("{}", "-".repeat(120));
 
     for (name, entry) in &manifest.skills {
@@ -42,15 +49,24 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
             "not locked"
         };
 
-        println!("{:<20} {:<45} {:<42} {}", name, entry.repo, commit, status);
+        println!(
+            "{} {} {} {}",
+            ui::padded(ui::skill_name(name), name, 20),
+            ui::padded(&entry.repo, &entry.repo, 45),
+            ui::padded(commit, commit, 42),
+            ui::status_label(status)
+        );
     }
 
     // Show orphaned lockfile entries
     for (name, lock) in lockfile.entries() {
         if !manifest.skills.contains_key(name) {
             println!(
-                "{:<20} {:<45} {:<42} orphaned",
-                name, lock.repo, lock.commit
+                "{} {} {} {}",
+                ui::padded(ui::skill_name(name), name, 20),
+                ui::padded(&lock.repo, &lock.repo, 45),
+                ui::padded(&lock.commit, &lock.commit, 42),
+                ui::status_label("orphaned")
             );
         }
     }

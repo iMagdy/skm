@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::error::InitPathNotFound;
 use crate::manifest::Manifest;
+use crate::ui;
 
 pub fn run(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let dir = Path::new(path);
@@ -14,17 +15,20 @@ pub fn run(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let manifest_path = dir.join("skills.json");
     if manifest_path.exists() {
-        eprintln!(
+        ui::warning(format!(
             "skills.json already exists at {}, skipping",
             manifest_path.display()
-        );
+        ));
         return Ok(());
     }
 
     let manifest = Manifest::new();
     manifest.save(&manifest_path)?;
 
-    println!("Created skills.json at {}", manifest_path.display());
+    ui::success(format!(
+        "Created skills.json at {}",
+        manifest_path.display()
+    ));
     Ok(())
 }
 

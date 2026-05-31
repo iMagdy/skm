@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
+use crate::ui;
 
 #[cfg(not(tarpaulin_include))]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,14 +49,14 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
     manifest.save(&manifest_path)?;
 
     if exported == 0 {
-        eprintln!("No skills to export. Created an empty skills.json manifest.");
+        ui::info("No skills to export. Created an empty skills.json manifest.");
     } else {
-        println!(
+        ui::success(format!(
             "Exported {} skill{} to {}",
             exported,
             if exported == 1 { "" } else { "s" },
             manifest_path.display()
-        );
+        ));
     }
 
     Ok(())

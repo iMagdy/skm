@@ -1,6 +1,6 @@
 mod helpers;
 
-use helpers::{run_skm_command, TestContext};
+use helpers::{run_skm_command, run_skm_command_output, TestContext};
 
 #[test]
 fn test_install_single_skill_creates_directory() {
@@ -182,6 +182,42 @@ fn test_install_clones_correct_content() {
     assert!(
         !skill_dir.join(".git").exists(),
         "Git metadata should not be installed"
+    );
+}
+
+#[test]
+fn test_install_hides_raw_git_clone_output() {
+    let ctx = TestContext::new();
+    ctx.ensure_skills_dir();
+
+    let fixture_dir = ctx.create_fixture_repo("awesome-copilot", true);
+
+    let manifest = serde_json::json!({
+        "skills": {
+            "awesome-copilot": {
+                "repo": fixture_dir.to_str().unwrap()
+            }
+        },
+        "exports": {}
+    });
+    std::fs::write(
+        ctx.manifest(),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
+
+    let output =
+        run_skm_command_output(&["install"], &ctx.project_dir).expect("skm install should succeed");
+
+    assert!(
+        !output.stderr.contains("Cloning into"),
+        "raw git clone output should be hidden: {}",
+        output.stderr
+    );
+    assert!(
+        !output.stderr.contains("Receiving objects"),
+        "raw git progress output should be hidden: {}",
+        output.stderr
     );
 }
 
