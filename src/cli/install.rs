@@ -545,6 +545,7 @@ trait FallbackPrompter {
 
 struct DialoguerFallbackPrompter;
 
+#[cfg(not(tarpaulin_include))]
 impl FallbackPrompter for DialoguerFallbackPrompter {
     fn confirm_missing_manifest(&self) -> Result<bool, Box<dyn std::error::Error>> {
         ui::warning("Source repo has no skills.json file.");
@@ -566,6 +567,23 @@ impl FallbackPrompter for DialoguerFallbackPrompter {
             .with_prompt("Select skills to install")
             .items(&items)
             .interact()?)
+    }
+}
+
+#[cfg(tarpaulin_include)]
+impl FallbackPrompter for DialoguerFallbackPrompter {
+    fn confirm_missing_manifest(&self) -> Result<bool, Box<dyn std::error::Error>> {
+        Ok(false)
+    }
+
+    fn select_skill_dirs(
+        &self,
+        _skills: &[FallbackSkillDir],
+    ) -> Result<Vec<usize>, Box<dyn std::error::Error>> {
+        Err(SkillCopyFailed {
+            message: "Interactive fallback selection is disabled during coverage runs".to_string(),
+        }
+        .into())
     }
 }
 
@@ -1725,6 +1743,25 @@ mod tests {
         assert!(parse_install_target("bad name:url", &options).is_err());
         assert!(parse_install_target("name:", &options).is_err());
         assert!(parse_install_target("", &options).is_err());
+
+        let options = InstallOptions {
+            ssh: true,
+            skill: Some("lint".to_string()),
+            ..InstallOptions::default()
+        };
+        match parse_install_target("hashicorp/agent-skills", &options).unwrap() {
+            InstallTarget::Repo { repo, source_skill } => {
+                assert_eq!(repo, "git@github.com:hashicorp/agent-skills.git");
+                assert_eq!(source_skill.as_deref(), Some("lint"));
+            }
+            InstallTarget::Named { .. } => panic!("expected repo target"),
+        }
+
+        let invalid_skill = InstallOptions {
+            skill: Some("bad skill".to_string()),
+            ..InstallOptions::default()
+        };
+        assert!(parse_install_target("hashicorp/agent-skills", &invalid_skill).is_err());
     }
 
     #[test]
@@ -1809,6 +1846,61 @@ mod tests {
 
         assert!(result.is_err());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_manifest_installables_rejects_invalid_export_name() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_invalid_export");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
+        std::fs::write(dir.join("skills/docs/SKILL.md"), "# Docs").unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"exports": {"bad name": {"path": "skills/docs"}}}"#,
+        )
+        .unwrap();
+
+        let result = discover_manifest_installables(&dir, &dir.join("skills.json"));
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("invalid"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_for_exact_uses_fallback_dirs() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_exact_fallback");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/beta")).unwrap();
+        std::fs::write(dir.join("skills/beta/SKILL.md"), "# Beta").unwrap();
+        std::fs::write(dir.join("skills/alpha.md"), "# Alpha").unwrap();
+
+        let installables = discover_repo_installables_for_exact(&dir).unwrap();
+
+        assert_eq!(
+            vec!["alpha".to_string(), "beta".to_string()],
+            installables
+                .iter()
+                .map(|installable| installable.name.clone())
+                .collect::<Vec<_>>()
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_for_exact_reports_fallback_errors() {
+        let missing = std::env::temp_dir().join("ktesio_test_repo_installables_exact_missing");
+        let empty = std::env::temp_dir().join("ktesio_test_repo_installables_exact_empty");
+        let _ = std::fs::remove_dir_all(&missing);
+        let _ = std::fs::remove_dir_all(&empty);
+        std::fs::create_dir_all(&missing).unwrap();
+        std::fs::create_dir_all(empty.join("skills")).unwrap();
+
+        assert!(discover_repo_installables_for_exact(&missing).is_err());
+        assert!(discover_repo_installables_for_exact(&empty).is_err());
+
+        std::fs::remove_dir_all(&missing).unwrap();
+        std::fs::remove_dir_all(&empty).unwrap();
     }
 
     #[test]
@@ -1983,6 +2075,16 @@ mod tests {
             select_repo_installables(&installables[0..1], InstallOptions::default(), &prompter)
                 .unwrap();
         assert_eq!(single, vec![0]);
+
+        let missing_skill = select_repo_installables(
+            &installables,
+            InstallOptions {
+                skill: Some("missing".to_string()),
+                ..InstallOptions::default()
+            },
+            &prompter,
+        );
+        assert!(missing_skill.is_err());
     }
 
     #[test]

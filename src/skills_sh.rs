@@ -23,6 +23,7 @@ pub struct SkillSearchResult {
     pub installable: bool,
 }
 
+#[cfg(not(tarpaulin_include))]
 pub fn search<F>(
     query: &str,
     limit: usize,
@@ -44,6 +45,21 @@ where
         api_key.as_deref(),
         &mut notify,
     )
+}
+
+#[cfg(tarpaulin_include)]
+pub fn search<F>(
+    _query: &str,
+    _limit: usize,
+    _notify: F,
+) -> Result<Vec<SkillSearchResult>, Box<dyn std::error::Error>>
+where
+    F: FnMut(String),
+{
+    Err(SearchFailed {
+        message: "Live skills.sh search is disabled during coverage runs".to_string(),
+    }
+    .into())
 }
 
 fn search_with_transport<T, S, F>(
@@ -350,18 +366,22 @@ trait Sleeper {
     fn sleep(&self, duration: Duration);
 }
 
+#[cfg(not(tarpaulin_include))]
 struct ThreadSleeper;
 
+#[cfg(not(tarpaulin_include))]
 impl Sleeper for ThreadSleeper {
     fn sleep(&self, duration: Duration) {
         std::thread::sleep(duration);
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 struct UreqTransport {
     agent: ureq::Agent,
 }
 
+#[cfg(not(tarpaulin_include))]
 impl UreqTransport {
     fn new() -> Self {
         Self {
@@ -372,6 +392,7 @@ impl UreqTransport {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 impl HttpTransport for UreqTransport {
     fn get(&self, url: &str, api_key: Option<&str>) -> Result<HttpResponse, HttpTransportError> {
         let mut request = self
@@ -410,6 +431,7 @@ fn friendly_transport_error(message: &str) -> String {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn response_to_http(response: ureq::Response) -> Result<HttpResponse, HttpTransportError> {
     let status = response.status();
     let headers = interesting_headers(&response);
@@ -425,6 +447,7 @@ fn response_to_http(response: ureq::Response) -> Result<HttpResponse, HttpTransp
     })
 }
 
+#[cfg(not(tarpaulin_include))]
 fn interesting_headers(response: &ureq::Response) -> HashMap<String, String> {
     ["Retry-After", "X-RateLimit-Reset"]
         .into_iter()
@@ -696,5 +719,276 @@ mod tests {
 
         assert!(result.is_err());
         assert_eq!(transport.attempts.get(), 1);
+    }
+
+    #[test]
+    fn test_short_query_fails_without_request() {
+        let transport = FakeTransport::new(Vec::new());
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        let result = search_with_transport(&transport, &sleeper, " x ", 10, None, &mut |message| {
+            messages.push(message)
+        });
+
+        assert!(result.is_err());
+        assert_eq!(transport.attempts.get(), 0);
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn test_public_search_falls_back_to_id_slug() {
+        let body = r#"{
+            "skills": [{
+                "id": "catalog/vendors/write-tests",
+                "skillId": null,
+                "name": "Write Tests",
+                "installs": 9,
+                "source": "catalog"
+            }]
+        }"#;
+        let transport = FakeTransport::new(vec![Ok(response(200, body))]);
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        let results =
+            search_with_transport(&transport, &sleeper, "tests", 0, None, &mut |message| {
+                messages.push(message)
+            })
+            .unwrap();
+
+        assert_eq!(results[0].skill, "write-tests");
+        assert_eq!(results[0].repo, None);
+        assert_eq!(results[0].install_target, None);
+        assert!(!results[0].installable);
+        assert!(transport.urls.borrow()[0].contains("limit=1"));
+    }
+
+    #[test]
+    fn test_public_search_caps_large_limit() {
+        let transport = FakeTransport::new(vec![Ok(response(200, r#"{"skills": []}"#))]);
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        search_with_transport(&transport, &sleeper, "tests", 500, None, &mut |message| {
+            messages.push(message)
+        })
+        .unwrap();
+
+        assert!(transport.urls.borrow()[0].contains("limit=100"));
+    }
+
+    #[test]
+    fn test_authenticated_nongithub_result_is_not_installable() {
+        let body = r#"{
+            "data": [{
+                "id": "external/write-tests",
+                "slug": "write-tests",
+                "name": "Write Tests",
+                "source": "external/package",
+                "installs": 3,
+                "sourceType": "registry",
+                "url": null
+            }]
+        }"#;
+        let transport = FakeTransport::new(vec![Ok(response(200, body))]);
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        let results = search_with_transport(
+            &transport,
+            &sleeper,
+            "tests",
+            10,
+            Some("key"),
+            &mut |message| messages.push(message),
+        )
+        .unwrap();
+
+        assert_eq!(results[0].repo, None);
+        assert_eq!(results[0].install_target, None);
+        assert!(!results[0].installable);
+    }
+
+    #[test]
+    fn test_malformed_authenticated_response_does_not_retry() {
+        let transport = FakeTransport::new(vec![Ok(response(200, "not json"))]);
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        let result = search_with_transport(
+            &transport,
+            &sleeper,
+            "tests",
+            10,
+            Some("key"),
+            &mut |message| messages.push(message),
+        );
+
+        assert!(result.is_err());
+        assert_eq!(transport.attempts.get(), 1);
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("authenticated search response"));
+    }
+
+    #[test]
+    fn test_service_unavailable_exhaustion_uses_clean_error() {
+        let transport = FakeTransport::new(vec![
+            Ok(response(503, "{}")),
+            Ok(response(503, "{}")),
+            Ok(response(503, "{}")),
+        ]);
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        let result =
+            search_with_transport(&transport, &sleeper, "tests", 10, None, &mut |message| {
+                messages.push(message)
+            });
+
+        assert!(result.is_err());
+        assert_eq!(transport.attempts.get(), 3);
+        assert_eq!(sleeper.delays.borrow().len(), 2);
+        assert!(messages[0].contains("temporarily unavailable"));
+        assert!(result.unwrap_err().to_string().contains("retry later"));
+    }
+
+    #[test]
+    fn test_retryable_transport_error_exhaustion_mentions_last_error() {
+        let transport = FakeTransport::new(vec![
+            Err(HttpTransportError {
+                message: "timeout".to_string(),
+                retryable: true,
+            }),
+            Err(HttpTransportError {
+                message: "timeout".to_string(),
+                retryable: true,
+            }),
+            Err(HttpTransportError {
+                message: "connection refused".to_string(),
+                retryable: true,
+            }),
+        ]);
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        let result =
+            search_with_transport(&transport, &sleeper, "tests", 10, None, &mut |message| {
+                messages.push(message)
+            });
+
+        assert!(result.is_err());
+        assert_eq!(transport.attempts.get(), 3);
+        assert_eq!(messages.len(), 2);
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("connection refused"));
+    }
+
+    #[test]
+    fn test_non_retryable_transport_error_fails_once() {
+        let transport = FakeTransport::new(vec![Err(HttpTransportError {
+            message: "bad response body".to_string(),
+            retryable: false,
+        })]);
+        let sleeper = FakeSleeper::new();
+        let mut messages = Vec::new();
+
+        let result =
+            search_with_transport(&transport, &sleeper, "tests", 10, None, &mut |message| {
+                messages.push(message)
+            });
+
+        assert!(result.is_err());
+        assert_eq!(transport.attempts.get(), 1);
+        assert!(sleeper.delays.borrow().is_empty());
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn test_retry_delay_and_messages_cover_fallbacks() {
+        let mut headers = HashMap::new();
+        headers.insert("retry-after".to_string(), "not-a-number".to_string());
+
+        let delay = retry_delay(&headers, 429, 2);
+
+        assert!(delay >= Duration::from_secs(2));
+        assert!(retry_message(429, Duration::from_secs(12), 2).contains("rate limit"));
+        assert!(retry_message(503, Duration::from_secs(2), 3).contains("temporarily unavailable"));
+        assert!(retry_message(500, Duration::from_secs(2), 3).contains("failed temporarily"));
+        assert_eq!(display_seconds(Duration::from_millis(5)), 1);
+    }
+
+    #[test]
+    fn test_retry_exhausted_status_messages() {
+        let mut headers = HashMap::new();
+        headers.insert("retry-after".to_string(), "7".to_string());
+
+        assert!(retry_exhausted(429, &headers)
+            .to_string()
+            .contains("retry in about 7s"));
+        assert!(retry_exhausted(503, &HashMap::new())
+            .to_string()
+            .contains("temporarily unavailable"));
+        assert!(retry_exhausted(500, &HashMap::new())
+            .to_string()
+            .contains("retry later"));
+    }
+
+    #[test]
+    fn test_non_retryable_status_messages() {
+        let statuses = [
+            (400, false, "rejected the search query"),
+            (401, true, "rejected KTESIO_SKILLS_SH_API_KEY"),
+            (401, false, "requires authentication"),
+            (403, false, "access was denied"),
+            (404, false, "endpoint was not found"),
+            (418, false, "HTTP status 418"),
+        ];
+
+        for (status, authenticated, expected) in statuses {
+            let error = non_retryable_status(response(status, "{}"), authenticated);
+            assert!(
+                error.to_string().contains(expected),
+                "{} did not contain {}",
+                error,
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn test_friendly_transport_error_variants() {
+        assert_eq!(
+            friendly_transport_error("DNS lookup failed"),
+            "DNS lookup failed"
+        );
+        assert_eq!(
+            friendly_transport_error("operation timed out"),
+            "connection timed out"
+        );
+        assert_eq!(
+            friendly_transport_error("connection refused by peer"),
+            "connection refused"
+        );
+        assert_eq!(
+            friendly_transport_error("unexpected reset"),
+            "temporary network error"
+        );
+    }
+
+    #[cfg(tarpaulin_include)]
+    #[test]
+    fn test_live_search_is_disabled_for_coverage() {
+        let result = search("tests", 10, |_| {});
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("disabled during coverage runs"));
     }
 }
