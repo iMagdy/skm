@@ -129,7 +129,8 @@ jobs:
             echo "::error::Cargo package version ${crate_version} must match release tag ${tag}."
             exit 1
           fi
-          status="$(curl --silent --show-error --output /tmp/crate-version.json --write-out "%{http_code}" "https://crates.io/api/v1/crates/${crate_name}/${crate_version}")"
+          user_agent="ktesio-release-workflow (${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}; release automation)"
+          status="$(curl --silent --show-error --user-agent "$user_agent" --output /tmp/crate-version.json --write-out "%{http_code}" "https://crates.io/api/v1/crates/${crate_name}/${crate_version}")"
           case "$status" in
             200)
               echo "${crate_name} ${crate_version} is already published on crates.io"
