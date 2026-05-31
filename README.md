@@ -49,6 +49,12 @@ cargo install --path .
 
 From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/skm/releases), unpack it, and place `skm` on your `PATH`.
 
+With Homebrew, install from the tap once a release is published:
+
+```bash
+brew install imagdy/tap/skm
+```
+
 ## Commands
 
 | Command | Purpose |

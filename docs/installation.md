@@ -35,6 +35,16 @@ skm-<tag>-<target>.zip
 
 Each release also includes `.sha256` files and an aggregate checksum file.
 
+## Install with Homebrew
+
+After a release is published to the Homebrew tap:
+
+```bash
+brew install imagdy/tap/skm
+```
+
+The formula installs the prebuilt macOS or Linux release archive for your platform.
+
 ## Platform Notes
 
 - macOS may require Xcode Command Line Tools when building from source.

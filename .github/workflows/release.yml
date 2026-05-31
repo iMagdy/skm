@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
   pull-requests: write
 
 jobs:
@@ -93,6 +94,18 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: Set release metadata
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          package_ref="ghcr.io/${GITHUB_REPOSITORY}:${tag}"
+          latest_ref="ghcr.io/${GITHUB_REPOSITORY}:latest"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "package_ref=${package_ref,,}" >> "$GITHUB_OUTPUT"
+          echo "latest_ref=${latest_ref,,}" >> "$GITHUB_OUTPUT"
       - name: Prepare release notes and checksums
         shell: bash
         run: |
@@ -100,7 +113,22 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           python3 scripts/generate_release_docs.py "$tag" --output-dir target/release-docs
           (cd dist && cat *.sha256 | sort > "skm-${tag}-checksums.txt")
-      - name: Create or update GitHub Release
+      - name: Resolve Homebrew tap configuration
+        id: homebrew
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_REPOSITORY: ${{ vars.HOMEBREW_TAP_REPOSITORY }}
+          HOMEBREW_TAP_BRANCH: ${{ vars.HOMEBREW_TAP_BRANCH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "::error::Set a HOMEBREW_TAP_TOKEN secret with contents:write access to the Homebrew tap repository."
+            exit 1
+          fi
+          echo "repository=${HOMEBREW_TAP_REPOSITORY:-${GITHUB_REPOSITORY_OWNER}/homebrew-tap}" >> "$GITHUB_OUTPUT"
+          echo "branch=${HOMEBREW_TAP_BRANCH:-main}" >> "$GITHUB_OUTPUT"
+      - name: Create or update draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -113,7 +141,64 @@ jobs:
             gh release create "$tag" --draft --title "skm ${tag}" --notes-file target/release-docs/release-body.md
           fi
           gh release upload "$tag" dist/* --clobber
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+        with:
+          version: 1.3.0
+      - name: Publish GitHub Package
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          PACKAGE_REF: ${{ steps.release.outputs.package_ref }}
+          LATEST_REF: ${{ steps.release.outputs.latest_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | oras login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          cd dist
+          annotations=(
+            "--annotation" "org.opencontainers.image.title=skm ${GITHUB_REF_NAME} release archives"
+            "--annotation" "org.opencontainers.image.description=Prebuilt skm release archives for macOS, Linux, and Windows"
+            "--annotation" "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}"
+            "--annotation" "org.opencontainers.image.url=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}"
+            "--annotation" "org.opencontainers.image.version=${GITHUB_REF_NAME}"
+            "--annotation" "org.opencontainers.image.revision=${GITHUB_SHA}"
+          )
+          oras push "$PACKAGE_REF" --artifact-type "application/vnd.skm.release.v1" "${annotations[@]}" *
+          oras push "$LATEST_REF" --artifact-type "application/vnd.skm.release.v1" "${annotations[@]}" *
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
           gh release edit "$tag" --draft=false --latest
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.homebrew.outputs.repository }}
+          ref: ${{ steps.homebrew.outputs.branch }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+      - name: Publish Homebrew formula
+        env:
+          TAP_BRANCH: ${{ steps.homebrew.outputs.branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          python3 scripts/generate_homebrew_formula.py "$tag" \
+            --checksums-file "dist/skm-${tag}-checksums.txt" \
+            --output homebrew-tap/Formula/skm.rb
+          git -C homebrew-tap config user.name "github-actions[bot]"
+          git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C homebrew-tap add Formula/skm.rb
+          if git -C homebrew-tap diff --cached --quiet; then
+            echo "Homebrew formula already up to date"
+          else
+            git -C homebrew-tap commit -m "chore: update skm formula for ${tag}"
+            git -C homebrew-tap push origin "HEAD:${TAP_BRANCH}"
+          fi
       - name: Open release docs pull request
         env:
           GH_TOKEN: ${{ github.token }}
