@@ -73,7 +73,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ktesio-${{ github.ref_name }}-${{ matrix.target }}
-          path: dist/*
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
 
   publish:
     name: publish release
@@ -175,7 +178,13 @@ jobs:
           else
             gh release create "$tag" --draft --title "Ktesio ${tag}" --notes-file target/release-docs/release-body.md
           fi
-          gh release upload "$tag" dist/* --clobber
+          release_assets=(
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+            dist/*-checksums.txt
+          )
+          gh release upload "$tag" "${release_assets[@]}" --clobber
       - name: Set up ORAS
         uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
         with:
@@ -198,8 +207,14 @@ jobs:
             "--annotation" "org.opencontainers.image.version=${GITHUB_REF_NAME}"
             "--annotation" "org.opencontainers.image.revision=${GITHUB_SHA}"
           )
-          oras push "$PACKAGE_REF" --artifact-type "application/vnd.ktesio.release.v1" "${annotations[@]}" *
-          oras push "$LATEST_REF" --artifact-type "application/vnd.ktesio.release.v1" "${annotations[@]}" *
+          release_assets=(
+            *.tar.gz
+            *.zip
+            *.sha256
+            *-checksums.txt
+          )
+          oras push "$PACKAGE_REF" --artifact-type "application/vnd.ktesio.release.v1" "${annotations[@]}" "${release_assets[@]}"
+          oras push "$LATEST_REF" --artifact-type "application/vnd.ktesio.release.v1" "${annotations[@]}" "${release_assets[@]}"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
