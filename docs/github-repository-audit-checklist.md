@@ -62,7 +62,7 @@ contribution flow into routine admin bypass.
 - [x] Allowed Actions are restricted to selected actions.
 - [x] SHA pinning is required.
 - [x] GitHub-owned actions are allowed.
-- [x] Third-party action allowlist is limited to `oras-project/setup-oras@*`.
+- [x] No third-party release-packaging action is required.
 - [x] Default workflow token permissions are read-only.
 - [x] Workflows request write permissions only where needed.
 - [x] Third-party workflow actions are pinned by SHA.

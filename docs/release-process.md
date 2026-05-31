@@ -27,10 +27,9 @@ When a `v*` tag is pushed, `.github/workflows/release.yml`:
 4. Creates a draft GitHub Release for the tag.
 5. Uploads all release assets.
 6. Publishes the `ktesio` crate to crates.io.
-7. Publishes the release archives to GitHub Packages through the GitHub Container Registry.
-8. Publishes the GitHub Release with a clean asset table.
-9. Updates the Homebrew tap formula for macOS Intel, macOS Apple Silicon, and Linux x64.
-10. Opens a pull request updating `CHANGELOG.md` and `docs/RELEASE_NOTES.md`.
+7. Publishes the GitHub Release with a clean asset table.
+8. Updates the Homebrew tap formula for macOS Intel, macOS Apple Silicon, and Linux x64.
+9. Opens a pull request updating `CHANGELOG.md` and `docs/RELEASE_NOTES.md`.
 
 The docs PR happens after the tag because a tag points at an existing commit. The release page is updated immediately; repository docs are refreshed through the follow-up pull request.
 
@@ -53,17 +52,6 @@ Configure this repository secret before publishing a tag:
 - `CARGO_REGISTRY_TOKEN`: crates.io API token with publish access to the `ktesio` crate.
 
 The workflow verifies that `Cargo.toml` version matches the tag without the leading `v`. If the crate version is already published, the workflow skips the publish step so release reruns stay safe.
-
-## GitHub Packages
-
-Release archives are mirrored to GitHub Packages as an OCI artifact in the GitHub Container Registry:
-
-```text
-ghcr.io/imagdy/ktesio:<tag>
-ghcr.io/imagdy/ktesio:latest
-```
-
-The workflow uses the built-in `GITHUB_TOKEN` and requires `packages: write` permission. The package contains the same archives, per-asset `.sha256` files, and aggregate checksum file that are attached to the GitHub Release.
 
 ## Homebrew
 
