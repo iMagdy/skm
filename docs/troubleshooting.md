@@ -42,6 +42,16 @@ Options:
 - Run `kt export` if the skill should be restored to the manifest.
 - Remove the stale lock entry by uninstalling or editing the lockfile.
 
+## Project State Looks Wrong
+
+Run:
+
+```bash
+kt doctor
+```
+
+`kt doctor` checks the manifest, lockfile, installed directories, local export paths, orphaned entries, and git availability, then prints repair hints.
+
 ## Release Workflow Did Not Update Docs
 
 The tag workflow publishes the GitHub Release first, then opens a pull request for `CHANGELOG.md` and `docs/RELEASE_NOTES.md`.

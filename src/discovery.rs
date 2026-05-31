@@ -31,20 +31,35 @@ pub struct DiscoveryResult {
 }
 
 /// Normalize a skill name from a filename or directory name.
-/// Strips `.md` extension, replaces hyphens and underscores with spaces.
+/// Strips `.md`, converts whitespace to `-`, and keeps manifest-safe ASCII.
 pub fn normalize_skill_name(name: &str) -> String {
-    let mut result = name.to_string();
+    let stem = name.strip_suffix(".md").unwrap_or(name);
+    let mut normalized = String::new();
+    let mut last_was_dash = false;
 
-    // Strip .md extension
-    if let Some(stripped) = result.strip_suffix(".md") {
-        result = stripped.to_string();
+    for ch in stem.chars() {
+        let next = if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+            Some(ch)
+        } else if ch.is_whitespace() {
+            Some('-')
+        } else {
+            None
+        };
+
+        if let Some(ch) = next {
+            if ch == '-' {
+                if last_was_dash {
+                    continue;
+                }
+                last_was_dash = true;
+            } else {
+                last_was_dash = false;
+            }
+            normalized.push(ch);
+        }
     }
 
-    // Replace hyphens and underscores with spaces
-    result = result.replace('-', " ");
-    result = result.replace('_', " ");
-
-    result
+    normalized.trim_matches('-').to_string()
 }
 
 /// Find the skills directory in a repository root.
@@ -107,6 +122,14 @@ pub fn discover_skills(skills_dir: &Path) -> DiscoveryResult {
 
         let normalized_name = normalize_skill_name(&file_name);
 
+        if normalized_name.is_empty() {
+            warnings.push(format!(
+                "Skill '{}' skipped because its name is invalid",
+                file_name
+            ));
+            continue;
+        }
+
         // Deduplicate by normalized name
         if !seen_names.insert(normalized_name.clone()) {
             warnings.push(format!("Duplicate skill '{}' skipped", normalized_name));
@@ -154,22 +177,29 @@ mod tests {
 
     #[test]
     fn test_normalize_skill_name_with_extension() {
-        assert_eq!(normalize_skill_name("web-perf.md"), "web perf");
+        assert_eq!(normalize_skill_name("web-perf.md"), "web-perf");
     }
 
     #[test]
     fn test_normalize_skill_name_without_extension() {
-        assert_eq!(normalize_skill_name("ui-ux-pro-max"), "ui ux pro max");
+        assert_eq!(normalize_skill_name("ui-ux-pro-max"), "ui-ux-pro-max");
     }
 
     #[test]
     fn test_normalize_skill_name_underscores() {
-        assert_eq!(normalize_skill_name("agents_sdk.md"), "agents sdk");
+        assert_eq!(normalize_skill_name("agents_sdk.md"), "agents_sdk");
     }
 
     #[test]
     fn test_normalize_skill_name_mixed() {
-        assert_eq!(normalize_skill_name("my_cool-skill.md"), "my cool skill");
+        assert_eq!(normalize_skill_name("my_cool-skill.md"), "my_cool-skill");
+    }
+
+    #[test]
+    fn test_normalize_skill_name_strips_invalid_characters() {
+        assert_eq!(normalize_skill_name(" @@@ "), "");
+        assert_eq!(normalize_skill_name("docs/api!.md"), "docsapi");
+        assert_eq!(normalize_skill_name("My  Skill.md"), "My-Skill");
     }
 
     #[test]

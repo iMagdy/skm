@@ -37,6 +37,13 @@ Add and install one skill with:
 kt install docs:https://github.com/example/agent-docs.git
 ```
 
+If the source repo declares multiple exports, install from the repo directly:
+
+```bash
+kt install https://github.com/example/agent-docs.git
+kt install --all https://github.com/example/agent-docs.git
+```
+
 Or edit `skills.json` manually and run:
 
 ```bash
@@ -53,7 +60,9 @@ While installing, Ktesio shows a progress bar for cloning and file copy work. Ra
 
 ```bash
 kt list
+kt list --json
 kt show docs
+kt doctor
 ```
 
 Status output is color-coded with small icons in terminals that support them.
@@ -74,6 +83,12 @@ kt remove docs
 ```
 
 `kt remove` is an alias for `kt uninstall`.
+
+To expose a local skill from your repo, run:
+
+```bash
+kt export add docs skills/docs
+```
 
 ## Next Steps
 

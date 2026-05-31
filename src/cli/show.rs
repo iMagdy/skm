@@ -5,16 +5,41 @@ use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
 use crate::ui;
+use serde::Serialize;
 
-#[cfg(not(tarpaulin_include))]
-pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let project_root = std::env::current_dir()?;
-    run_in(&project_root, package_name)
+#[derive(Serialize)]
+struct SkillDetails {
+    name: String,
+    repo: String,
+    commit: String,
+    path: String,
+    status: String,
 }
 
+#[cfg(not(tarpaulin_include))]
+#[allow(dead_code)]
+pub fn run(package_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    run_with_options(package_name, false)
+}
+
+#[cfg(not(tarpaulin_include))]
+pub fn run_with_options(package_name: &str, json: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let project_root = std::env::current_dir()?;
+    run_in_with_options(&project_root, package_name, json)
+}
+
+#[allow(dead_code)]
 pub(crate) fn run_in(
     project_root: &Path,
     package_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    run_in_with_options(project_root, package_name, false)
+}
+
+pub(crate) fn run_in_with_options(
+    project_root: &Path,
+    package_name: &str,
+    json: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_path = project_root.join("skills.json");
     let lockfile_path = project_root.join("skills.lock");
@@ -51,15 +76,31 @@ pub(crate) fn run_in(
         "not installed"
     };
 
-    println!(
-        "{} {}",
-        ui::table_header("Skill"),
-        ui::skill_name(package_name)
-    );
-    println!("{} {}", ui::label("Repo   "), repo);
-    println!("{} {}", ui::label("Commit "), commit);
-    println!("{} {}", ui::label("Path   "), dir.display());
-    println!("{} {}", ui::label("Status "), ui::status_label(status));
+    let details = SkillDetails {
+        name: package_name.to_string(),
+        repo: repo.to_string(),
+        commit: commit.to_string(),
+        path: dir.display().to_string(),
+        status: status.to_string(),
+    };
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&details)?);
+    } else {
+        println!(
+            "{} {}",
+            ui::table_header("Skill"),
+            ui::skill_name(package_name)
+        );
+        println!("{} {}", ui::label("Repo   "), details.repo);
+        println!("{} {}", ui::label("Commit "), details.commit);
+        println!("{} {}", ui::label("Path   "), details.path);
+        println!(
+            "{} {}",
+            ui::label("Status "),
+            ui::status_label(&details.status)
+        );
+    }
 
     Ok(())
 }
@@ -88,6 +129,23 @@ mod tests {
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
         let result = run_in(&dir, "test");
+        assert!(result.is_ok());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_show_json_output() {
+        let dir = std::env::temp_dir().join("ktesio_test_show_json");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+
+        let result = run_in_with_options(&dir, "test", true);
+
         assert!(result.is_ok());
         std::fs::remove_dir_all(&dir).unwrap();
     }

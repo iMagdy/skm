@@ -28,10 +28,13 @@ const INSTALL_AFTER_HELP: &str = "\
 Details:
   With no argument, installs every skill declared in skills.json. With
   name:repo, adds one skill after the repo is fetched and copied successfully.
+  With a bare repo URL or local path, reads exports from that repo and lets you
+  choose which skills to install.
 
 Examples:
   kt install
-  kt install docs:https://github.com/example/agent-docs.git";
+  kt install docs:https://github.com/example/agent-docs.git
+  kt install --all https://github.com/example/agent-docs.git";
 
 const UPGRADE_AFTER_HELP: &str = "\
 Details:
@@ -44,10 +47,12 @@ Example:
 const EXPORT_AFTER_HELP: &str = "\
 Details:
   Preserves existing exports, imports entries from skills.lock, and adds
-  untracked directories under .agents/skills using their local paths.
+  untracked directories under .agents/skills using their local paths. Use
+  export add to expose a local file or directory from this repo.
 
 Example:
-  kt export";
+  kt export
+  kt export add docs skills/docs";
 
 const LIST_AFTER_HELP: &str = "\
 Details:
@@ -64,6 +69,14 @@ Details:
 
 Example:
   kt show docs";
+
+const DOCTOR_AFTER_HELP: &str = "\
+Details:
+  Validates skills.json, skills.lock, installed skill directories, local exports,
+  orphaned lock entries, and git availability.
+
+Example:
+  kt doctor";
 
 const UNINSTALL_AFTER_HELP: &str = "\
 Details:
@@ -103,6 +116,15 @@ enum Commands {
         after_help = INSTALL_AFTER_HELP
     )]
     Install {
+        /// Install every discovered export from a repo target
+        #[arg(long)]
+        all: bool,
+        /// Accept safe defaults for prompts
+        #[arg(long)]
+        yes: bool,
+        /// Fail instead of prompting for interactive choices
+        #[arg(long = "no-input")]
+        no_input: bool,
         /// Optional: skill name and repo URL (format: name:url)
         target: Option<String>,
     },
@@ -117,22 +139,38 @@ enum Commands {
         about = "Export installed skills back into skills.json",
         after_help = EXPORT_AFTER_HELP
     )]
-    Export,
+    Export {
+        #[command(subcommand)]
+        command: Option<ExportCommands>,
+    },
     /// List installed skills
     #[command(
         about = "List installed skills",
         after_help = LIST_AFTER_HELP
     )]
-    List,
+    List {
+        /// Emit machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Show details for a specific skill
     #[command(
         about = "Show details for a specific skill",
         after_help = SHOW_AFTER_HELP
     )]
     Show {
+        /// Emit machine-readable JSON
+        #[arg(long)]
+        json: bool,
         /// Name of the skill to inspect
         package_name: String,
     },
+    /// Validate project skill state
+    #[command(
+        about = "Validate project skill state",
+        after_help = DOCTOR_AFTER_HELP
+    )]
+    Doctor,
     /// Remove a skill from the project
     #[command(
         alias = "remove",
@@ -145,17 +183,42 @@ enum Commands {
     },
 }
 
+#[derive(Subcommand)]
+enum ExportCommands {
+    /// Add or update a local export in skills.json
+    Add {
+        /// Export name
+        name: String,
+        /// Local file or directory path to export
+        path: String,
+    },
+}
+
 #[cfg(not(tarpaulin_include))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
         Some(Commands::Init { path }) => cli::init::run(&path),
-        Some(Commands::Install { target }) => cli::install::run(target.as_deref()),
+        Some(Commands::Install {
+            all,
+            yes,
+            no_input,
+            target,
+        }) => cli::install::run_with_options(
+            target.as_deref(),
+            cli::install::InstallOptions { all, yes, no_input },
+        ),
         Some(Commands::Upgrade) => cli::upgrade::run(),
-        Some(Commands::Export) => cli::export::run(),
-        Some(Commands::List) => cli::list::run(),
-        Some(Commands::Show { package_name }) => cli::show::run(&package_name),
+        Some(Commands::Export { command }) => match command {
+            Some(ExportCommands::Add { name, path }) => cli::export::run_add(&name, &path),
+            None => cli::export::run(),
+        },
+        Some(Commands::List { json }) => cli::list::run_with_options(json),
+        Some(Commands::Show { json, package_name }) => {
+            cli::show::run_with_options(&package_name, json)
+        }
+        Some(Commands::Doctor) => cli::doctor::run(),
         Some(Commands::Uninstall { package_name }) => cli::uninstall::run(&package_name),
         None => {
             Cli::command().print_help()?;
@@ -183,6 +246,7 @@ mod tests {
         assert!(cmd.find_subcommand("export").is_some());
         assert!(cmd.find_subcommand("list").is_some());
         assert!(cmd.find_subcommand("show").is_some());
+        assert!(cmd.find_subcommand("doctor").is_some());
         assert!(cmd.find_subcommand("uninstall").is_some());
         assert!(cmd.find_subcommand("remove").is_some());
     }
@@ -209,6 +273,7 @@ mod tests {
             ("export", "Preserves existing exports"),
             ("list", "Shows each known skill"),
             ("show", "Shows the repo URL"),
+            ("doctor", "Validates skills.json"),
             ("uninstall", "Removes one skill"),
         ] {
             let mut cmd = Cli::command();
