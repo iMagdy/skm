@@ -143,12 +143,17 @@ class ReleaseDocsTests(unittest.TestCase):
         self.assertIn("gh release create", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("gh pr create", workflow)
-        self.assertIn("packages: write", workflow)
-        self.assertIn("oras push", workflow)
         self.assertIn("generate_homebrew_formula.py", workflow)
         self.assertIn("HOMEBREW_TAP_TOKEN", workflow)
         self.assertIn("CARGO_REGISTRY_TOKEN", workflow)
         self.assertIn("cargo publish --locked", workflow)
+        self.assertNotIn("packages: write", workflow)
+        self.assertNotIn("oras-project/setup-oras", workflow)
+        self.assertNotIn("oras push", workflow)
+        self.assertNotIn("ghcr.io", workflow)
+        self.assertNotIn("GHCR_TOKEN", workflow)
+        self.assertNotIn("org.opencontainers.image", workflow)
+        self.assertNotIn("application/vnd.ktesio.release.v1", workflow)
 
     def test_homebrew_formula_uses_release_assets_and_checksums(self) -> None:
         checksums = {
