@@ -71,9 +71,7 @@ where
     }
 
     if !options.json {
-        ui::info(
-            "Searching skills.sh public listings. Ktesio respects rate limits and retries responsibly.",
-        );
+        ui::info("Searching skills.sh public listings (rate-limited, with retries).");
     }
 
     let mut notify = |message| ui::warning(message);
@@ -99,29 +97,35 @@ fn print_results(results: &[SkillSearchResult]) {
         return;
     }
 
-    println!(
-        "{} {} {} {}",
-        ui::padded(ui::table_header("SKILL"), "SKILL", 34),
-        ui::padded(ui::table_header("SOURCE"), "SOURCE", 28),
-        ui::padded(ui::table_header("INSTALLS"), "INSTALLS", 12),
-        ui::table_header("INSTALL")
-    );
-    println!("{}", "-".repeat(110));
+    let columns = [
+        ui::TableColumn::new("Skill", 16, 30),
+        ui::TableColumn::new("Source", 16, 34),
+        ui::TableColumn::new("Installs", 8, 9).right(),
+        ui::TableColumn::new("Install", 18, 54),
+    ];
+    let rows = results
+        .iter()
+        .map(|result| {
+            let install = result
+                .install_target
+                .as_deref()
+                .map(|target| format!("kt install {target}"))
+                .unwrap_or_else(|| "not installable yet".to_string());
+            let install_cell = if result.installable {
+                ui::TableCell::command(install)
+            } else {
+                ui::TableCell::muted(install)
+            };
 
-    for result in results {
-        let install = result
-            .install_target
-            .as_deref()
-            .map(|target| format!("kt install {target}"))
-            .unwrap_or_else(|| "not installable yet".to_string());
-        println!(
-            "{} {} {} {}",
-            ui::padded(ui::skill_name(&result.name), &result.name, 34),
-            ui::padded(&result.source, &result.source, 28),
-            ui::padded(result.installs, &result.installs.to_string(), 12),
-            install
-        );
-    }
+            vec![
+                ui::TableCell::skill(result.name.as_str()),
+                ui::TableCell::muted(ui::compact_source(&result.source)),
+                ui::TableCell::number(result.installs.to_string()),
+                install_cell,
+            ]
+        })
+        .collect::<Vec<_>>();
+    ui::print_table("Search results", &columns, &rows);
 }
 
 fn install_selected(
