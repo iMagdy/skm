@@ -177,7 +177,7 @@ fn prompt_user_selection(
             "\nSelect skill to install (1-{}, or 'q' to cancel)",
             skills.len()
         ))
-        .items(&skills.iter().map(|s| s.name.as_str()).collect::<Vec<_>>())
+        .items(skills.iter().map(|s| s.name.as_str()).collect::<Vec<_>>())
         .default(0)
         .interact_opt()?;
 
