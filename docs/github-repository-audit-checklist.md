@@ -129,9 +129,9 @@ Evidence:
 - [x] Dependabot config exists for GitHub Actions.
 - [x] Dependabot labels exist: `dependencies`, `rust`, and `github-actions`.
 - [x] Maintenance labels exist for areas, security, breaking changes, and repro needs.
-- [x] Dependabot PR #8 was opened for GitHub Actions updates.
-- [x] Dependabot PR #9 was opened for Cargo updates.
-- [x] Dependabot PR #9 clippy compatibility fix was pushed to its branch.
+- [x] Dependabot PR #8 was merged for GitHub Actions updates.
+- [x] Dependabot PR #9 was merged for Cargo updates.
+- [x] Dependabot PR #9 clippy compatibility fix was included before merge.
 
 Evidence:
 
