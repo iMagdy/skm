@@ -384,6 +384,19 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_default_branch_falls_back_to_local_main() {
+        let dir = std::env::temp_dir().join("skm_test_resolve_local_main");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        run_git(&dir, &["init", "-b", "main"]);
+
+        let result = resolve_default_branch(&dir);
+
+        assert_eq!(result.unwrap(), "main");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_checkout_default_branch_invalid_dir() {
         let dir = std::env::temp_dir().join("skm_test_checkout_invalid");
         let result = checkout_default_branch(&dir);
@@ -421,9 +434,74 @@ mod tests {
     }
 
     #[test]
+    fn test_git_progress_stage_labels_and_positions() {
+        assert_eq!(GitProgressStage::Counting.label(), "Counting objects");
+        assert_eq!(GitProgressStage::Compressing.label(), "Compressing objects");
+        assert_eq!(GitProgressStage::Receiving.label(), "Receiving objects");
+        assert_eq!(GitProgressStage::Resolving.label(), "Resolving deltas");
+        assert_eq!(GitProgressStage::Updating.label(), "Writing files");
+
+        assert_eq!(GitProgressStage::Counting.mapped_position(100), 20);
+        assert_eq!(GitProgressStage::Compressing.mapped_position(100), 40);
+        assert_eq!(GitProgressStage::Receiving.mapped_position(100), 75);
+        assert_eq!(GitProgressStage::Resolving.mapped_position(100), 90);
+        assert_eq!(GitProgressStage::Updating.mapped_position(100), 95);
+        assert_eq!(GitProgressStage::Updating.mapped_position(250), 95);
+    }
+
+    #[test]
+    fn test_parse_git_progress_all_stage_prefixes() {
+        assert_eq!(
+            parse_git_progress("Compressing objects: 10% (1/10)"),
+            Some((GitProgressStage::Compressing, 10))
+        );
+        assert_eq!(
+            parse_git_progress("Resolving deltas: 55% (11/20)"),
+            Some((GitProgressStage::Resolving, 55))
+        );
+        assert_eq!(
+            parse_git_progress("Updating files: 100% (3/3)"),
+            Some((GitProgressStage::Updating, 100))
+        );
+        assert_eq!(parse_git_progress("Counting objects: % (0/0)"), None);
+        assert_eq!(parse_git_progress("fatal: repository not found"), None);
+    }
+
+    #[test]
+    fn test_observe_progress_updates_progress_and_flushes_large_buffer() {
+        let progress = ProgressBar::hidden();
+        let mut buffer = String::new();
+
+        observe_progress(
+            &progress,
+            b"remote: Resolving deltas: 80% (8/10)\n",
+            &mut buffer,
+        );
+        assert_eq!(progress.position(), 87);
+        assert!(buffer.is_empty());
+
+        observe_progress(&progress, "x".repeat(4097).as_bytes(), &mut buffer);
+        assert!(buffer.is_empty());
+    }
+
+    #[test]
     fn test_summarize_git_failure_skips_progress_noise() {
         let stderr =
             b"Cloning into 'repo'...\nReceiving objects: 100% (1/1)\nfatal: repository not found\n";
         assert_eq!(summarize_git_failure(stderr), "fatal: repository not found");
+    }
+
+    fn run_git(repo: &Path, args: &[&str]) {
+        let output = std::process::Command::new("git")
+            .args(args)
+            .current_dir(repo)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 }
