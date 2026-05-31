@@ -11,18 +11,46 @@ use crate::manifest::Manifest;
 use crate::skill;
 use crate::ui;
 
-#[cfg(not(tarpaulin_include))]
-pub fn run(target: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-    let project_root = std::env::current_dir()?;
-    run_in(&project_root, target)
+#[derive(Debug, Clone, Copy, Default)]
+pub struct InstallOptions {
+    pub all: bool,
+    pub yes: bool,
+    pub no_input: bool,
 }
 
+#[cfg(not(tarpaulin_include))]
+#[allow(dead_code)]
+pub fn run(target: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    run_with_options(target, InstallOptions::default())
+}
+
+#[cfg(not(tarpaulin_include))]
+pub fn run_with_options(
+    target: Option<&str>,
+    options: InstallOptions,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let project_root = std::env::current_dir()?;
+    run_in_with_options(&project_root, target, options)
+}
+
+#[allow(dead_code)]
 pub(crate) fn run_in(
     project_root: &Path,
     target: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    run_in_with_options(project_root, target, InstallOptions::default())
+}
+
+pub(crate) fn run_in_with_options(
+    project_root: &Path,
+    target: Option<&str>,
+    options: InstallOptions,
+) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(t) = target {
-        return run_single(project_root, t);
+        return match parse_install_target(t)? {
+            InstallTarget::Named { name, repo } => run_single(project_root, &name, &repo),
+            InstallTarget::Repo(repo) => run_repo_target(project_root, &repo, options),
+        };
     }
 
     run_bulk(project_root)
@@ -279,20 +307,25 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
-fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let parts: Vec<&str> = target.splitn(2, ':').collect();
-    if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
-        return Err(InstallInvalidFormat {
-            message:
-                "Invalid format. Expected name:url (e.g., clap:https://github.com/clap-rs/clap.git)"
-                    .to_string(),
-        }
-        .into());
+fn copy_installable_path(src: &Path, dst: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    if src.is_dir() {
+        return copy_dir_recursive(src, dst);
     }
 
-    let name = parts[0].to_string();
-    let repo_url = parts[1].to_string();
-    if !is_valid_skill_name(&name) {
+    std::fs::create_dir_all(dst)?;
+    let file_name = src.file_name().ok_or_else(|| SkillCopyFailed {
+        message: format!("Cannot determine file name for {}", src.display()),
+    })?;
+    std::fs::copy(src, dst.join(file_name))?;
+    Ok(())
+}
+
+fn run_single(
+    project_root: &Path,
+    name: &str,
+    repo_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !is_valid_skill_name(name) {
         return Err(InstallInvalidFormat {
             message: format!("Invalid skill name '{}': must match [a-zA-Z0-9_-]+", name),
         }
@@ -306,7 +339,7 @@ fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::erro
         Manifest::new()
     };
 
-    if manifest.has_skill(&name) {
+    if manifest.has_skill(name) {
         return Err(InstallAlreadyExists {
             message: format!("Skill '{}' already exists in manifest, skipping", name),
         }
@@ -314,27 +347,27 @@ fn run_single(project_root: &Path, target: &str) -> Result<(), Box<dyn std::erro
     }
 
     let mp = MultiProgress::new();
-    let pb = ui::install_progress(&mp, &name);
+    let pb = ui::install_progress(&mp, name);
 
-    let commit = install_repo_to_skill_dir(project_root, &name, &repo_url, &pb)?;
+    let commit = install_repo_to_skill_dir(project_root, name, repo_url, &pb)?;
 
-    manifest.add_skill(name.clone(), repo_url.clone());
+    manifest.add_skill(name.to_string(), repo_url.to_string());
     manifest.save(&manifest_path)?;
 
     let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
     lockfile.insert(
-        name.clone(),
+        name.to_string(),
         LockEntry {
             commit,
-            repo: repo_url,
+            repo: repo_url.to_string(),
         },
     );
     lockfile.save(&project_root.join("skills.lock"))?;
 
-    ui::finish_success(&pb, format!("Installed {}", ui::skill_name(&name)));
+    ui::finish_success(&pb, format!("Installed {}", ui::skill_name(name)));
     ui::success(format!(
         "Installed {} from {}",
-        ui::skill_name(&name),
+        ui::skill_name(name),
         project_root.display()
     ));
 
@@ -425,7 +458,7 @@ fn copy_repo_content_for_install(
         let selected = skills.get(index).ok_or_else(|| SkillCopyFailed {
             message: format!("Selected fallback skill index {} is invalid", index),
         })?;
-        copy_dir_recursive(&selected.path, &dest_dir.join(&selected.name))?;
+        copy_installable_path(&selected.path, &dest_dir.join(&selected.name))?;
     }
 
     Ok(())
@@ -479,12 +512,16 @@ fn discover_fallback_skill_dirs(
     for entry in std::fs::read_dir(skills_dir)? {
         let entry = entry?;
         let file_type = entry.file_type()?;
-        if !file_type.is_dir() {
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        if file_name.starts_with('.') || file_name == "target" || file_name == "node_modules" {
+            continue;
+        }
+        if !file_type.is_dir() && !file_name.ends_with(".md") {
             continue;
         }
 
-        let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with('.') || name == "target" || name == "node_modules" {
+        let name = discovery::normalize_skill_name(&file_name);
+        if name.is_empty() {
             continue;
         }
 
@@ -503,6 +540,263 @@ fn is_valid_skill_name(name: &str) -> bool {
         && name
             .chars()
             .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
+}
+
+enum InstallTarget {
+    Named { name: String, repo: String },
+    Repo(String),
+}
+
+fn parse_install_target(target: &str) -> Result<InstallTarget, Box<dyn std::error::Error>> {
+    if target.is_empty() {
+        return Err(InstallInvalidFormat {
+            message: "Install target cannot be empty".to_string(),
+        }
+        .into());
+    }
+
+    if let Some((name, repo)) = parse_named_target(target)? {
+        return Ok(InstallTarget::Named { name, repo });
+    }
+
+    Ok(InstallTarget::Repo(target.to_string()))
+}
+
+fn parse_named_target(
+    target: &str,
+) -> Result<Option<(String, String)>, Box<dyn std::error::Error>> {
+    if target.starts_with("http://")
+        || target.starts_with("https://")
+        || target.starts_with("ssh://")
+        || target.starts_with("git@")
+    {
+        return Ok(None);
+    }
+
+    let Some((name, repo)) = target.split_once(':') else {
+        return Ok(None);
+    };
+
+    if name.is_empty() || repo.is_empty() || !is_valid_skill_name(name) {
+        return Err(InstallInvalidFormat {
+            message:
+                "Invalid format. Expected name:url (e.g., clap:https://github.com/clap-rs/clap.git)"
+                    .to_string(),
+        }
+        .into());
+    }
+
+    Ok(Some((name.to_string(), repo.to_string())))
+}
+
+#[derive(Debug, Clone)]
+struct SourceInstallable {
+    name: String,
+    path: PathBuf,
+}
+
+fn run_repo_target(
+    project_root: &Path,
+    repo_url: &str,
+    options: InstallOptions,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mp = MultiProgress::new();
+    let pb = ui::install_progress(&mp, repo_url);
+    let workspace = InstallWorkspace::create(project_root, "repo")?;
+
+    pb.set_message("Cloning repository");
+    git::clone_with_progress(repo_url, &workspace.clone_dir, &pb)?;
+    let commit = git::rev_parse_head(&workspace.clone_dir).unwrap_or_default();
+
+    let prompter = DialoguerFallbackPrompter;
+    let installables = discover_repo_installables(&workspace.clone_dir, options, &prompter)?;
+    let selected_indexes = select_repo_installables(&installables, options, &prompter)?;
+
+    if selected_indexes.is_empty() {
+        return Err(SkillCopyFailed {
+            message: "No skills selected for installation".to_string(),
+        }
+        .into());
+    }
+
+    let manifest_path = project_root.join("skills.json");
+    let mut manifest = if manifest_path.exists() {
+        Manifest::load(&manifest_path)?
+    } else {
+        Manifest::new()
+    };
+    let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
+
+    let mut staged = Vec::new();
+    for index in selected_indexes {
+        let installable = installables.get(index).ok_or_else(|| SkillCopyFailed {
+            message: format!("Selected skill index {} is invalid", index),
+        })?;
+
+        if manifest.has_skill(&installable.name)
+            || git::skill_dir(project_root, &installable.name).exists()
+        {
+            ui::warning(format!(
+                "Skill {} already exists, skipping",
+                ui::skill_name(&installable.name)
+            ));
+            continue;
+        }
+
+        let staged_dir = workspace.install_dir.join(&installable.name);
+        copy_installable_path(&installable.path, &staged_dir)?;
+        staged.push(installable.clone());
+    }
+
+    if staged.is_empty() {
+        return Err(InstallAlreadyExists {
+            message: "No selected skills can be installed because they already exist".to_string(),
+        }
+        .into());
+    }
+
+    if let Some(parent) = git::skill_dir(project_root, "placeholder").parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    for installable in &staged {
+        let dest = git::skill_dir(project_root, &installable.name);
+        std::fs::rename(workspace.install_dir.join(&installable.name), &dest)?;
+        manifest.add_skill(installable.name.clone(), repo_url.to_string());
+        lockfile.insert(
+            installable.name.clone(),
+            LockEntry {
+                commit: commit.clone(),
+                repo: repo_url.to_string(),
+            },
+        );
+    }
+
+    manifest.save(&manifest_path)?;
+    lockfile.save(&project_root.join("skills.lock"))?;
+
+    ui::finish_success(
+        &pb,
+        format!(
+            "Installed {} skill{}",
+            staged.len(),
+            if staged.len() == 1 { "" } else { "s" }
+        ),
+    );
+
+    Ok(())
+}
+
+fn discover_repo_installables(
+    clone_dir: &Path,
+    options: InstallOptions,
+    prompter: &dyn FallbackPrompter,
+) -> Result<Vec<SourceInstallable>, Box<dyn std::error::Error>> {
+    let manifest_path = clone_dir.join("skills.json");
+    if manifest_path.exists() {
+        let manifest = Manifest::load(&manifest_path)?;
+        if manifest.exports.is_empty() {
+            return Err(SkillCopyFailed {
+                message: "Source skills.json does not declare any exports".to_string(),
+            }
+            .into());
+        }
+
+        let mut installables = manifest
+            .exports
+            .iter()
+            .map(|(name, export)| SourceInstallable {
+                name: name.clone(),
+                path: clone_dir.join(&export.path),
+            })
+            .collect::<Vec<_>>();
+        installables.sort_by(|a, b| a.name.cmp(&b.name));
+
+        for installable in &installables {
+            if !is_valid_skill_name(&installable.name) {
+                return Err(SkillCopyFailed {
+                    message: format!(
+                        "Source export name '{}' is invalid: must match [a-zA-Z0-9_-]+",
+                        installable.name
+                    ),
+                }
+                .into());
+            }
+            if !installable.path.exists() {
+                return Err(SkillCopyFailed {
+                    message: format!(
+                        "Source export path '{}' does not exist",
+                        installable.path.display()
+                    ),
+                }
+                .into());
+            }
+        }
+
+        return Ok(installables);
+    }
+
+    if options.no_input && !options.yes && !options.all {
+        return Err(SkillCopyFailed {
+            message: "Source repo has no skills.json and --no-input prevents fallback confirmation"
+                .to_string(),
+        }
+        .into());
+    }
+
+    if !options.yes && !options.all && !prompter.confirm_missing_manifest()? {
+        return Err(SkillCopyFailed {
+            message: "Installation cancelled because source repo has no skills.json".to_string(),
+        }
+        .into());
+    }
+
+    let skills_dir =
+        discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
+            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+        })?;
+    let fallback = discover_fallback_skill_dirs(&skills_dir)?;
+    if fallback.is_empty() {
+        return Err(SkillCopyFailed {
+            message: "Source skills directory does not contain skill directories".to_string(),
+        }
+        .into());
+    }
+
+    Ok(fallback
+        .into_iter()
+        .map(|skill| SourceInstallable {
+            name: skill.name,
+            path: skill.path,
+        })
+        .collect())
+}
+
+fn select_repo_installables(
+    installables: &[SourceInstallable],
+    options: InstallOptions,
+    prompter: &dyn FallbackPrompter,
+) -> Result<Vec<usize>, Box<dyn std::error::Error>> {
+    if options.all || installables.len() == 1 {
+        return Ok((0..installables.len()).collect());
+    }
+
+    if options.no_input || options.yes {
+        return Err(SkillCopyFailed {
+            message: "Multiple skills are available; use --all or run interactively to select"
+                .to_string(),
+        }
+        .into());
+    }
+
+    let fallback = installables
+        .iter()
+        .map(|installable| FallbackSkillDir {
+            name: installable.name.clone(),
+            path: installable.path.clone(),
+        })
+        .collect::<Vec<_>>();
+    prompter.select_skill_dirs(&fallback)
 }
 
 struct InstallWorkspace {
@@ -717,6 +1011,36 @@ mod tests {
     }
 
     #[test]
+    fn test_run_single_rejects_invalid_name_directly() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_single_invalid_name_direct");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let result = run_single(&dir, "bad name", "url");
+
+        assert!(result.is_err());
+        assert!(!dir.join("skills.json").exists());
+        assert!(!dir.join("skills.lock").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_single_creates_manifest_when_missing() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_single_new_manifest");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = create_local_repo(&dir, "source");
+
+        let result = run_single(&dir, "source", repo.to_str().unwrap());
+
+        assert!(result.is_ok());
+        assert!(dir.join("skills.json").exists());
+        assert!(dir.join("skills.lock").exists());
+        assert!(dir.join(".agents/skills/source/source/SKILL.md").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_run_single_success_with_local_repo() {
         let dir = std::env::temp_dir().join("ktesio_test_install_single_success");
         let _ = std::fs::remove_dir_all(&dir);
@@ -803,6 +1127,26 @@ mod tests {
     }
 
     #[test]
+    fn test_copy_repo_content_for_install_auto_selects_single_fallback_file() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_single_fallback_file");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("skills")).unwrap();
+        std::fs::write(src.join("skills/file-skill.md"), "# File Skill").unwrap();
+
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+        let result = copy_repo_content_for_install(&src, &dst, &prompter);
+
+        assert!(result.is_ok());
+        assert!(dst.join("file-skill/file-skill.md").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_run_bulk_fallback_no_skills_dir() {
         let dir = std::env::temp_dir().join("ktesio_test_install_fallback_nodir");
         std::fs::create_dir_all(&dir).unwrap();
@@ -827,7 +1171,7 @@ mod tests {
         std::fs::write(dir.join("skills/test-skill.md"), "# Test Skill").unwrap();
         let result = run_in(&dir, None);
         assert!(result.is_ok());
-        assert!(dir.join(".agents/skills/test skill/test-skill.md").exists());
+        assert!(dir.join(".agents/skills/test-skill/test-skill.md").exists());
         assert!(dir.join("skills.lock").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -1116,12 +1460,13 @@ mod tests {
         std::fs::create_dir_all(skills.join(".hidden")).unwrap();
         std::fs::create_dir_all(skills.join("target")).unwrap();
         std::fs::create_dir_all(skills.join("node_modules")).unwrap();
-        std::fs::write(skills.join("README.md"), "not a skill dir").unwrap();
+        std::fs::write(skills.join("gamma.md"), "# Gamma").unwrap();
+        std::fs::write(skills.join("README.txt"), "not a skill").unwrap();
 
         let result = discover_fallback_skill_dirs(&skills).unwrap();
 
         assert_eq!(
-            vec!["alpha".to_string(), "beta".to_string()],
+            vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()],
             result
                 .into_iter()
                 .map(|skill| skill.name)
@@ -1166,6 +1511,319 @@ mod tests {
             Ok(_) => panic!("workspace creation should fail after all names collide"),
             Err(err) => assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists),
         }
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_parse_install_target_recognizes_named_and_repo_targets() {
+        match parse_install_target("docs:https://example.com/repo.git").unwrap() {
+            InstallTarget::Named { name, repo } => {
+                assert_eq!(name, "docs");
+                assert_eq!(repo, "https://example.com/repo.git");
+            }
+            InstallTarget::Repo(_) => panic!("expected named target"),
+        }
+
+        match parse_install_target("https://example.com/repo.git").unwrap() {
+            InstallTarget::Repo(repo) => assert_eq!(repo, "https://example.com/repo.git"),
+            InstallTarget::Named { .. } => panic!("expected repo target"),
+        }
+
+        assert!(parse_install_target("bad name:url").is_err());
+        assert!(parse_install_target("name:").is_err());
+        assert!(parse_install_target("").is_err());
+    }
+
+    #[test]
+    fn test_discover_repo_installables_from_manifest() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_manifest");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/beta")).unwrap();
+        std::fs::create_dir_all(dir.join("skills/alpha")).unwrap();
+        std::fs::write(dir.join("skills/alpha/SKILL.md"), "# Alpha").unwrap();
+        std::fs::write(dir.join("skills/beta/SKILL.md"), "# Beta").unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"exports": {"beta": {"path": "skills/beta"}, "alpha": {"path": "skills/alpha"}}}"#,
+        )
+        .unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let installables =
+            discover_repo_installables(&dir, InstallOptions::default(), &prompter).unwrap();
+
+        assert_eq!(
+            vec!["alpha".to_string(), "beta".to_string()],
+            installables
+                .iter()
+                .map(|installable| installable.name.clone())
+                .collect::<Vec<_>>()
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_rejects_empty_exports() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_empty");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"exports": {}}"#).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = discover_repo_installables(&dir, InstallOptions::default(), &prompter);
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_rejects_missing_export_path() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_missing_path");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"exports": {"docs": {"path": "skills/docs"}}}"#,
+        )
+        .unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = discover_repo_installables(&dir, InstallOptions::default(), &prompter);
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_fallback_respects_no_input() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_no_input");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = discover_repo_installables(
+            &dir,
+            InstallOptions {
+                no_input: true,
+                ..InstallOptions::default()
+            },
+            &prompter,
+        );
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_fallback_requires_confirmation() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_declined");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: false,
+            selections: vec![],
+        };
+
+        let result = discover_repo_installables(&dir, InstallOptions::default(), &prompter);
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_fallback_reports_missing_skills_dir() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_no_skills_dir");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = discover_repo_installables(
+            &dir,
+            InstallOptions {
+                yes: true,
+                ..InstallOptions::default()
+            },
+            &prompter,
+        );
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_fallback_reports_empty_skills_dir() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_empty_skills_dir");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills")).unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = discover_repo_installables(
+            &dir,
+            InstallOptions {
+                all: true,
+                ..InstallOptions::default()
+            },
+            &prompter,
+        );
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_repo_installables_fallback_returns_safe_names() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_fallback_names");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/Fancy Skill")).unwrap();
+        std::fs::write(dir.join("skills/alpha_beta.md"), "# Alpha").unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let installables = discover_repo_installables(
+            &dir,
+            InstallOptions {
+                all: true,
+                ..InstallOptions::default()
+            },
+            &prompter,
+        )
+        .unwrap();
+
+        assert_eq!(
+            vec!["Fancy-Skill".to_string(), "alpha_beta".to_string()],
+            installables
+                .iter()
+                .map(|installable| installable.name.clone())
+                .collect::<Vec<_>>()
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_select_repo_installables_handles_all_single_and_ambiguous() {
+        let installables = vec![
+            SourceInstallable {
+                name: "alpha".to_string(),
+                path: PathBuf::from("alpha"),
+            },
+            SourceInstallable {
+                name: "beta".to_string(),
+                path: PathBuf::from("beta"),
+            },
+        ];
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![1],
+        };
+
+        let all = select_repo_installables(
+            &installables,
+            InstallOptions {
+                all: true,
+                ..InstallOptions::default()
+            },
+            &prompter,
+        )
+        .unwrap();
+        assert_eq!(all, vec![0, 1]);
+
+        let selected =
+            select_repo_installables(&installables, InstallOptions::default(), &prompter).unwrap();
+        assert_eq!(selected, vec![1]);
+
+        let no_input = select_repo_installables(
+            &installables,
+            InstallOptions {
+                no_input: true,
+                ..InstallOptions::default()
+            },
+            &prompter,
+        );
+        assert!(no_input.is_err());
+
+        let yes = select_repo_installables(
+            &installables,
+            InstallOptions {
+                yes: true,
+                ..InstallOptions::default()
+            },
+            &prompter,
+        );
+        assert!(yes.is_err());
+
+        let single =
+            select_repo_installables(&installables[0..1], InstallOptions::default(), &prompter)
+                .unwrap();
+        assert_eq!(single, vec![0]);
+    }
+
+    #[test]
+    fn test_run_repo_target_installs_all_exports_from_local_repo() {
+        let dir = std::env::temp_dir().join("ktesio_test_run_repo_target_all");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = create_local_repo(&dir, "source");
+
+        let result = run_repo_target(
+            &dir,
+            repo.to_str().unwrap(),
+            InstallOptions {
+                all: true,
+                ..InstallOptions::default()
+            },
+        );
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/source/SKILL.md").exists());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert!(manifest.has_skill("source"));
+        let lockfile = Lockfile::load(&dir.join("skills.lock")).unwrap();
+        assert!(lockfile.contains("source"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_repo_target_skips_existing_and_errors_when_nothing_installable() {
+        let dir = std::env::temp_dir().join("ktesio_test_run_repo_target_existing");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/source")).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"source": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+        let repo = create_local_repo(&dir, "source");
+
+        let result = run_repo_target(
+            &dir,
+            repo.to_str().unwrap(),
+            InstallOptions {
+                all: true,
+                ..InstallOptions::default()
+            },
+        );
+
+        assert!(result.is_err());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

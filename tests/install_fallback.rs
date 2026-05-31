@@ -1,27 +1,28 @@
 mod helpers;
 
-use helpers::{run_kt_command, TestContext};
+use helpers::{run_kt_command, run_kt_command_output, TestContext};
 
 #[test]
 fn test_install_fallback_displays_warning() {
     let ctx = TestContext::new();
 
-    let fixture_dir = ctx.create_fixture_repo("agent-skill", false);
+    let fixture_dir = ctx.project_dir.join("fixture");
+    std::fs::create_dir_all(fixture_dir.join("skills/agent-skill")).unwrap();
+    std::fs::write(
+        fixture_dir.join("skills/agent-skill/SKILL.md"),
+        "# Agent Skill",
+    )
+    .unwrap();
 
-    // The agent-skills repo should not have skills.json
-    assert!(
-        !fixture_dir.join("skills.json").exists(),
-        "Fixture should not have skills.json"
-    );
+    let output =
+        run_kt_command_output(&["install"], &fixture_dir).expect("fallback install should succeed");
 
-    // Run kt install without a manifest - this should trigger fallback discovery
-    // Note: This test may fail because the CLI expects a manifest
-    // We're testing that the fallback path is taken
-    let result = run_kt_command(&["install"], &fixture_dir);
-
-    // The install may fail due to various reasons, but we're testing the fallback path
-    // For now, just verify the command ran
-    assert!(result.is_ok() || result.is_err(), "Command should complete");
+    assert!(output.stderr.contains("No skills.json found"));
+    assert!(fixture_dir
+        .join(".agents/skills/agent-skill/SKILL.md")
+        .exists());
+    let lockfile = std::fs::read_to_string(fixture_dir.join("skills.lock")).unwrap();
+    assert!(lockfile.contains("agent-skill"));
 }
 
 #[test]
@@ -33,11 +34,17 @@ fn test_install_fallback_discovers_skills_directory() {
     std::fs::create_dir_all(fixture_dir.join("skills")).unwrap();
     std::fs::write(fixture_dir.join("skills/test-skill.md"), "# Test Skill").unwrap();
 
-    // Run kt install - this should trigger fallback discovery
     let result = run_kt_command(&["install"], &fixture_dir);
 
-    // The install may fail, but we're testing the fallback path
-    assert!(result.is_ok() || result.is_err(), "Command should complete");
+    assert!(
+        result.is_ok(),
+        "fallback install should succeed: {:?}",
+        result.err()
+    );
+    assert!(fixture_dir
+        .join(".agents/skills/test-skill/test-skill.md")
+        .exists());
+    assert!(fixture_dir.join("skills.lock").exists());
 }
 
 #[test]

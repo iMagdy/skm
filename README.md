@@ -73,10 +73,13 @@ brew install imagdy/tap/ktesio
 | `kt init <path>` | Create `skills.json` in a project |
 | `kt install` | Install every skill declared in `skills.json` |
 | `kt install <name:repo>` | Add and install one skill |
+| `kt install --all <repo>` | Install all exported skills from one repo |
 | `kt export` | Rebuild `skills.json` from installed skills |
+| `kt export add <name> <path>` | Add or update a local export |
 | `kt upgrade` | Fetch latest commits for installed skills |
 | `kt list` | Show installed, missing, and orphaned skills |
 | `kt show <name>` | Show one skill's repo, commit, path, and status |
+| `kt doctor` | Validate manifest, lockfile, installed files, and git state |
 | `kt uninstall <name>` | Remove a skill from manifest, lockfile, and disk |
 | `kt remove <name>` | Alias for `kt uninstall <name>` |
 

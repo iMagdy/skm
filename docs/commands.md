@@ -48,6 +48,24 @@ Ktesio updates `skills.json` and `skills.lock` only after the repo is fetched an
 
 The single-skill install flow uses the same progress bar and quiet git output as bulk install.
 
+## `kt install <repo>`
+
+Install one or more exports from a source repository without naming the package first.
+
+```bash
+kt install https://github.com/example/agent-docs.git
+kt install --all https://github.com/example/agent-docs.git
+```
+
+Behavior:
+
+- Reads the source repo's `skills.json` `exports` and derives destination names from export names.
+- Prompts when multiple exports are available.
+- `--all` installs every export without prompting.
+- `--yes` accepts safe defaults, such as a single obvious fallback skill.
+- `--no-input` fails instead of prompting when a choice is required.
+- Repos without `skills.json` can use fallback discovery from `.md` files or directories under `skills/` or `SKILLS/`.
+
 ## `kt export`
 
 Rebuild `skills.json` from installed skills.
@@ -62,6 +80,20 @@ Behavior:
 - Adds untracked directories under `.agents/skills/` using their local paths.
 - Preserves existing `exports`.
 - Creates an empty manifest if no skills are installed.
+
+## `kt export add <name> <path>`
+
+Add or update one local export in `skills.json`.
+
+```bash
+kt export add docs skills/docs
+```
+
+Behavior:
+
+- Creates `skills.json` if needed.
+- Preserves existing imported skills and exports.
+- Fails if the name is invalid, the path does not exist, or the path is outside the project.
 
 ## `kt upgrade`
 
@@ -96,6 +128,8 @@ Statuses:
 
 The table uses icons and color-coded status labels when the terminal supports them.
 
+Use `kt list --json` for machine-readable output. JSON entries include `name`, `repo`, `commit`, `path`, and `status`.
+
 ## `kt show <name>`
 
 Show one skill.
@@ -107,6 +141,22 @@ kt show docs
 Output includes name, repo, commit, local path, and status.
 
 Status is color-coded the same way as `kt list`.
+
+Use `kt show <name> --json` for machine-readable output with `name`, `repo`, `commit`, `path`, and `status`.
+
+## `kt doctor`
+
+Validate project skill state.
+
+```bash
+kt doctor
+```
+
+Behavior:
+
+- Checks `skills.json`, `skills.lock`, `.agents/skills/`, local export paths, orphaned lock entries, missing installed directories, and git availability.
+- Exits successfully when no errors are found.
+- Prints actionable warnings and errors for repairable project state.
 
 ## `kt uninstall <name>`
 

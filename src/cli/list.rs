@@ -4,14 +4,38 @@ use crate::git;
 use crate::lockfile::Lockfile;
 use crate::manifest::Manifest;
 use crate::ui;
+use serde::Serialize;
 
-#[cfg(not(tarpaulin_include))]
-pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let project_root = std::env::current_dir()?;
-    run_in(&project_root)
+#[derive(Serialize)]
+struct SkillStatus {
+    name: String,
+    repo: String,
+    commit: String,
+    path: String,
+    status: String,
 }
 
+#[cfg(not(tarpaulin_include))]
+#[allow(dead_code)]
+pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+    run_with_options(false)
+}
+
+#[cfg(not(tarpaulin_include))]
+pub fn run_with_options(json: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let project_root = std::env::current_dir()?;
+    run_in_with_options(&project_root, json)
+}
+
+#[allow(dead_code)]
 pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    run_in_with_options(project_root, false)
+}
+
+pub(crate) fn run_in_with_options(
+    project_root: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_path = project_root.join("skills.json");
     let lockfile_path = project_root.join("skills.lock");
 
@@ -23,7 +47,14 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
 
     let lockfile = Lockfile::load(&lockfile_path)?;
 
-    if manifest.skills.is_empty() && lockfile.entries().is_empty() {
+    let statuses = collect_statuses(project_root, &manifest, &lockfile);
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&statuses)?);
+        return Ok(());
+    }
+
+    if statuses.is_empty() {
         ui::info("No skills installed. Run 'kt install' to add skills.");
         return Ok(());
     }
@@ -37,6 +68,26 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
     );
     println!("{}", "-".repeat(120));
 
+    for skill in &statuses {
+        println!(
+            "{} {} {} {}",
+            ui::padded(ui::skill_name(&skill.name), &skill.name, 20),
+            ui::padded(&skill.repo, &skill.repo, 45),
+            ui::padded(&skill.commit, &skill.commit, 42),
+            ui::status_label(&skill.status)
+        );
+    }
+
+    Ok(())
+}
+
+fn collect_statuses(
+    project_root: &Path,
+    manifest: &Manifest,
+    lockfile: &Lockfile,
+) -> Vec<SkillStatus> {
+    let mut statuses = Vec::new();
+
     for (name, entry) in &manifest.skills {
         let lock = lockfile.entry(name);
         let commit = lock.map(|l| l.commit.as_str()).unwrap_or("—");
@@ -49,29 +100,29 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
             "not locked"
         };
 
-        println!(
-            "{} {} {} {}",
-            ui::padded(ui::skill_name(name), name, 20),
-            ui::padded(&entry.repo, &entry.repo, 45),
-            ui::padded(commit, commit, 42),
-            ui::status_label(status)
-        );
+        statuses.push(SkillStatus {
+            name: name.clone(),
+            repo: entry.repo.clone(),
+            commit: commit.to_string(),
+            path: dir.display().to_string(),
+            status: status.to_string(),
+        });
     }
 
-    // Show orphaned lockfile entries
     for (name, lock) in lockfile.entries() {
         if !manifest.skills.contains_key(name) {
-            println!(
-                "{} {} {} {}",
-                ui::padded(ui::skill_name(name), name, 20),
-                ui::padded(&lock.repo, &lock.repo, 45),
-                ui::padded(&lock.commit, &lock.commit, 42),
-                ui::status_label("orphaned")
-            );
+            statuses.push(SkillStatus {
+                name: name.clone(),
+                repo: lock.repo.clone(),
+                commit: lock.commit.clone(),
+                path: git::skill_dir(project_root, name).display().to_string(),
+                status: "orphaned".to_string(),
+            });
         }
     }
 
-    Ok(())
+    statuses.sort_by(|a, b| a.name.cmp(&b.name));
+    statuses
 }
 
 #[cfg(test)]
@@ -83,6 +134,23 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_list_empty");
         std::fs::create_dir_all(&dir).unwrap();
         let result = run_in(&dir);
+        assert!(result.is_ok());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_list_json_output() {
+        let dir = std::env::temp_dir().join("ktesio_test_list_json");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+        )
+        .unwrap();
+
+        let result = run_in_with_options(&dir, true);
+
         assert!(result.is_ok());
         std::fs::remove_dir_all(&dir).unwrap();
     }

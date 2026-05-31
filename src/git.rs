@@ -4,7 +4,6 @@ use std::process::{Command, Stdio};
 use crate::error::{GitCheckoutFailed, GitCloneFailed, GitFetchFailed, GitRevParseFailed};
 use indicatif::ProgressBar;
 
-#[cfg(test)]
 pub fn is_git_available() -> bool {
     Command::new("git")
         .arg("--version")

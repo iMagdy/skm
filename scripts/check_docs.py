@@ -33,6 +33,7 @@ KT_COMMANDS = {
     "export",
     "list",
     "show",
+    "doctor",
     "uninstall",
     "remove",
     "help",
