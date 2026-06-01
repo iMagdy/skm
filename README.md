@@ -21,12 +21,21 @@ Ktesio is a tiny Rust CLI for installing and sharing agent skills. It makes reus
 
 ## 60-Second Quickstart
 
-```bash
-git clone https://github.com/iMagdy/ktesio.git
-cd ktesio
-cargo install --path .
+Install Ktesio with Cargo:
 
-# In another project:
+```bash
+cargo install ktesio
+```
+
+Or with Homebrew:
+
+```bash
+brew install imagdy/tap/ktesio
+```
+
+Then, in a project where you want to use agent skills:
+
+```bash
 kt init .
 kt install docs:example/agent-docs
 kt search tests
@@ -45,26 +54,26 @@ During install and upgrade, Ktesio shows progress bars for long-running git work
 
 ## Install
 
-From source:
-
-```bash
-git clone https://github.com/iMagdy/ktesio.git
-cd ktesio
-cargo install --path .
-```
-
-From crates.io:
+Cargo is the recommended install path if you already have Rust:
 
 ```bash
 cargo install ktesio
 ```
 
-From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/ktesio/releases), unpack it, and place `kt` on your `PATH`.
-
-With Homebrew, install from the tap once a release is published:
+With Homebrew:
 
 ```bash
 brew install imagdy/tap/ktesio
+```
+
+From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/ktesio/releases), unpack it, and place `kt` on your `PATH`.
+
+From the source repository:
+
+```bash
+git clone https://github.com/iMagdy/ktesio.git
+cd ktesio
+cargo install --path .
 ```
 
 ## Commands
@@ -126,7 +135,7 @@ Ktesio is early, useful, and intentionally conservative. The current package for
 
 ## Thanks
 
-Thank you to [Skills.sh](https://www.skills.sh/) for providing public skill search, and to [Vercel](https://vercel.com/) for making Skills.sh available to the public.
+Thank you to [Skills.sh](https://www.skills.sh/) for providing public skill search, and to [Vercel](https://vercel.com/) for making Skills.sh available to everyone for free.
 
 ## License
 
