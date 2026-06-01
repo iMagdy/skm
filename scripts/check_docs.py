@@ -31,7 +31,7 @@ KT_COMMANDS = {
     "search",
     "install",
     "upgrade",
-    "export",
+    "publish",
     "list",
     "show",
     "doctor",
