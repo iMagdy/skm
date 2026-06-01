@@ -21,7 +21,7 @@ Ktesio is a tiny Rust CLI for installing and sharing agent skills. It makes reus
 
 ## 60-Second Quickstart
 
-Install Ktesio with Cargo:
+Install Ktesio with Cargo if you already have Rust:
 
 ```bash
 cargo install ktesio
@@ -33,10 +33,21 @@ Or with Homebrew:
 brew install imagdy/tap/ktesio
 ```
 
+You can also download a release archive from [GitHub Releases](https://github.com/iMagdy/ktesio/releases), unpack it, and place `kt` on your `PATH`.
+
+Or install from the source repository:
+
+```bash
+git clone https://github.com/iMagdy/ktesio.git
+cd ktesio
+cargo install --path .
+```
+
 Then, in a project where you want to use agent skills:
 
 ```bash
 kt init .
+# Replace docs:example/agent-docs with skill_name:github_user/github_repo.
 kt install docs:example/agent-docs
 kt search tests
 kt list
@@ -51,30 +62,6 @@ skills.lock
 ```
 
 During install and upgrade, Ktesio shows progress bars for long-running git work and hides raw `git clone` or `git fetch` output unless an error needs to be summarized.
-
-## Install
-
-Cargo is the recommended install path if you already have Rust:
-
-```bash
-cargo install ktesio
-```
-
-With Homebrew:
-
-```bash
-brew install imagdy/tap/ktesio
-```
-
-From a release archive, download the binary for your platform from [GitHub Releases](https://github.com/iMagdy/ktesio/releases), unpack it, and place `kt` on your `PATH`.
-
-From the source repository:
-
-```bash
-git clone https://github.com/iMagdy/ktesio.git
-cd ktesio
-cargo install --path .
-```
 
 ## Commands
 
