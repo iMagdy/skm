@@ -17,10 +17,6 @@ pub fn clone(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
     clone_inner(url, dest, None)
 }
 
-pub fn clone_silent(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    clone_inner(url, dest, None)
-}
-
 pub fn clone_with_progress(
     url: &str,
     dest: &Path,

@@ -40,6 +40,15 @@ pub fn upgrade_progress(mp: &MultiProgress, name: &str) -> ProgressBar {
     pb
 }
 
+pub fn init_progress(mp: &MultiProgress, name: &str) -> ProgressBar {
+    let pb = mp.add(ProgressBar::new(100));
+    pb.set_style(progress_style());
+    pb.set_prefix(format!("{} {}", style(ARROW).cyan(), style("init").bold()));
+    pb.set_message(format!("Checking {}", skill_name(name)));
+    pb.enable_steady_tick(Duration::from_millis(90));
+    pb
+}
+
 pub fn finish_success(pb: &ProgressBar, message: impl Display) {
     pb.set_position(100);
     pb.finish_with_message(success_text(message));

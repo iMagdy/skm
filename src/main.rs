@@ -23,8 +23,9 @@ Details:
   Creates a manifest with dependencies and publish fields. Existing
   .agents/skills directories are adopted as dependencies: known public skills
   are resolved to remote dependencies when possible, and unmatched skills stay
-  as local path dependencies. If skills.json already exists, Ktesio leaves it
-  untouched.
+  as local path dependencies. Adoption reports lookup, clone, and fallback
+  progress for each existing skill. If skills.json already exists, Ktesio
+  leaves it untouched.
 
 Example:
   kt init .";

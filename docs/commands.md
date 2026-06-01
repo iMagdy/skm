@@ -37,6 +37,7 @@ Behavior:
 
 - Creates `skills.json` with `dependencies` and `publish` fields.
 - Scans existing `.agents/skills/*` directories.
+- Shows per-skill progress while looking up public matches, cloning matched repos to resolve commits, and falling back to local path dependencies.
 - Uses existing `skills.lock` entries or exact public skills.sh matches to adopt known installed skills as remote dependencies and lock their current commit.
 - Records unmatched installed skills as local path dependencies.
 - Does not automatically publish adopted local skills.

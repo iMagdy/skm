@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use indicatif::{MultiProgress, ProgressBar};
+
 use crate::error::InitPathNotFound;
 use crate::git;
 use crate::lockfile::{LockEntry, Lockfile};
@@ -26,7 +28,7 @@ fn run_with_remote_resolver<F>(
     mut resolve_remote: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
-    F: FnMut(&str) -> Result<Option<RemoteAdoption>, Box<dyn std::error::Error>>,
+    F: FnMut(&str, &ProgressBar) -> Result<Option<RemoteAdoption>, Box<dyn std::error::Error>>,
 {
     let dir = Path::new(path);
     if !dir.exists() {
@@ -48,6 +50,11 @@ where
     let mut manifest = Manifest::new();
     let lockfile_path = dir.join("skills.lock");
     let mut lockfile = Lockfile::load(&lockfile_path)?;
+    let skills_root = dir.join(".agents").join("skills");
+    ui::info(format!(
+        "Checking {} for existing skills...",
+        skills_root.display()
+    ));
     let lockfile_changed =
         adopt_existing_local_skills(dir, &mut manifest, &mut lockfile, &mut resolve_remote)?;
     manifest.save(&manifest_path)?;
@@ -66,7 +73,10 @@ fn adopt_existing_local_skills(
     dir: &Path,
     manifest: &mut Manifest,
     lockfile: &mut Lockfile,
-    resolve_remote: &mut impl FnMut(&str) -> Result<Option<RemoteAdoption>, Box<dyn std::error::Error>>,
+    resolve_remote: &mut impl FnMut(
+        &str,
+        &ProgressBar,
+    ) -> Result<Option<RemoteAdoption>, Box<dyn std::error::Error>>,
 ) -> Result<bool, Box<dyn std::error::Error>> {
     let skills_root = dir.join(".agents").join("skills");
     if !skills_root.exists() {
@@ -77,6 +87,7 @@ fn adopt_existing_local_skills(
     let mut remote_adopted = 0usize;
     let mut lockfile_changed = false;
     let mut remote_resolution_enabled = true;
+    let progress = MultiProgress::new();
 
     for entry in std::fs::read_dir(skills_root)? {
         let entry = entry?;
@@ -88,16 +99,24 @@ fn adopt_existing_local_skills(
             continue;
         }
 
+        let pb = ui::init_progress(&progress, &name);
+
         if let Some(entry) = lockfile.entry(&name) {
             if is_remote_lock_entry(entry) {
                 manifest.add_remote_dependency(name.clone(), entry.repo.clone(), None);
                 remote_adopted += 1;
+                ui::finish_success(
+                    &pb,
+                    format!("Adopted {} from skills.lock", ui::skill_name(&name)),
+                );
                 continue;
             }
         }
 
         if remote_resolution_enabled {
-            match resolve_remote(&name) {
+            pb.set_position(10);
+            pb.set_message(format!("Looking up {}", ui::skill_name(&name)));
+            match resolve_remote(&name, &pb) {
                 Ok(Some(remote)) if is_valid_commit(&remote.commit) => {
                     let source_skill = remote
                         .source_skill
@@ -113,21 +132,41 @@ fn adopt_existing_local_skills(
                     manifest.add_remote_dependency(name.clone(), remote.repo, None);
                     remote_adopted += 1;
                     lockfile_changed = true;
+                    ui::finish_success(
+                        &pb,
+                        format!("Adopted {} as remote dependency", ui::skill_name(&name)),
+                    );
                     continue;
                 }
-                Ok(_) => {}
-                Err(error) => {
-                    remote_resolution_enabled = false;
-                    ui::warning(format!(
-                        "Remote adoption unavailable after checking '{}': {}. Remaining existing skills will be adopted as local path dependencies.",
-                        name, error
+                Ok(_) => {
+                    pb.set_position(85);
+                    pb.set_message(format!(
+                        "No public match for {}, using local path",
+                        ui::skill_name(&name)
                     ));
                 }
+                Err(error) => {
+                    remote_resolution_enabled = false;
+                    pb.println(ui::warning_text(format!(
+                        "Remote adoption unavailable after checking '{}': {}. Remaining existing skills will be adopted as local path dependencies.",
+                        name, error
+                    )));
+                }
             }
+        } else {
+            pb.set_position(85);
+            pb.set_message(format!(
+                "Remote lookup skipped for {}, using local path",
+                ui::skill_name(&name)
+            ));
         }
 
         manifest.add_local_dependency(name.clone(), format!(".agents/skills/{name}"));
         local_adopted += 1;
+        ui::finish_success(
+            &pb,
+            format!("Adopted {} as local path dependency", ui::skill_name(&name)),
+        );
     }
 
     if remote_adopted > 0 {
@@ -149,8 +188,14 @@ fn adopt_existing_local_skills(
     Ok(lockfile_changed)
 }
 
-fn resolve_known_skill(name: &str) -> Result<Option<RemoteAdoption>, Box<dyn std::error::Error>> {
-    let mut notify = |message| ui::warning(message);
+fn resolve_known_skill(
+    name: &str,
+    progress: &ProgressBar,
+) -> Result<Option<RemoteAdoption>, Box<dyn std::error::Error>> {
+    progress.set_position(10);
+    progress.set_message(format!("Looking up {} on skills.sh", ui::skill_name(name)));
+
+    let mut notify = |message| progress.println(ui::warning_text(message));
     let results = skills_sh::search(name, 10, &mut notify)?;
     let Some(result) = exact_installable_match(name, &results) else {
         return Ok(None);
@@ -159,7 +204,13 @@ fn resolve_known_skill(name: &str) -> Result<Option<RemoteAdoption>, Box<dyn std
         return Ok(None);
     };
 
-    let commit = resolve_remote_head(&repo, name)?;
+    progress.set_position(25);
+    progress.set_message(format!(
+        "Resolving {} from {}",
+        ui::skill_name(name),
+        ui::compact_source(&repo)
+    ));
+    let commit = resolve_remote_head(&repo, name, progress)?;
     Ok(Some(RemoteAdoption {
         repo,
         commit,
@@ -177,7 +228,11 @@ fn exact_installable_match<'a>(
         .find(|result| result.skill == name)
 }
 
-fn resolve_remote_head(repo: &str, name: &str) -> Result<String, Box<dyn std::error::Error>> {
+fn resolve_remote_head(
+    repo: &str,
+    name: &str,
+    progress: &ProgressBar,
+) -> Result<String, Box<dyn std::error::Error>> {
     let clone_dir = std::env::temp_dir().join(format!(
         "ktesio-init-adopt-{}-{}-{}",
         sanitize_temp_name(name),
@@ -187,7 +242,9 @@ fn resolve_remote_head(repo: &str, name: &str) -> Result<String, Box<dyn std::er
     let _ = std::fs::remove_dir_all(&clone_dir);
 
     let result = (|| {
-        git::clone_silent(repo, &clone_dir)?;
+        git::clone_with_progress(repo, &clone_dir, progress)?;
+        progress.set_position(95);
+        progress.set_message(format!("Reading commit for {}", ui::skill_name(name)));
         git::rev_parse_head(&clone_dir)
     })();
 
@@ -265,8 +322,10 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join(".agents/skills/docs")).unwrap();
 
-        let result = run_with_remote_resolver(dir.to_str().unwrap(), |name| {
+        let result = run_with_remote_resolver(dir.to_str().unwrap(), |name, progress| {
             assert_eq!(name, "docs");
+            assert!(progress.message().contains("Looking up"));
+            assert!(progress.message().contains("docs"));
             Ok(Some(RemoteAdoption {
                 repo: "https://github.com/example/docs.git".to_string(),
                 commit: "a".repeat(40),
@@ -291,7 +350,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join(".agents/skills/local")).unwrap();
 
-        let result = run_with_remote_resolver(dir.to_str().unwrap(), |_| Ok(None));
+        let result = run_with_remote_resolver(dir.to_str().unwrap(), |_, _| Ok(None));
 
         assert!(result.is_ok());
         let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
