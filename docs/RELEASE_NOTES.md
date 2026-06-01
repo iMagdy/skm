@@ -4,6 +4,37 @@ Release notes are generated when a version tag is published.
 
 The tag workflow updates the GitHub Release immediately and then opens a pull request that refreshes this file and the root `CHANGELOG.md`.
 
+## v0.2.0
+
+Comparison: [v0.1.1...v0.2.0](https://github.com/iMagdy/ktesio/compare/v0.1.1...v0.2.0)
+
+| Platform | Target | Archive | Checksum |
+|----------|--------|---------|----------|
+| macOS Intel | `x86_64-apple-darwin` | [ktesio-v0.2.0-x86_64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-x86_64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-x86_64-apple-darwin.tar.gz.sha256) |
+| macOS Apple Silicon | `aarch64-apple-darwin` | [ktesio-v0.2.0-aarch64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-aarch64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-aarch64-apple-darwin.tar.gz.sha256) |
+| Windows x64 | `x86_64-pc-windows-msvc` | [ktesio-v0.2.0-x86_64-pc-windows-msvc.zip](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-x86_64-pc-windows-msvc.zip) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-x86_64-pc-windows-msvc.zip.sha256) |
+| Linux x64 | `x86_64-unknown-linux-gnu` | [ktesio-v0.2.0-x86_64-unknown-linux-gnu.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-x86_64-unknown-linux-gnu.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-x86_64-unknown-linux-gnu.tar.gz.sha256) |
+| All | checksums | [ktesio-v0.2.0-checksums.txt](https://github.com/iMagdy/ktesio/releases/download/v0.2.0/ktesio-v0.2.0-checksums.txt) | - |
+
+### Features
+
+- add dependency publish manifest model ([784a02b](https://github.com/iMagdy/ktesio/commit/784a02b))
+- polish CLI terminal output (#26) ([86e13be](https://github.com/iMagdy/ktesio/commit/86e13be))
+- add skills search and shorthand installs (#23) ([17b4e4d](https://github.com/iMagdy/ktesio/commit/17b4e4d))
+
+### Documentation
+
+- update release notes for v0.1.1 (#11) ([883c7a3](https://github.com/iMagdy/ktesio/commit/883c7a3))
+
+### CI
+
+- remove OCI release packaging (#24) ([2e9cc1d](https://github.com/iMagdy/ktesio/commit/2e9cc1d))
+
+### Other Changes
+
+- [codex] Add adoption CLI workflows (#17) ([d66f73f](https://github.com/iMagdy/ktesio/commit/d66f73f))
+- [codex] Add README banner (#12) ([c41c7ed](https://github.com/iMagdy/ktesio/commit/c41c7ed))
+
 ## v0.1.1
 
 Comparison: Initial release history
