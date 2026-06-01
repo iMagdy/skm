@@ -4,6 +4,34 @@ Release notes are generated when a version tag is published.
 
 The tag workflow updates the GitHub Release immediately and then opens a pull request that refreshes this file and the root `CHANGELOG.md`.
 
+## v0.3.0
+
+Comparison: [v0.2.0...v0.3.0](https://github.com/iMagdy/ktesio/compare/v0.2.0...v0.3.0)
+
+| Platform | Target | Archive | Checksum |
+|----------|--------|---------|----------|
+| macOS Intel | `x86_64-apple-darwin` | [ktesio-v0.3.0-x86_64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-x86_64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-x86_64-apple-darwin.tar.gz.sha256) |
+| macOS Apple Silicon | `aarch64-apple-darwin` | [ktesio-v0.3.0-aarch64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-aarch64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-aarch64-apple-darwin.tar.gz.sha256) |
+| Windows x64 | `x86_64-pc-windows-msvc` | [ktesio-v0.3.0-x86_64-pc-windows-msvc.zip](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-x86_64-pc-windows-msvc.zip) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-x86_64-pc-windows-msvc.zip.sha256) |
+| Linux x64 | `x86_64-unknown-linux-gnu` | [ktesio-v0.3.0-x86_64-unknown-linux-gnu.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-x86_64-unknown-linux-gnu.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-x86_64-unknown-linux-gnu.tar.gz.sha256) |
+| All | checksums | [ktesio-v0.3.0-checksums.txt](https://github.com/iMagdy/ktesio/releases/download/v0.3.0/ktesio-v0.3.0-checksums.txt) | - |
+
+### Features
+
+- show init adoption progress ([7ac8362](https://github.com/iMagdy/ktesio/commit/7ac8362))
+
+### Fixes
+
+- recognize publish docs examples ([8c1443c](https://github.com/iMagdy/ktesio/commit/8c1443c))
+
+### Documentation
+
+- update release notes for v0.2.0 (#27) ([12ce314](https://github.com/iMagdy/ktesio/commit/12ce314))
+
+### Maintenance
+
+- bump version to 0.3.0 ([dabb5a0](https://github.com/iMagdy/ktesio/commit/dabb5a0))
+
 ## v0.2.0
 
 Comparison: [v0.1.1...v0.2.0](https://github.com/iMagdy/ktesio/compare/v0.1.1...v0.2.0)
