@@ -160,17 +160,11 @@ fn print_report(report: &DoctorReport) {
     }
 
     if !report.errors.is_empty() {
-        ui::error("Errors:");
-        for error in &report.errors {
-            eprintln!("  - {}", error);
-        }
+        ui::print_diagnostics("Errors", &report.errors, ui::DiagnosticKind::Error);
     }
 
     if !report.warnings.is_empty() {
-        ui::warning("Warnings:");
-        for warning in &report.warnings {
-            eprintln!("  - {}", warning);
-        }
+        ui::print_diagnostics("Warnings", &report.warnings, ui::DiagnosticKind::Warning);
     }
 }
 

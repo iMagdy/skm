@@ -61,24 +61,24 @@ pub(crate) fn run_in_with_options(
         return Ok(());
     }
 
-    println!(
-        "{} {} {} {}",
-        ui::padded(ui::table_header("NAME"), "NAME", 20),
-        ui::padded(ui::table_header("REPO"), "REPO", 45),
-        ui::padded(ui::table_header("COMMIT"), "COMMIT", 42),
-        ui::table_header("STATUS")
-    );
-    println!("{}", "-".repeat(120));
-
-    for skill in &statuses {
-        println!(
-            "{} {} {} {}",
-            ui::padded(ui::skill_name(&skill.name), &skill.name, 20),
-            ui::padded(&skill.repo, &skill.repo, 45),
-            ui::padded(&skill.commit, &skill.commit, 42),
-            ui::status_label(&skill.status)
-        );
-    }
+    let columns = [
+        ui::TableColumn::new("Name", 16, 30),
+        ui::TableColumn::new("Repo", 18, 64),
+        ui::TableColumn::new("Commit", 8, 10),
+        ui::TableColumn::new("Status", 12, 14),
+    ];
+    let rows = statuses
+        .iter()
+        .map(|skill| {
+            vec![
+                ui::TableCell::skill(skill.name.as_str()),
+                ui::TableCell::muted(ui::compact_source(&skill.repo)),
+                ui::TableCell::muted(ui::short_commit(&skill.commit)),
+                ui::TableCell::status(skill.status.as_str()),
+            ]
+        })
+        .collect::<Vec<_>>();
+    ui::print_table("Skills", &columns, &rows);
 
     Ok(())
 }
