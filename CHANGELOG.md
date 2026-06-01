@@ -52,7 +52,7 @@ Comparison: Initial release history
 - use current intel macos release runner ([ad0e63d](https://github.com/iMagdy/ktesio/commit/ad0e63d))
 - exempt dependabot prs from dco by author ([537742b](https://github.com/iMagdy/ktesio/commit/537742b))
 - align dco checks with automation ([5682357](https://github.com/iMagdy/ktesio/commit/5682357))
-- publish release artifacts to ghcr homebrew and crates (#6) ([d571bd5](https://github.com/iMagdy/ktesio/commit/d571bd5))
+- publish release artifacts to homebrew and crates (#6) ([d571bd5](https://github.com/iMagdy/ktesio/commit/d571bd5))
 
 ### Maintenance
 
