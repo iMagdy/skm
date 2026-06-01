@@ -20,20 +20,23 @@ const HELP_FOOTER: &str = concat!(
 
 const INIT_AFTER_HELP: &str = "\
 Details:
-  Creates an empty manifest with skills and exports objects. If skills.json
-  already exists, Ktesio leaves it untouched.
+  Creates a manifest with dependencies and publish fields. Existing
+  .agents/skills directories are adopted as dependencies: known public skills
+  are resolved to remote dependencies when possible, and unmatched skills stay
+  as local path dependencies. If skills.json already exists, Ktesio leaves it
+  untouched.
 
 Example:
   kt init .";
 
 const INSTALL_AFTER_HELP: &str = "\
 Details:
-  With no argument, installs every skill declared in skills.json. With
+  With no argument, installs every dependency declared in skills.json. With
   name:repo, adds one skill after the repo is fetched and copied successfully.
-  With a bare repo URL or local path, reads exports from that repo and lets you
+  With a bare repo URL or local path, reads published skills from that repo and lets you
   choose which skills to install. GitHub owner/repo shorthand resolves to an
   HTTPS clone URL by default; use --ssh to prefer SSH. Add /skill or --skill to
-  install one export from a multi-skill repository.
+  install one published skill from a multi-skill repository.
 
 Examples:
   kt install
@@ -61,15 +64,14 @@ Details:
 Example:
   kt upgrade";
 
-const EXPORT_AFTER_HELP: &str = "\
+const PUBLISH_AFTER_HELP: &str = "\
 Details:
-  Preserves existing exports, imports entries from skills.lock, and adds
-  untracked directories under .agents/skills using their local paths. Use
-  export add to expose a local file or directory from this repo.
+  Publishes local skill paths from this repo so other projects can install
+  them. Use publish add to expose a local file or directory directly.
 
 Example:
-  kt export
-  kt export add docs skills/docs";
+  kt publish
+  kt publish add docs skills/docs";
 
 const LIST_AFTER_HELP: &str = "\
 Details:
@@ -89,7 +91,7 @@ Example:
 
 const DOCTOR_AFTER_HELP: &str = "\
 Details:
-  Validates skills.json, skills.lock, installed skill directories, local exports,
+  Validates skills.json, skills.lock, installed skill directories, published local paths,
   orphaned lock entries, and git availability.
 
 Example:
@@ -133,13 +135,13 @@ enum Commands {
         after_help = INSTALL_AFTER_HELP
     )]
     Install {
-        /// Install every discovered export from a repo target
+        /// Install every discovered published skill from a repo target
         #[arg(long)]
         all: bool,
         /// Resolve GitHub owner/repo shorthand to an SSH clone URL
         #[arg(long)]
         ssh: bool,
-        /// Install one named source skill/export from the target repo
+        /// Install one named source published skill from the target repo
         #[arg(long)]
         skill: Option<String>,
         /// Accept safe defaults for prompts
@@ -179,14 +181,14 @@ enum Commands {
         after_help = UPGRADE_AFTER_HELP
     )]
     Upgrade,
-    /// Export installed skills back into skills.json
+    /// Publish local skills from this repo
     #[command(
-        about = "Export installed skills back into skills.json",
-        after_help = EXPORT_AFTER_HELP
+        about = "Publish local skills from this repo",
+        after_help = PUBLISH_AFTER_HELP
     )]
-    Export {
+    Publish {
         #[command(subcommand)]
-        command: Option<ExportCommands>,
+        command: Option<PublishCommands>,
     },
     /// List installed skills
     #[command(
@@ -229,12 +231,12 @@ enum Commands {
 }
 
 #[derive(Subcommand)]
-enum ExportCommands {
-    /// Add or update a local export in skills.json
+enum PublishCommands {
+    /// Add or update one published local skill in skills.json
     Add {
-        /// Export name
-        name: String,
-        /// Local file or directory path to export
+        /// Published skill name
+        skill: String,
+        /// Local file or directory path to publish
         path: String,
     },
 }
@@ -286,9 +288,9 @@ fn run_cli() -> Result<(), Box<dyn std::error::Error>> {
             },
         ),
         Some(Commands::Upgrade) => cli::upgrade::run(),
-        Some(Commands::Export { command }) => match command {
-            Some(ExportCommands::Add { name, path }) => cli::export::run_add(&name, &path),
-            None => cli::export::run(),
+        Some(Commands::Publish { command }) => match command {
+            Some(PublishCommands::Add { skill, path }) => cli::publish::run_add(&skill, &path),
+            None => cli::publish::run(),
         },
         Some(Commands::List { json }) => cli::list::run_with_options(json),
         Some(Commands::Show { json, package_name }) => {
@@ -320,7 +322,7 @@ mod tests {
         assert!(cmd.find_subcommand("install").is_some());
         assert!(cmd.find_subcommand("search").is_some());
         assert!(cmd.find_subcommand("upgrade").is_some());
-        assert!(cmd.find_subcommand("export").is_some());
+        assert!(cmd.find_subcommand("publish").is_some());
         assert!(cmd.find_subcommand("list").is_some());
         assert!(cmd.find_subcommand("show").is_some());
         assert!(cmd.find_subcommand("doctor").is_some());
@@ -344,10 +346,10 @@ mod tests {
     #[test]
     fn test_subcommand_help_includes_details_and_examples() {
         for (command, detail) in [
-            ("init", "Creates an empty manifest"),
-            ("install", "installs every skill"),
+            ("init", "Creates a manifest with dependencies"),
+            ("install", "installs every dependency"),
             ("upgrade", "Fetches latest upstream commits"),
-            ("export", "Preserves existing exports"),
+            ("publish", "Publishes local skill paths"),
             ("list", "Shows each known skill"),
             ("show", "Shows the repo URL"),
             ("doctor", "Validates skills.json"),

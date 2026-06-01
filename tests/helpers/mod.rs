@@ -60,18 +60,19 @@ pub fn create_local_skill_repo(path: &Path, name: &str, with_manifest: bool) {
     .expect("Failed to write skill file");
     std::fs::write(
         path.join("README.md"),
-        "Repository readme, not an exported skill.\n",
+        "Repository readme, not a published skill.\n",
     )
-    .expect("Failed to write unexported readme");
+    .expect("Failed to write unpublished readme");
 
     if with_manifest {
         let manifest = serde_json::json!({
-            "skills": {},
-            "exports": {
-                name: {
+            "dependencies": {},
+            "publish": [
+                {
+                    "skill": name,
                     "path": format!("skills/{name}")
                 }
-            }
+            ]
         });
         std::fs::write(
             path.join("skills.json"),

@@ -6,9 +6,9 @@ use std::process::Command;
 use helpers::{run_kt_command, run_kt_command_output, TestContext};
 
 #[test]
-fn test_install_all_from_repo_installs_each_export() {
+fn test_install_all_from_repo_installs_each_published_skill() {
     let ctx = TestContext::new();
-    let repo = create_multi_export_repo(&ctx.project_dir, "source");
+    let repo = create_multi_publish_repo(&ctx.project_dir, "source");
 
     let result = run_kt_command(
         &["install", "--all", repo.to_str().unwrap()],
@@ -25,8 +25,8 @@ fn test_install_all_from_repo_installs_each_export() {
 
     let manifest: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(ctx.manifest()).unwrap()).unwrap();
-    assert!(manifest["skills"].get("alpha").is_some());
-    assert!(manifest["skills"].get("beta").is_some());
+    assert!(manifest["dependencies"].get("alpha").is_some());
+    assert!(manifest["dependencies"].get("beta").is_some());
 
     let lockfile = std::fs::read_to_string(ctx.lockfile()).unwrap();
     assert!(lockfile.contains("alpha"));
@@ -34,9 +34,9 @@ fn test_install_all_from_repo_installs_each_export() {
 }
 
 #[test]
-fn test_install_repo_no_input_refuses_ambiguous_exports() {
+fn test_install_repo_no_input_refuses_ambiguous_publish_entries() {
     let ctx = TestContext::new();
-    let repo = create_multi_export_repo(&ctx.project_dir, "source");
+    let repo = create_multi_publish_repo(&ctx.project_dir, "source");
 
     let result = run_kt_command(
         &["install", "--no-input", repo.to_str().unwrap()],
@@ -69,7 +69,7 @@ fn test_install_all_from_repo_without_manifest_installs_fallback_files() {
 #[test]
 fn test_list_and_show_json_output() {
     let ctx = TestContext::new();
-    let repo = create_multi_export_repo(&ctx.project_dir, "source");
+    let repo = create_multi_publish_repo(&ctx.project_dir, "source");
     run_kt_command(
         &["install", "--all", repo.to_str().unwrap()],
         &ctx.project_dir,
@@ -90,26 +90,27 @@ fn test_list_and_show_json_output() {
 }
 
 #[test]
-fn test_export_add_preserves_imports_and_adds_export() {
+fn test_publish_add_preserves_dependencies_and_adds_publish_entry() {
     let ctx = TestContext::new();
     std::fs::create_dir_all(ctx.project_dir.join("skills/local")).unwrap();
     std::fs::write(ctx.project_dir.join("skills/local/SKILL.md"), "# Local").unwrap();
     std::fs::write(
         ctx.manifest(),
-        r#"{"skills": {"docs": {"repo": "url"}}, "exports": {}}"#,
+        r#"{"dependencies": {"docs": {"repo": "url"}}, "publish": []}"#,
     )
     .unwrap();
 
     let result = run_kt_command(
-        &["export", "add", "local", "skills/local"],
+        &["publish", "add", "local", "skills/local"],
         &ctx.project_dir,
     );
 
-    assert!(result.is_ok(), "export add failed: {:?}", result.err());
+    assert!(result.is_ok(), "publish add failed: {:?}", result.err());
     let manifest: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(ctx.manifest()).unwrap()).unwrap();
-    assert_eq!(manifest["skills"]["docs"]["repo"], "url");
-    assert_eq!(manifest["exports"]["local"]["path"], "skills/local");
+    assert_eq!(manifest["dependencies"]["docs"]["repo"], "url");
+    assert_eq!(manifest["publish"][0]["skill"], "local");
+    assert_eq!(manifest["publish"][0]["path"], "skills/local");
 }
 
 #[test]
@@ -117,7 +118,7 @@ fn test_doctor_reports_missing_locked_skill() {
     let ctx = TestContext::new();
     std::fs::write(
         ctx.manifest(),
-        r#"{"skills": {"docs": {"repo": "url"}}, "exports": {}}"#,
+        r#"{"dependencies": {"docs": {"repo": "url"}}, "publish": []}"#,
     )
     .unwrap();
     std::fs::write(
@@ -134,7 +135,7 @@ fn test_doctor_reports_missing_locked_skill() {
     );
 }
 
-fn create_multi_export_repo(root: &Path, name: &str) -> PathBuf {
+fn create_multi_publish_repo(root: &Path, name: &str) -> PathBuf {
     let repo = root.join(format!("{name}-repo"));
     std::fs::create_dir_all(repo.join("skills/alpha")).unwrap();
     std::fs::create_dir_all(repo.join("skills/beta")).unwrap();
@@ -143,11 +144,11 @@ fn create_multi_export_repo(root: &Path, name: &str) -> PathBuf {
     std::fs::write(
         repo.join("skills.json"),
         r#"{
-  "skills": {},
-  "exports": {
-    "alpha": { "path": "skills/alpha" },
-    "beta": { "path": "skills/beta" }
-  }
+  "dependencies": {},
+  "publish": [
+    { "skill": "alpha", "path": "skills/alpha" },
+    { "skill": "beta", "path": "skills/beta" }
+  ]
 }"#,
     )
     .unwrap();

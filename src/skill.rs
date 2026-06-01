@@ -2,27 +2,46 @@ use std::fs;
 use std::path::Path;
 
 use crate::error::SkillCopyFailed;
-use crate::manifest::Manifest;
+use crate::manifest::{Manifest, PublishEntry};
 
 pub fn copy_skill_files(
     source_repo: &Path,
     dest_dir: &Path,
     manifest: &Manifest,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if manifest.exports.is_empty() {
+    if manifest.publish.is_empty() {
         return Err(SkillCopyFailed {
-            message: "Source skills.json does not declare any exports".to_string(),
+            message: "Source skills.json does not declare any published skills".to_string(),
         }
         .into());
     }
 
-    for (name, export) in &manifest.exports {
-        let src_path = source_repo.join(&export.path);
+    for entry in &manifest.publish {
+        let (name, relative_path) = match entry {
+            PublishEntry::Dependency(name) => {
+                let dependency =
+                    manifest
+                        .dependencies
+                        .get(name)
+                        .ok_or_else(|| SkillCopyFailed {
+                            message: format!(
+                                "Published skill '{}' does not match a local dependency",
+                                name
+                            ),
+                        })?;
+                let path = dependency.path.as_deref().ok_or_else(|| SkillCopyFailed {
+                    message: format!("Published skill '{}' is not a local path dependency", name),
+                })?;
+                (name.as_str(), path)
+            }
+            PublishEntry::Object(object) => (object.skill.as_str(), object.path.as_str()),
+        };
+        let src_path = source_repo.join(relative_path);
         if !src_path.exists() {
             return Err(SkillCopyFailed {
                 message: format!(
-                    "Export path '{}' does not exist in source repo",
-                    export.path
+                    "Published path '{}' does not exist in source repo",
+                    relative_path
                 ),
             }
             .into());
@@ -93,9 +112,9 @@ pub fn copy_cloned_repo_to_dest(
     }
 
     let source_manifest = Manifest::load(&source_manifest_path)?;
-    if source_manifest.exports.is_empty() {
+    if source_manifest.publish.is_empty() {
         return Err(SkillCopyFailed {
-            message: "Source skills.json does not declare any exports".to_string(),
+            message: "Source skills.json does not declare any published skills".to_string(),
         }
         .into());
     }
@@ -107,12 +126,12 @@ pub fn copy_cloned_repo_to_dest(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manifest::{ExportEntry, Manifest};
+    use crate::manifest::{Manifest, PublishEntry, PublishObject};
 
     #[test]
-    fn test_copy_skill_files_empty_exports() {
-        let source = std::env::temp_dir().join("ktesio_test_empty_exports_src");
-        let dest = std::env::temp_dir().join("ktesio_test_empty_exports_dst");
+    fn test_copy_skill_files_empty_publish() {
+        let source = std::env::temp_dir().join("ktesio_test_empty_publish_src");
+        let dest = std::env::temp_dir().join("ktesio_test_empty_publish_dst");
         std::fs::create_dir_all(&source).unwrap();
         std::fs::write(source.join("file.txt"), "content").unwrap();
         let manifest = Manifest::new();
@@ -123,18 +142,17 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_skill_files_with_exports() {
-        let source = std::env::temp_dir().join("ktesio_test_exports_src");
-        let dest = std::env::temp_dir().join("ktesio_test_exports_dst");
+    fn test_copy_skill_files_with_publish() {
+        let source = std::env::temp_dir().join("ktesio_test_publish_src");
+        let dest = std::env::temp_dir().join("ktesio_test_publish_dst");
         std::fs::create_dir_all(source.join("skills/test")).unwrap();
         std::fs::write(source.join("skills/test/f.txt"), "c").unwrap();
         let mut manifest = Manifest::new();
-        manifest.exports.insert(
-            "test".to_string(),
-            ExportEntry {
-                path: "skills/test".to_string(),
-            },
-        );
+        manifest.publish.push(PublishEntry::Object(PublishObject {
+            skill: "test".to_string(),
+            path: "skills/test".to_string(),
+            deprecated: false,
+        }));
         assert!(copy_skill_files(&source, &dest, &manifest).is_ok());
         assert!(dest.join("test/f.txt").exists());
         std::fs::remove_dir_all(&source).unwrap();
@@ -142,17 +160,16 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_skill_files_export_not_found() {
+    fn test_copy_skill_files_publish_not_found() {
         let source = std::env::temp_dir().join("ktesio_test_notfound_src");
         let dest = std::env::temp_dir().join("ktesio_test_notfound_dst");
         std::fs::create_dir_all(&source).unwrap();
         let mut manifest = Manifest::new();
-        manifest.exports.insert(
-            "x".to_string(),
-            ExportEntry {
-                path: "nope".to_string(),
-            },
-        );
+        manifest.publish.push(PublishEntry::Object(PublishObject {
+            skill: "x".to_string(),
+            path: "nope".to_string(),
+            deprecated: false,
+        }));
         assert!(copy_skill_files(&source, &dest, &manifest).is_err());
         std::fs::remove_dir_all(&source).unwrap();
         let _ = std::fs::remove_dir_all(&dest);
@@ -205,14 +222,13 @@ mod tests {
         std::fs::create_dir_all(src.join("skills/test")).unwrap();
         std::fs::write(src.join("skills/test/f.txt"), "c").unwrap();
         let mut m = Manifest::new();
-        m.exports.insert(
-            "test".to_string(),
-            ExportEntry {
-                path: "skills/test".to_string(),
-            },
-        );
+        m.publish.push(PublishEntry::Object(PublishObject {
+            skill: "test".to_string(),
+            path: "skills/test".to_string(),
+            deprecated: false,
+        }));
         std::fs::write(src.join("skills.json"), serde_json::to_string(&m).unwrap()).unwrap();
-        std::fs::write(src.join("README.md"), "not exported").unwrap();
+        std::fs::write(src.join("README.md"), "not published").unwrap();
         assert!(copy_cloned_repo_to_dest(&src, &dst).is_ok());
         assert!(dst.join("test/f.txt").exists());
         assert!(!dst.join("README.md").exists());
@@ -221,14 +237,14 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_cloned_repo_with_exports_only_manifest() {
-        let src = std::env::temp_dir().join("ktesio_test_clone_exports_only_src");
-        let dst = std::env::temp_dir().join("ktesio_test_clone_exports_only_dst");
+    fn test_copy_cloned_repo_with_publish_only_manifest() {
+        let src = std::env::temp_dir().join("ktesio_test_clone_publish_only_src");
+        let dst = std::env::temp_dir().join("ktesio_test_clone_publish_only_dst");
         std::fs::create_dir_all(src.join("skills/test")).unwrap();
         std::fs::write(src.join("skills/test/SKILL.md"), "content").unwrap();
         std::fs::write(
             src.join("skills.json"),
-            r#"{"exports": {"test": {"path": "skills/test"}}}"#,
+            r#"{"publish": [{"skill": "test", "path": "skills/test"}]}"#,
         )
         .unwrap();
 
@@ -255,8 +271,8 @@ mod tests {
 
     #[test]
     fn test_copy_cloned_repo_without_manifest_or_skills_dir_fails() {
-        let src = std::env::temp_dir().join("ktesio_test_clone_no_exports_src");
-        let dst = std::env::temp_dir().join("ktesio_test_clone_no_exports_dst");
+        let src = std::env::temp_dir().join("ktesio_test_clone_no_publish_src");
+        let dst = std::env::temp_dir().join("ktesio_test_clone_no_publish_dst");
         std::fs::create_dir_all(&src).unwrap();
         std::fs::write(src.join("README.md"), "not a skill").unwrap();
         assert!(copy_cloned_repo_to_dest(&src, &dst).is_err());
@@ -282,19 +298,18 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_skill_files_with_file_export() {
-        let source = std::env::temp_dir().join("ktesio_test_file_export_src");
-        let dest = std::env::temp_dir().join("ktesio_test_file_export_dst");
+    fn test_copy_skill_files_with_file_publish() {
+        let source = std::env::temp_dir().join("ktesio_test_file_publish_src");
+        let dest = std::env::temp_dir().join("ktesio_test_file_publish_dst");
         std::fs::create_dir_all(&source).unwrap();
         std::fs::create_dir_all(&dest).unwrap();
         std::fs::write(source.join("skill.md"), "content").unwrap();
         let mut manifest = Manifest::new();
-        manifest.exports.insert(
-            "my-skill".to_string(),
-            ExportEntry {
-                path: "skill.md".to_string(),
-            },
-        );
+        manifest.publish.push(PublishEntry::Object(PublishObject {
+            skill: "my-skill".to_string(),
+            path: "skill.md".to_string(),
+            deprecated: false,
+        }));
         let result = copy_skill_files(&source, &dest, &manifest);
         assert!(
             result.is_ok(),
@@ -307,20 +322,19 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_skill_files_file_export_reports_copy_error() {
-        let source = std::env::temp_dir().join("ktesio_test_file_export_error_src");
-        let dest = std::env::temp_dir().join("ktesio_test_file_export_error_dst");
+    fn test_copy_skill_files_file_publish_reports_copy_error() {
+        let source = std::env::temp_dir().join("ktesio_test_file_publish_error_src");
+        let dest = std::env::temp_dir().join("ktesio_test_file_publish_error_dst");
         let _ = std::fs::remove_dir_all(&source);
         let _ = std::fs::remove_dir_all(&dest);
         std::fs::create_dir_all(&source).unwrap();
         std::fs::write(source.join("skill.md"), "content").unwrap();
         let mut manifest = Manifest::new();
-        manifest.exports.insert(
-            "my-skill".to_string(),
-            ExportEntry {
-                path: "skill.md".to_string(),
-            },
-        );
+        manifest.publish.push(PublishEntry::Object(PublishObject {
+            skill: "my-skill".to_string(),
+            path: "skill.md".to_string(),
+            deprecated: false,
+        }));
 
         let result = copy_skill_files(&source, &dest, &manifest);
 
@@ -330,13 +344,17 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_cloned_repo_with_empty_exports_manifest() {
-        let src = std::env::temp_dir().join("ktesio_test_clone_empty_exports_src");
-        let dst = std::env::temp_dir().join("ktesio_test_clone_empty_exports_dst");
+    fn test_copy_cloned_repo_with_empty_publish_manifest() {
+        let src = std::env::temp_dir().join("ktesio_test_clone_empty_publish_src");
+        let dst = std::env::temp_dir().join("ktesio_test_clone_empty_publish_dst");
         let _ = std::fs::remove_dir_all(&src);
         let _ = std::fs::remove_dir_all(&dst);
         std::fs::create_dir_all(&src).unwrap();
-        std::fs::write(src.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            src.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
 
         let result = copy_cloned_repo_to_dest(&src, &dst);
 
@@ -344,7 +362,7 @@ mod tests {
         assert!(result
             .unwrap_err()
             .to_string()
-            .contains("does not declare any exports"));
+            .contains("does not declare any published skills"));
         std::fs::remove_dir_all(&src).unwrap();
         let _ = std::fs::remove_dir_all(&dst);
     }

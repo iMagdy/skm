@@ -33,9 +33,9 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
             .collect()
     } else {
         manifest
-            .skills
+            .dependencies
             .iter()
-            .map(|(n, e)| (n.clone(), e.repo.clone()))
+            .filter_map(|(n, e)| e.repo.clone().map(|repo| (n.clone(), repo)))
             .collect()
     };
 
@@ -89,7 +89,7 @@ pub(crate) fn run_in(project_root: &Path) -> Result<(), Box<dyn std::error::Erro
                 repo: entry.repo.clone(),
                 skill: entry.skill.clone(),
             };
-            lockfile.insert(name.clone(), new_entry);
+            lockfile.insert(name.to_string(), new_entry);
         }
 
         ui::finish_success(&pb, format!("Upgraded {}", ui::skill_name(name)));
@@ -128,7 +128,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         let result = run_in(&dir);
@@ -140,7 +140,11 @@ mod tests {
     fn test_upgrade_with_lockfile() {
         let dir = std::env::temp_dir().join("ktesio_test_upgrade_lockfile");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         std::fs::write(
             dir.join("skills.lock"),
             r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,

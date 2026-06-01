@@ -35,13 +35,17 @@ kt init .
 
 Behavior:
 
-- Creates `skills.json` with empty `skills` and `exports` objects.
+- Creates `skills.json` with `dependencies` and `publish` fields.
+- Scans existing `.agents/skills/*` directories.
+- Uses existing `skills.lock` entries or exact public skills.sh matches to adopt known installed skills as remote dependencies and lock their current commit.
+- Records unmatched installed skills as local path dependencies.
+- Does not automatically publish adopted local skills.
 - Leaves an existing manifest untouched.
 - Fails if the target directory does not exist.
 
 ## `kt install`
 
-Install every skill declared in `skills.json`. If `skills` is omitted, it is treated as empty.
+Install every dependency declared in `skills.json`. If `dependencies` is omitted, it is treated as empty.
 
 ```bash
 kt install
@@ -49,10 +53,12 @@ kt install
 
 Behavior:
 
-- Fetches each manifest entry into a temporary workspace.
-- Shows a progress bar while cloning each repo and copying exported content.
+- Fetches each remote dependency into a temporary workspace.
+- Shows a progress bar while cloning each repo and copying published content.
 - Suppresses raw git clone progress; clone failures are summarized after the skill finishes.
-- Installs only paths declared in the source repo's `skills.json` `exports`.
+- Installs only paths declared in the source repo's `skills.json` `publish` list.
+- Supports local path dependencies with `dependencies.<name>.path`.
+- Supports optional `rev` selectors: `commit:<sha>`, `branch:<name>`, or `tag:<name>`.
 - If the source repo has no `skills.json`, asks before discovering directories under `skills/` or `SKILLS/`; multiple directories can be selected.
 - Records resolved commits in `skills.lock` only for successful installs.
 - Continues after individual clone/copy failures and reports all errors.
@@ -70,13 +76,13 @@ kt install docs:example/agent-docs/review
 
 The `repo` value can be an HTTPS URL, SSH URL, local git path, GitHub `owner/repo` shorthand, or GitHub `owner/repo/skill` shorthand. GitHub shorthand resolves to HTTPS by default; `--ssh` resolves shorthand to an SSH clone URL.
 
-Ktesio updates `skills.json` and `skills.lock` only after the repo is fetched and installable content is copied successfully. A bad target, failed clone, missing exports, missing selected skill, cancelled fallback, or missing fallback `skills/` directory leaves those files unchanged.
+Ktesio updates `skills.json` and `skills.lock` only after the repo is fetched and installable content is copied successfully. A bad target, failed clone, missing published skill, cancelled fallback, or missing fallback `skills/` directory leaves those files unchanged.
 
 The single-skill install flow uses the same progress bar and quiet git output as bulk install.
 
 ## `kt install <repo>`
 
-Install one or more exports from a source repository without naming the package first.
+Install one or more published skills from a source repository without naming the package first.
 
 ```bash
 kt install https://github.com/example/agent-docs.git
@@ -88,41 +94,42 @@ kt install --all https://github.com/example/agent-docs.git
 
 Behavior:
 
-- Reads the source repo's `skills.json` `exports` and derives destination names from export names.
-- Prompts when multiple exports are available.
-- `--all` installs every export without prompting.
-- `--skill <name>` installs one matching export or fallback-discovered skill.
+- Reads the source repo's `skills.json` `publish` list and derives destination names from published skill names.
+- Prompts when multiple published skills are available.
+- `--all` installs every published skill without prompting.
+- `--skill <name>` installs one matching published or fallback-discovered skill.
 - `--yes` accepts safe defaults, such as a single obvious fallback skill.
 - `--no-input` fails instead of prompting when a choice is required.
 - Repos without `skills.json` can use fallback discovery from `.md` files or directories under `skills/` or `SKILLS/`.
 
-## `kt export`
+## `kt publish`
 
-Rebuild `skills.json` from installed skills.
+Publish local skills from this repo.
 
 ```bash
-kt export
+kt publish
 ```
 
 Behavior:
 
-- Reads `skills.lock` first.
-- Adds untracked directories under `.agents/skills/` using their local paths.
-- Preserves existing `exports`.
-- Creates an empty manifest if no skills are installed.
+- Selects local path dependencies or directories under `.agents/skills/`.
+- Writes selected skill names to the `publish` list.
+- If an untracked `.agents/skills/<name>` directory is selected, first records it as a local path dependency.
+- Does not publish remote dependencies.
+- Creates a manifest if needed.
 
-## `kt export add <name> <path>`
+## `kt publish add <name> <path>`
 
-Add or update one local export in `skills.json`.
+Add or update one published local skill in `skills.json`.
 
 ```bash
-kt export add docs skills/docs
+kt publish add docs skills/docs
 ```
 
 Behavior:
 
 - Creates `skills.json` if needed.
-- Preserves existing imported skills and exports.
+- Preserves existing dependencies and publish entries.
 - Fails if the name is invalid, the path does not exist, or the path is outside the project.
 
 ## `kt upgrade`
@@ -184,7 +191,7 @@ kt doctor
 
 Behavior:
 
-- Checks `skills.json`, `skills.lock`, `.agents/skills/`, local export paths, orphaned lock entries, missing installed directories, and git availability.
+- Checks `skills.json`, `skills.lock`, `.agents/skills/`, published local paths, orphaned lock entries, missing installed directories, and git availability.
 - Exits successfully when no errors are found.
 - Prints actionable warnings and errors for repairable project state.
 

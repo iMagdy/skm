@@ -65,7 +65,11 @@ mod tests {
     fn test_uninstall_not_found() {
         let dir = std::env::temp_dir().join("ktesio_test_uninstall_notfound");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         let result = run_in(&dir, "nonexistent");
         assert!(result.is_err());
         std::fs::remove_dir_all(&dir).unwrap();
@@ -77,7 +81,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::write(
@@ -103,7 +107,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         // No lockfile

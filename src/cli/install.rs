@@ -8,9 +8,11 @@ use crate::error::{InstallAlreadyExists, InstallInvalidFormat, SkillCopyFailed};
 use crate::git;
 use crate::install_target;
 use crate::lockfile::{LockEntry, Lockfile};
-use crate::manifest::Manifest;
+use crate::manifest::{parse_rev, Manifest, PublishEntry, RevKind};
 use crate::skill;
 use crate::ui;
+
+const LOCAL_COMMIT: &str = "0000000000000000000000000000000000000000";
 
 #[derive(Debug, Clone, Default)]
 pub struct InstallOptions {
@@ -87,7 +89,7 @@ fn run_bulk_with_manifest(
     let mut manifest = Manifest::load(manifest_path)?;
     let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
     let entries = manifest
-        .skills
+        .dependencies
         .iter()
         .map(|(name, entry)| (name.clone(), entry.clone()))
         .collect::<Vec<_>>();
@@ -99,7 +101,6 @@ fn run_bulk_with_manifest(
 
     for (name, entry) in entries {
         let skill_dir = git::skill_dir(project_root, &name);
-
         if skill_dir.exists() && lockfile.contains(&name) {
             ui::warning(format!(
                 "Skill {} already installed, skipping",
@@ -108,13 +109,49 @@ fn run_bulk_with_manifest(
             continue;
         }
 
-        let resolved = resolve_manifest_entry(&entry.repo, entry.skill.clone());
+        if skill_dir.exists() && entry.repo.is_some() {
+            ui::warning(format!(
+                "Skill {} already exists on disk but is not locked; run 'kt init .' to adopt it or remove the directory before installing.",
+                ui::skill_name(&name)
+            ));
+            continue;
+        }
+
+        if let Some(path) = entry.path.as_deref() {
+            match install_local_dependency(project_root, &name, path) {
+                Ok(()) => {
+                    lockfile.insert(
+                        name.clone(),
+                        LockEntry {
+                            commit: LOCAL_COMMIT.to_string(),
+                            repo: path.to_string(),
+                            skill: None,
+                        },
+                    );
+                    lockfile_changed = true;
+                    ui::success(format!("Installed {}", ui::skill_name(&name)));
+                }
+                Err(e) => errors.push(format!("Error installing {}: {}", name, e)),
+            }
+            continue;
+        }
+
+        let Some(repo) = entry.repo.as_deref() else {
+            errors.push(format!(
+                "Error installing {}: dependency must declare repo or path",
+                name
+            ));
+            continue;
+        };
+
+        let resolved = resolve_manifest_entry(repo, Some(name.clone()));
         let pb = ui::install_progress(&mp, &name);
         let commit = match install_repo_to_skill_dir(
             project_root,
             &name,
             &resolved.repo,
             resolved.source_skill.as_deref(),
+            entry.rev.as_deref(),
             &pb,
         ) {
             Ok(commit) => commit,
@@ -143,12 +180,8 @@ fn run_bulk_with_manifest(
             },
         );
         lockfile_changed = true;
-        if entry.repo != resolved.repo || entry.skill != resolved.source_skill {
-            manifest.add_skill_with_source(
-                name.clone(),
-                resolved.repo.clone(),
-                resolved.source_skill.clone(),
-            );
+        if repo != resolved.repo {
+            manifest.add_remote_dependency(name.clone(), resolved.repo.clone(), entry.rev.clone());
             manifest_changed = true;
         }
 
@@ -358,6 +391,39 @@ fn copy_installable_path(src: &Path, dst: &Path) -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+fn install_local_dependency(
+    project_root: &Path,
+    name: &str,
+    dependency_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let src = project_root.join(dependency_path);
+    if !src.exists() {
+        return Err(SkillCopyFailed {
+            message: format!("Local dependency path '{}' does not exist", dependency_path),
+        }
+        .into());
+    }
+
+    let skill_dir = git::skill_dir(project_root, name);
+    if skill_dir.exists() {
+        let canonical_skill_dir = skill_dir.canonicalize()?;
+        let canonical_src = src.canonicalize()?;
+        if canonical_src == canonical_skill_dir || canonical_src.starts_with(&canonical_skill_dir) {
+            return Ok(());
+        }
+
+        return Err(SkillCopyFailed {
+            message: format!(
+                "Destination skill directory already exists at {}",
+                skill_dir.display()
+            ),
+        }
+        .into());
+    }
+
+    copy_installable_path(&src, &skill_dir)
+}
+
 fn run_single(
     project_root: &Path,
     name: &str,
@@ -388,13 +454,11 @@ fn run_single(
     let mp = MultiProgress::new();
     let pb = ui::install_progress(&mp, name);
 
-    let commit = install_repo_to_skill_dir(project_root, name, repo_url, source_skill, &pb)?;
+    let source_skill = source_skill.unwrap_or(name);
+    let commit =
+        install_repo_to_skill_dir(project_root, name, repo_url, Some(source_skill), None, &pb)?;
 
-    manifest.add_skill_with_source(
-        name.to_string(),
-        repo_url.to_string(),
-        source_skill.map(str::to_string),
-    );
+    manifest.add_remote_dependency(name.to_string(), repo_url.to_string(), None);
     manifest.save(&manifest_path)?;
 
     let mut lockfile = Lockfile::load(&project_root.join("skills.lock"))?;
@@ -403,7 +467,7 @@ fn run_single(
         LockEntry {
             commit,
             repo: repo_url.to_string(),
-            skill: source_skill.map(str::to_string),
+            skill: Some(source_skill.to_string()),
         },
     );
     lockfile.save(&project_root.join("skills.lock"))?;
@@ -423,6 +487,7 @@ fn install_repo_to_skill_dir(
     name: &str,
     repo_url: &str,
     source_skill: Option<&str>,
+    rev: Option<&str>,
     pb: &ProgressBar,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let skill_dir = git::skill_dir(project_root, name);
@@ -440,6 +505,10 @@ fn install_repo_to_skill_dir(
 
     pb.set_message(format!("Cloning {}", ui::skill_name(name)));
     git::clone_with_progress(repo_url, &workspace.clone_dir, pb)?;
+
+    if let Some(rev) = rev {
+        checkout_manifest_rev(&workspace.clone_dir, rev)?;
+    }
 
     let commit = git::rev_parse_head(&workspace.clone_dir).unwrap_or_default();
 
@@ -463,6 +532,25 @@ fn install_repo_to_skill_dir(
     Ok(commit)
 }
 
+fn checkout_manifest_rev(repo_dir: &Path, rev: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let Some((kind, value)) = parse_rev(rev) else {
+        return Err(SkillCopyFailed {
+            message: format!(
+                "Invalid rev '{}'; use commit:<sha>, branch:<name>, or tag:<name>",
+                rev
+            ),
+        }
+        .into());
+    };
+
+    let checkout_target = match kind {
+        RevKind::Commit => value.to_string(),
+        RevKind::Branch => format!("origin/{value}"),
+        RevKind::Tag => value.to_string(),
+    };
+    git::checkout_rev(repo_dir, &checkout_target)
+}
+
 fn copy_repo_content_for_install(
     clone_dir: &Path,
     dest_dir: &Path,
@@ -480,6 +568,12 @@ fn copy_repo_content_for_install(
                     source_skill
                 ),
             })?;
+        if installable.deprecated {
+            ui::warning(format!(
+                "Published skill {} is deprecated.",
+                ui::skill_name(&installable.name)
+            ));
+        }
         return copy_installable_path(&installable.path, dest_dir);
     }
 
@@ -724,6 +818,7 @@ fn parse_named_target(
 struct SourceInstallable {
     name: String,
     path: PathBuf,
+    deprecated: bool,
 }
 
 fn discover_repo_installables_for_exact(
@@ -751,6 +846,7 @@ fn discover_repo_installables_for_exact(
         .map(|skill| SourceInstallable {
             name: skill.name,
             path: skill.path,
+            deprecated: false,
         })
         .collect())
 }
@@ -808,6 +904,12 @@ fn run_repo_target(
         }
 
         let staged_dir = workspace.install_dir.join(&installable.name);
+        if installable.deprecated {
+            ui::warning(format!(
+                "Published skill {} is deprecated.",
+                ui::skill_name(&installable.name)
+            ));
+        }
         copy_installable_path(&installable.path, &staged_dir)?;
         staged.push(installable.clone());
     }
@@ -826,11 +928,7 @@ fn run_repo_target(
     for installable in &staged {
         let dest = git::skill_dir(project_root, &installable.name);
         std::fs::rename(workspace.install_dir.join(&installable.name), &dest)?;
-        manifest.add_skill_with_source(
-            installable.name.clone(),
-            repo_url.to_string(),
-            Some(installable.name.clone()),
-        );
+        manifest.add_remote_dependency(installable.name.clone(), repo_url.to_string(), None);
         lockfile.insert(
             installable.name.clone(),
             LockEntry {
@@ -898,6 +996,7 @@ fn discover_repo_installables(
         .map(|skill| SourceInstallable {
             name: skill.name,
             path: skill.path,
+            deprecated: false,
         })
         .collect())
 }
@@ -907,28 +1006,52 @@ fn discover_manifest_installables(
     manifest_path: &Path,
 ) -> Result<Vec<SourceInstallable>, Box<dyn std::error::Error>> {
     let manifest = Manifest::load(manifest_path)?;
-    if manifest.exports.is_empty() {
+    if manifest.publish.is_empty() {
         return Err(SkillCopyFailed {
-            message: "Source skills.json does not declare any exports".to_string(),
+            message: "Source skills.json does not declare any published skills".to_string(),
         }
         .into());
     }
 
-    let mut installables = manifest
-        .exports
-        .iter()
-        .map(|(name, export)| SourceInstallable {
-            name: name.clone(),
-            path: clone_dir.join(&export.path),
-        })
-        .collect::<Vec<_>>();
+    let mut installables = Vec::new();
+    for entry in &manifest.publish {
+        match entry {
+            PublishEntry::Dependency(name) => {
+                let dependency =
+                    manifest
+                        .dependencies
+                        .get(name)
+                        .ok_or_else(|| SkillCopyFailed {
+                            message: format!(
+                                "Published skill '{}' does not match a local dependency",
+                                name
+                            ),
+                        })?;
+                let path = dependency.path.as_deref().ok_or_else(|| SkillCopyFailed {
+                    message: format!("Published skill '{}' is not a local path dependency", name),
+                })?;
+                installables.push(SourceInstallable {
+                    name: name.clone(),
+                    path: clone_dir.join(path),
+                    deprecated: false,
+                });
+            }
+            PublishEntry::Object(object) => {
+                installables.push(SourceInstallable {
+                    name: object.skill.clone(),
+                    path: clone_dir.join(&object.path),
+                    deprecated: object.deprecated,
+                });
+            }
+        }
+    }
     installables.sort_by(|a, b| a.name.cmp(&b.name));
 
     for installable in &installables {
         if !is_valid_skill_name(&installable.name) {
             return Err(SkillCopyFailed {
                 message: format!(
-                    "Source export name '{}' is invalid: must match [a-zA-Z0-9_-]+",
+                    "Source published skill name '{}' is invalid: must match [a-zA-Z0-9_-]+",
                     installable.name
                 ),
             }
@@ -937,7 +1060,7 @@ fn discover_manifest_installables(
         if !installable.path.exists() {
             return Err(SkillCopyFailed {
                 message: format!(
-                    "Source export path '{}' does not exist",
+                    "Source published path '{}' does not exist",
                     installable.path.display()
                 ),
             }
@@ -1109,7 +1232,11 @@ mod tests {
     fn test_run_bulk_empty() {
         let dir = std::env::temp_dir().join("ktesio_test_install_empty");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         let result = run_in(&dir, None);
         assert!(result.is_ok());
         std::fs::remove_dir_all(&dir).unwrap();
@@ -1121,7 +1248,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::write(
@@ -1144,7 +1271,7 @@ mod tests {
         std::fs::write(
             dir.join("skills.json"),
             format!(
-                r#"{{"skills": {{"test": {{"repo": "{}"}}}}, "exports": {{}}}}"#,
+                r#"{{"dependencies": {{"test": {{"repo": "{}"}}}}, "publish": []}}"#,
                 missing_repo.display()
             ),
         )
@@ -1161,7 +1288,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         let result = run_in(&dir, Some("test:https://example.com/repo.git"));
@@ -1174,13 +1301,17 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_install_single_clonefail");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         let target = format!("test:{}", dir.join("missing-repo").display());
         let result = run_in(&dir, Some(&target));
         assert!(result.is_err());
         assert_eq!(
             std::fs::read_to_string(dir.join("skills.json")).unwrap(),
-            r#"{"skills": {}, "exports": {}}"#
+            r#"{"dependencies": {}, "publish": []}"#
         );
         assert!(!dir.join("skills.lock").exists());
         std::fs::remove_dir_all(&dir).unwrap();
@@ -1225,7 +1356,7 @@ mod tests {
         assert!(result.is_ok());
         assert!(dir.join("skills.json").exists());
         assert!(dir.join("skills.lock").exists());
-        assert!(dir.join(".agents/skills/source/source/SKILL.md").exists());
+        assert!(dir.join(".agents/skills/source/SKILL.md").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -1234,17 +1365,21 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_install_single_success");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         let repo = create_local_repo(&dir, "source");
 
-        let target = format!("test:{}", repo.display());
+        let target = format!("source:{}", repo.display());
         let result = run_in(&dir, Some(&target));
 
         assert!(result.is_ok());
-        assert!(dir.join(".agents/skills/test").exists());
-        assert!(dir.join(".agents/skills/test/source/SKILL.md").exists());
-        assert!(!dir.join(".agents/skills/test/README.md").exists());
-        assert!(!dir.join(".agents/skills/test/.git").exists());
+        assert!(dir.join(".agents/skills/source").exists());
+        assert!(dir.join(".agents/skills/source/SKILL.md").exists());
+        assert!(!dir.join(".agents/skills/source/README.md").exists());
+        assert!(!dir.join(".agents/skills/source/.git").exists());
         assert!(dir.join("skills.lock").exists());
 
         std::fs::remove_dir_all(&dir).unwrap();
@@ -1413,7 +1548,11 @@ mod tests {
     fn test_run_bulk_with_manifest_success() {
         let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_success");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
         std::fs::remove_dir_all(&dir).unwrap();
@@ -1423,7 +1562,11 @@ mod tests {
     fn test_run_bulk_with_manifest_empty() {
         let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_empty");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
         std::fs::remove_dir_all(&dir).unwrap();
@@ -1463,7 +1606,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::write(
@@ -1486,7 +1629,7 @@ mod tests {
         std::fs::write(
             dir.join("skills.json"),
             format!(
-                r#"{{"skills": {{"docs": {{"repo": "{}"}}}}, "exports": {{}}}}"#,
+                r#"{{"dependencies": {{"source": {{"repo": "{}"}}}}, "publish": []}}"#,
                 repo.display()
             ),
         )
@@ -1495,7 +1638,7 @@ mod tests {
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
 
         assert!(result.is_ok());
-        assert!(dir.join(".agents/skills/docs/source/SKILL.md").exists());
+        assert!(dir.join(".agents/skills/source/SKILL.md").exists());
         assert!(dir.join("skills.lock").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -1509,7 +1652,7 @@ mod tests {
         std::fs::write(
             dir.join("skills.json"),
             format!(
-                r#"{{"skills": {{"test": {{"repo": "{}"}}}}, "exports": {{}}}}"#,
+                r#"{{"dependencies": {{"test": {{"repo": "{}"}}}}, "publish": []}}"#,
                 missing_repo.display()
             ),
         )
@@ -1527,7 +1670,7 @@ mod tests {
         std::fs::create_dir_all(git::skill_dir(&dir, "docs")).unwrap();
         let progress = ProgressBar::hidden();
 
-        let result = install_repo_to_skill_dir(&dir, "docs", "unused", None, &progress);
+        let result = install_repo_to_skill_dir(&dir, "docs", "unused", None, None, &progress);
 
         assert!(result.is_err());
         assert!(result
@@ -1789,7 +1932,7 @@ mod tests {
         std::fs::write(dir.join("skills/beta/SKILL.md"), "# Beta").unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"exports": {"beta": {"path": "skills/beta"}, "alpha": {"path": "skills/alpha"}}}"#,
+            r#"{"publish": [{"skill": "beta", "path": "skills/beta"}, {"skill": "alpha", "path": "skills/alpha"}]}"#,
         )
         .unwrap();
         let prompter = FakeFallbackPrompter {
@@ -1811,11 +1954,11 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_repo_installables_rejects_empty_exports() {
+    fn test_discover_repo_installables_rejects_empty_publish() {
         let dir = std::env::temp_dir().join("ktesio_test_repo_installables_empty");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"exports": {}}"#).unwrap();
+        std::fs::write(dir.join("skills.json"), r#"{"publish": []}"#).unwrap();
         let prompter = FakeFallbackPrompter {
             confirm: true,
             selections: vec![],
@@ -1828,13 +1971,13 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_repo_installables_rejects_missing_export_path() {
+    fn test_discover_repo_installables_rejects_missing_publish_path() {
         let dir = std::env::temp_dir().join("ktesio_test_repo_installables_missing_path");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"exports": {"docs": {"path": "skills/docs"}}}"#,
+            r#"{"publish": [{"skill": "docs", "path": "skills/docs"}]}"#,
         )
         .unwrap();
         let prompter = FakeFallbackPrompter {
@@ -1849,21 +1992,21 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_manifest_installables_rejects_invalid_export_name() {
-        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_invalid_export");
+    fn test_discover_manifest_installables_rejects_invalid_publish_name() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_invalid_publish");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
         std::fs::write(dir.join("skills/docs/SKILL.md"), "# Docs").unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"exports": {"bad name": {"path": "skills/docs"}}}"#,
+            r#"{"publish": [{"skill": "bad name", "path": "skills/docs"}]}"#,
         )
         .unwrap();
 
         let result = discover_manifest_installables(&dir, &dir.join("skills.json"));
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("invalid"));
+        assert!(result.unwrap_err().to_string().contains("Invalid"));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -2025,10 +2168,12 @@ mod tests {
             SourceInstallable {
                 name: "alpha".to_string(),
                 path: PathBuf::from("alpha"),
+                deprecated: false,
             },
             SourceInstallable {
                 name: "beta".to_string(),
                 path: PathBuf::from("beta"),
+                deprecated: false,
             },
         ];
         let prompter = FakeFallbackPrompter {
@@ -2088,7 +2233,7 @@ mod tests {
     }
 
     #[test]
-    fn test_run_repo_target_installs_all_exports_from_local_repo() {
+    fn test_run_repo_target_installs_all_published_skills_from_local_repo() {
         let dir = std::env::temp_dir().join("ktesio_test_run_repo_target_all");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
@@ -2132,7 +2277,7 @@ mod tests {
         assert!(!dir.join(".agents/skills/alpha").exists());
         assert!(dir.join(".agents/skills/beta/SKILL.md").exists());
         let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
-        assert_eq!(manifest.skills["beta"].skill.as_deref(), Some("beta"));
+        assert!(manifest.dependencies.contains_key("beta"));
         let lockfile = Lockfile::load(&dir.join("skills.lock")).unwrap();
         assert_eq!(
             lockfile.entry("beta").unwrap().skill.as_deref(),
@@ -2154,7 +2299,7 @@ mod tests {
         assert!(dir.join(".agents/skills/docs/SKILL.md").exists());
         assert!(!dir.join(".agents/skills/docs/beta/SKILL.md").exists());
         let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
-        assert_eq!(manifest.skills["docs"].skill.as_deref(), Some("beta"));
+        assert!(manifest.dependencies.contains_key("docs"));
         let lockfile = Lockfile::load(&dir.join("skills.lock")).unwrap();
         assert_eq!(
             lockfile.entry("docs").unwrap().skill.as_deref(),
@@ -2170,7 +2315,7 @@ mod tests {
         std::fs::create_dir_all(dir.join(".agents/skills/source")).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"source": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"source": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         let repo = create_local_repo(&dir, "source");
@@ -2188,15 +2333,84 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    #[test]
+    fn test_install_repo_to_skill_dir_checks_out_commit_rev() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_commit_rev");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (repo, base_commit) = create_rev_repo(&dir);
+        let progress = ProgressBar::hidden();
+
+        let result = install_repo_to_skill_dir(
+            &dir,
+            "source",
+            repo.to_str().unwrap(),
+            Some("source"),
+            Some(&format!("commit:{base_commit}")),
+            &progress,
+        );
+
+        assert!(result.is_ok());
+        let content = std::fs::read_to_string(dir.join(".agents/skills/source/SKILL.md")).unwrap();
+        assert!(content.contains("Base"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_install_repo_to_skill_dir_checks_out_branch_rev() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_branch_rev");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (repo, _) = create_rev_repo(&dir);
+        let progress = ProgressBar::hidden();
+
+        let result = install_repo_to_skill_dir(
+            &dir,
+            "source",
+            repo.to_str().unwrap(),
+            Some("source"),
+            Some("branch:feature"),
+            &progress,
+        );
+
+        assert!(result.is_ok());
+        let content = std::fs::read_to_string(dir.join(".agents/skills/source/SKILL.md")).unwrap();
+        assert!(content.contains("Feature"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_install_repo_to_skill_dir_checks_out_tag_rev() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_tag_rev");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (repo, _) = create_rev_repo(&dir);
+        let progress = ProgressBar::hidden();
+
+        let result = install_repo_to_skill_dir(
+            &dir,
+            "source",
+            repo.to_str().unwrap(),
+            Some("source"),
+            Some("tag:v1"),
+            &progress,
+        );
+
+        assert!(result.is_ok());
+        let content = std::fs::read_to_string(dir.join(".agents/skills/source/SKILL.md")).unwrap();
+        assert!(content.contains("Tagged"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     fn create_local_repo(root: &Path, name: &str) -> std::path::PathBuf {
         let repo = root.join(name);
         std::fs::create_dir_all(repo.join("skills").join(name)).unwrap();
         std::fs::write(repo.join("skills").join(name).join("SKILL.md"), "# Test").unwrap();
-        std::fs::write(repo.join("README.md"), "not exported").unwrap();
+        std::fs::write(repo.join("README.md"), "not published").unwrap();
         std::fs::write(
             repo.join("skills.json"),
             format!(
-                r#"{{"skills": {{}}, "exports": {{"{}": {{"path": "skills/{}"}}}}}}"#,
+                r#"{{"dependencies": {{}}, "publish": [{{"skill": "{}", "path": "skills/{}"}}]}}"#,
                 name, name
             ),
         )
@@ -2220,6 +2434,71 @@ mod tests {
         repo
     }
 
+    fn create_rev_repo(root: &Path) -> (std::path::PathBuf, String) {
+        let repo = root.join("rev-source");
+        std::fs::create_dir_all(repo.join("skills/source")).unwrap();
+        std::fs::write(repo.join("skills/source/SKILL.md"), "# Base").unwrap();
+        std::fs::write(
+            repo.join("skills.json"),
+            r#"{"dependencies": {}, "publish": [{"skill": "source", "path": "skills/source"}]}"#,
+        )
+        .unwrap();
+        run_git(&repo, &["init"]);
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=ktesio tests",
+                "-c",
+                "user.email=ktesio-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "base",
+            ],
+        );
+        let base_commit = git::rev_parse_head(&repo).unwrap();
+
+        std::fs::write(repo.join("skills/source/SKILL.md"), "# Tagged").unwrap();
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=ktesio tests",
+                "-c",
+                "user.email=ktesio-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "tagged",
+            ],
+        );
+        run_git(&repo, &["tag", "v1"]);
+
+        run_git(&repo, &["checkout", "-b", "feature"]);
+        std::fs::write(repo.join("skills/source/SKILL.md"), "# Feature").unwrap();
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=ktesio tests",
+                "-c",
+                "user.email=ktesio-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "feature",
+            ],
+        );
+        (repo, base_commit)
+    }
+
     fn create_multi_local_repo(root: &Path, name: &str) -> std::path::PathBuf {
         let repo = root.join(name);
         std::fs::create_dir_all(repo.join("skills/alpha")).unwrap();
@@ -2228,7 +2507,7 @@ mod tests {
         std::fs::write(repo.join("skills/beta/SKILL.md"), "# Beta").unwrap();
         std::fs::write(
             repo.join("skills.json"),
-            r#"{"skills": {}, "exports": {"alpha": {"path": "skills/alpha"}, "beta": {"path": "skills/beta"}}}"#,
+            r#"{"dependencies": {}, "publish": [{"skill": "alpha", "path": "skills/alpha"}, {"skill": "beta", "path": "skills/beta"}]}"#,
         )
         .unwrap();
         run_git(&repo, &["init"]);

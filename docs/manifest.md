@@ -1,22 +1,28 @@
 # Manifest Format
 
-`skills.json` is the project manifest. It declares imported skills and local exports.
+`skills.json` is the project manifest. It declares skill dependencies this project uses and local skills this repo publishes for others.
 
 ## Shape
 
 ```json
 {
-  "skills": {
+  "dependencies": {
     "docs": {
       "repo": "https://github.com/example/agent-docs.git",
-      "skill": "docs"
+      "rev": "branch:main"
+    },
+    "local-docs": {
+      "path": ".agents/skills/local-docs"
     }
   },
-  "exports": {
-    "local-docs": {
-      "path": "skills/local-docs"
+  "publish": [
+    "local-docs",
+    {
+      "skill": "extra-docs",
+      "path": "skills/extra-docs",
+      "deprecated": true
     }
-  }
+  ]
 }
 ```
 
@@ -24,11 +30,15 @@
 
 | Field | Type | Required | Meaning |
 |-------|------|----------|---------|
-| `skills` | object | no | Skills this project imports; defaults to `{}` |
-| `exports` | object | no | Local files or directories this repo exposes to other projects; defaults to `{}` |
-| `skills.<name>.repo` | string | yes | Git clone URL or local git path |
-| `skills.<name>.skill` | string | no | Specific source export/fallback skill to install from a multi-skill repo |
-| `exports.<name>.path` | string | yes | Path inside this repo to copy when installed elsewhere |
+| `dependencies` | object | no | Skills this project uses; defaults to `{}` |
+| `dependencies.<name>.repo` | string | yes, for remote deps | Git clone URL, local git path, or supported shorthand |
+| `dependencies.<name>.path` | string | yes, for local deps | Local path to a skill used by this project |
+| `dependencies.<name>.rev` | string | no | Source selector: `commit:<sha>`, `branch:<name>`, or `tag:<name>` |
+| `publish` | array | no | Local skills this repo exposes to other projects; defaults to `[]` |
+| `publish[]` string | string | no | Publish a local path dependency by name |
+| `publish[].skill` | string | yes, for object entries | Published skill name |
+| `publish[].path` | string | yes, for object entries | Path inside this repo to copy when installed elsewhere |
+| `publish[].deprecated` | bool | no | Warn whenever this published skill is installed |
 
 Skill names must match:
 
@@ -36,48 +46,69 @@ Skill names must match:
 ^[a-zA-Z0-9_-]+$
 ```
 
+Each dependency must declare exactly one of `repo` or `path`.
+
 ## Minimal Manifest
 
 ```json
 {}
 ```
 
-`kt init` writes both top-level keys for readability, but parsers treat missing `skills` and missing `exports` as empty objects.
-
-## Import Example
+`kt init` writes both top-level keys for readability:
 
 ```json
 {
-  "skills": {
+  "dependencies": {},
+  "publish": []
+}
+```
+
+When `.agents/skills/` already contains installed skills, `kt init` adopts those directories into `dependencies`. Known public skills are recorded as remote dependencies when they can be resolved through an existing lock entry or an exact skills.sh match; unmatched custom skills are recorded as local path dependencies. Adopted skills are not added to `publish` automatically.
+
+## Dependency Example
+
+```json
+{
+  "dependencies": {
     "docs": {
       "repo": "https://github.com/example/agent-docs.git",
-      "skill": "docs"
+      "rev": "tag:v1.2.0"
     },
     "review": {
       "repo": "git@github.com:example/review-skill.git"
+    },
+    "local-docs": {
+      "path": ".agents/skills/local-docs"
     }
   },
-  "exports": {}
+  "publish": []
 }
 ```
 
-The optional `skill` field is written when a command such as `kt install example/agent-docs/docs` or `kt install example/agent-docs --skill docs` installs one export from a multi-skill source. Older manifests without `skill` remain valid.
+For remote dependencies, the dependency key is the published skill name in the source repo. `skills.lock` records the resolved commit after install.
 
-## Export Example
+## Publish Example
 
 ```json
 {
-  "exports": {
+  "dependencies": {
     "my-skill": {
-      "path": "skills/my-skill"
+      "path": ".agents/skills/my-skill"
     }
-  }
+  },
+  "publish": [
+    "my-skill",
+    {
+      "skill": "extra-skill",
+      "path": "skills/extra-skill"
+    }
+  ]
 }
 ```
 
-When a repo with exports is installed, Ktesio copies only the exported paths into the destination skill directory. Other repository files, including `.git`, docs, fixtures, and unrelated source files, are not installed.
+String publish entries reference local path dependencies. Object publish entries can expose any repo-local file or directory. When a repo with `publish` entries is installed, Ktesio copies only the selected published path into the destination skill directory.
 
-If an installed repo has no `skills.json`, Ktesio asks before falling back to directories under `skills/` or `SKILLS/`. Repos with a `skills.json` but no `exports` are not installable by fallback.
+If a source repo has no `skills.json`, Ktesio asks before falling back to directories under `skills/` or `SKILLS/`. Repos with a `skills.json` but no `publish` entries are not installable by fallback.
 
 ## See Also
 

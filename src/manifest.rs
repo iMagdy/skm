@@ -7,30 +7,46 @@ use serde::{Deserialize, Serialize};
 use crate::error::{ManifestDuplicateName, ManifestInvalidName, ManifestNotFound};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SkillEntry {
-    pub repo: String,
+#[serde(deny_unknown_fields)]
+pub struct DependencyEntry {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub skill: Option<String>,
+    pub repo: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rev: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ExportEntry {
+#[serde(deny_unknown_fields)]
+pub struct PublishObject {
+    pub skill: String,
     pub path: String,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub deprecated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum PublishEntry {
+    Dependency(String),
+    Object(PublishObject),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Manifest {
     #[serde(default)]
-    pub skills: HashMap<String, SkillEntry>,
+    pub dependencies: HashMap<String, DependencyEntry>,
     #[serde(default)]
-    pub exports: HashMap<String, ExportEntry>,
+    pub publish: Vec<PublishEntry>,
 }
 
 impl Manifest {
     pub fn new() -> Self {
         Self {
-            skills: HashMap::new(),
-            exports: HashMap::new(),
+            dependencies: HashMap::new(),
+            publish: Vec::new(),
         }
     }
 
@@ -60,7 +76,7 @@ impl Manifest {
     pub fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
         let name_re = regex::Regex::new(r"^[a-zA-Z0-9_-]+$").unwrap();
 
-        for name in self.skills.keys() {
+        for name in self.dependencies.keys() {
             if !name_re.is_match(name) {
                 return Err(ManifestInvalidName {
                     message: format!("Invalid skill name '{}': must match [a-zA-Z0-9_-]+", name),
@@ -70,12 +86,106 @@ impl Manifest {
         }
 
         let mut seen = std::collections::HashSet::new();
-        for name in self.skills.keys() {
+        for name in self.dependencies.keys() {
             if !seen.insert(name.clone()) {
                 return Err(ManifestDuplicateName {
                     message: format!("Duplicate skill name: '{}'", name),
                 }
                 .into());
+            }
+        }
+
+        for (name, dependency) in &self.dependencies {
+            let has_repo = dependency
+                .repo
+                .as_deref()
+                .is_some_and(|repo| !repo.is_empty());
+            let has_path = dependency
+                .path
+                .as_deref()
+                .is_some_and(|path| !path.is_empty());
+            if has_repo == has_path {
+                return Err(ManifestInvalidName {
+                    message: format!(
+                        "Dependency '{}' must declare exactly one of repo or path",
+                        name
+                    ),
+                }
+                .into());
+            }
+            if dependency.rev.is_some() && !has_repo {
+                return Err(ManifestInvalidName {
+                    message: format!("Dependency '{}' cannot use rev with a local path", name),
+                }
+                .into());
+            }
+            if let Some(rev) = dependency.rev.as_deref() {
+                if parse_rev(rev).is_none() {
+                    return Err(ManifestInvalidName {
+                        message: format!(
+                            "Dependency '{}' has invalid rev '{}'; use commit:<sha>, branch:<name>, or tag:<name>",
+                            name, rev
+                        ),
+                    }
+                    .into());
+                }
+            }
+        }
+
+        for entry in &self.publish {
+            match entry {
+                PublishEntry::Dependency(name) => {
+                    if !name_re.is_match(name) {
+                        return Err(ManifestInvalidName {
+                            message: format!(
+                                "Invalid published skill name '{}': must match [a-zA-Z0-9_-]+",
+                                name
+                            ),
+                        }
+                        .into());
+                    }
+                    let dependency = self.dependencies.get(name).ok_or_else(|| {
+                        ManifestInvalidName {
+                            message: format!(
+                                "Published skill '{}' must match a dependency or use an object publish entry with a path",
+                                name
+                            ),
+                        }
+                    })?;
+                    if dependency
+                        .path
+                        .as_deref()
+                        .is_none_or(|path| path.is_empty())
+                    {
+                        return Err(ManifestInvalidName {
+                            message: format!(
+                                "Published skill '{}' must reference a local path dependency",
+                                name
+                            ),
+                        }
+                        .into());
+                    }
+                }
+                PublishEntry::Object(object) => {
+                    if !name_re.is_match(&object.skill) {
+                        return Err(ManifestInvalidName {
+                            message: format!(
+                                "Invalid published skill name '{}': must match [a-zA-Z0-9_-]+",
+                                object.skill
+                            ),
+                        }
+                        .into());
+                    }
+                    if object.path.trim().is_empty() {
+                        return Err(ManifestInvalidName {
+                            message: format!(
+                                "Published skill '{}' must declare a non-empty path",
+                                object.skill
+                            ),
+                        }
+                        .into());
+                    }
+                }
             }
         }
 
@@ -87,21 +197,93 @@ impl Manifest {
         fs::write(path, content)
     }
 
-    pub fn add_skill(&mut self, name: String, repo: String) {
-        self.add_skill_with_source(name, repo, None);
+    pub fn add_remote_dependency(&mut self, name: String, repo: String, rev: Option<String>) {
+        self.dependencies.insert(
+            name,
+            DependencyEntry {
+                repo: Some(repo),
+                path: None,
+                rev,
+            },
+        );
     }
 
-    pub fn add_skill_with_source(&mut self, name: String, repo: String, skill: Option<String>) {
-        self.skills.insert(name, SkillEntry { repo, skill });
+    pub fn add_local_dependency(&mut self, name: String, path: String) {
+        self.dependencies.insert(
+            name,
+            DependencyEntry {
+                repo: None,
+                path: Some(path),
+                rev: None,
+            },
+        );
+    }
+
+    pub fn add_publish_object(&mut self, skill: String, path: String, deprecated: bool) {
+        self.publish
+            .retain(|entry| entry.skill_name() != skill.as_str());
+        self.publish.push(PublishEntry::Object(PublishObject {
+            skill,
+            path,
+            deprecated,
+        }));
+    }
+
+    pub fn add_publish_dependency(&mut self, name: String) {
+        self.publish
+            .retain(|entry| entry.skill_name() != name.as_str());
+        self.publish.push(PublishEntry::Dependency(name));
+    }
+
+    pub fn remove_dependency(&mut self, name: &str) -> bool {
+        self.dependencies.remove(name).is_some()
+    }
+
+    pub fn has_dependency(&self, name: &str) -> bool {
+        self.dependencies.contains_key(name)
     }
 
     pub fn remove_skill(&mut self, name: &str) -> bool {
-        self.skills.remove(name).is_some()
+        self.remove_dependency(name)
     }
 
     pub fn has_skill(&self, name: &str) -> bool {
-        self.skills.contains_key(name)
+        self.has_dependency(name)
     }
+}
+
+impl PublishEntry {
+    pub fn skill_name(&self) -> &str {
+        match self {
+            PublishEntry::Dependency(name) => name,
+            PublishEntry::Object(object) => &object.skill,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RevKind {
+    Commit,
+    Branch,
+    Tag,
+}
+
+pub fn parse_rev(rev: &str) -> Option<(RevKind, &str)> {
+    let (kind, value) = rev.split_once(':')?;
+    if value.is_empty() {
+        return None;
+    }
+
+    match kind {
+        "commit" => Some((RevKind::Commit, value)),
+        "branch" => Some((RevKind::Branch, value)),
+        "tag" => Some((RevKind::Tag, value)),
+        _ => None,
+    }
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl Default for Manifest {
@@ -118,114 +300,98 @@ mod tests {
     #[test]
     fn test_new() {
         let manifest = Manifest::new();
-        assert!(manifest.skills.is_empty());
-        assert!(manifest.exports.is_empty());
+        assert!(manifest.dependencies.is_empty());
+        assert!(manifest.publish.is_empty());
     }
 
     #[test]
     fn test_default() {
         let manifest = Manifest::default();
-        assert!(manifest.skills.is_empty());
-        assert!(manifest.exports.is_empty());
+        assert!(manifest.dependencies.is_empty());
+        assert!(manifest.publish.is_empty());
     }
 
     #[test]
-    fn test_add_skill() {
+    fn test_add_remote_dependency() {
         let mut manifest = Manifest::new();
-        manifest.add_skill(
+        manifest.add_remote_dependency(
             "test-skill".to_string(),
             "https://github.com/test/repo.git".to_string(),
+            Some("commit:a1b2".to_string()),
         );
-        assert!(manifest.has_skill("test-skill"));
-        assert_eq!(manifest.skills.len(), 1);
+        assert!(manifest.has_dependency("test-skill"));
+        assert_eq!(manifest.dependencies.len(), 1);
     }
 
     #[test]
-    fn test_remove_skill() {
+    fn test_add_local_dependency() {
         let mut manifest = Manifest::new();
-        manifest.add_skill(
+        manifest.add_local_dependency(
             "test-skill".to_string(),
-            "https://github.com/test/repo.git".to_string(),
+            ".agents/skills/test-skill".to_string(),
         );
-        assert!(manifest.remove_skill("test-skill"));
-        assert!(!manifest.has_skill("test-skill"));
+        assert_eq!(
+            manifest.dependencies["test-skill"].path.as_deref(),
+            Some(".agents/skills/test-skill")
+        );
+    }
+
+    #[test]
+    fn test_remove_dependency() {
+        let mut manifest = Manifest::new();
+        manifest.add_local_dependency("test".to_string(), ".agents/skills/test".to_string());
+        assert!(manifest.remove_dependency("test"));
+        assert!(!manifest.has_dependency("test"));
     }
 
     #[test]
     fn test_remove_nonexistent() {
         let mut manifest = Manifest::new();
-        assert!(!manifest.remove_skill("nonexistent"));
-    }
-
-    #[test]
-    fn test_has_skill() {
-        let mut manifest = Manifest::new();
-        assert!(!manifest.has_skill("test-skill"));
-        manifest.add_skill(
-            "test-skill".to_string(),
-            "https://github.com/test/repo.git".to_string(),
-        );
-        assert!(manifest.has_skill("test-skill"));
+        assert!(!manifest.remove_dependency("nonexistent"));
     }
 
     #[test]
     fn test_parse_valid() {
         let content = r#"{
-            "skills": {
+            "dependencies": {
                 "my-skill": {
                     "repo": "https://github.com/test/repo.git"
                 }
             },
-            "exports": {}
+            "publish": []
         }"#;
         let path = Path::new("test.json");
         let manifest = Manifest::parse_str(content, path).unwrap();
-        assert!(manifest.has_skill("my-skill"));
+        assert!(manifest.has_dependency("my-skill"));
     }
 
     #[test]
-    fn test_parse_optional_source_skill() {
+    fn test_parse_local_dependency_and_publish_entries() {
         let content = r#"{
-            "skills": {
+            "dependencies": {
                 "my-skill": {
-                    "repo": "https://github.com/example/skills.git",
-                    "skill": "upstream-skill"
+                    "path": ".agents/skills/my-skill"
                 }
             },
-            "exports": {}
+            "publish": [
+                "my-skill",
+                {"skill": "extra", "path": "skills/extra", "deprecated": true}
+            ]
         }"#;
         let path = Path::new("test.json");
         let manifest = Manifest::parse_str(content, path).unwrap();
-        assert_eq!(
-            manifest.skills["my-skill"].skill.as_deref(),
-            Some("upstream-skill")
-        );
+        assert_eq!(manifest.publish.len(), 2);
+        assert_eq!(manifest.publish[0].skill_name(), "my-skill");
+        assert_eq!(manifest.publish[1].skill_name(), "extra");
     }
 
     #[test]
     fn test_parse_empty() {
-        let content = r#"{"skills": {}, "exports": {}}"#;
+        let content = r#"{"dependencies": {}, "publish": []}"#;
         let path = Path::new("test.json");
         let manifest = Manifest::parse_str(content, path).unwrap();
-        assert!(manifest.skills.is_empty());
-    }
-
-    #[test]
-    fn test_parse_missing_skills_defaults_empty() {
-        let content = r#"{"exports": {"my-skill": {"path": "skills/my-skill"}}}"#;
-        let path = Path::new("test.json");
-        let manifest = Manifest::parse_str(content, path).unwrap();
-        assert!(manifest.skills.is_empty());
-        assert!(manifest.exports.contains_key("my-skill"));
-    }
-
-    #[test]
-    fn test_parse_missing_exports_defaults_empty() {
-        let content = r#"{"skills": {"my-skill": {"repo": "url"}}}"#;
-        let path = Path::new("test.json");
-        let manifest = Manifest::parse_str(content, path).unwrap();
-        assert!(manifest.has_skill("my-skill"));
-        assert!(manifest.exports.is_empty());
+        assert!(manifest.dependencies.is_empty());
+        assert!(manifest.publish.is_empty());
     }
 
     #[test]
@@ -233,20 +399,20 @@ mod tests {
         let content = r#"{}"#;
         let path = Path::new("test.json");
         let manifest = Manifest::parse_str(content, path).unwrap();
-        assert!(manifest.skills.is_empty());
-        assert!(manifest.exports.is_empty());
+        assert!(manifest.dependencies.is_empty());
+        assert!(manifest.publish.is_empty());
     }
 
     #[test]
     fn test_parse_invalid_json() {
-        let content = r#"{"skills": {}"#;
+        let content = r#"{"dependencies": {}"#;
         let path = Path::new("test.json");
         assert!(Manifest::parse_str(content, path).is_err());
     }
 
     #[test]
     fn test_parse_invalid_name() {
-        let content = r#"{"skills": {"bad name!": {"repo": "url"}}, "exports": {}}"#;
+        let content = r#"{"dependencies": {"bad name!": {"repo": "url"}}, "publish": []}"#;
         let path = Path::new("test.json");
         assert!(Manifest::parse_str(content, path).is_err());
     }
@@ -254,27 +420,27 @@ mod tests {
     #[test]
     fn test_validate_valid() {
         let mut manifest = Manifest::new();
-        manifest.add_skill("valid_name-123".to_string(), "url".to_string());
+        manifest.add_remote_dependency("valid_name-123".to_string(), "url".to_string(), None);
         assert!(manifest.validate().is_ok());
     }
 
     #[test]
     fn test_validate_invalid_name() {
         let mut manifest = Manifest::new();
-        manifest.add_skill("bad name!".to_string(), "url".to_string());
+        manifest.add_remote_dependency("bad name!".to_string(), "url".to_string(), None);
         assert!(manifest.validate().is_err());
     }
 
     #[test]
     fn test_save_and_load() {
         let mut manifest = Manifest::new();
-        manifest.add_skill("test".to_string(), "url".to_string());
+        manifest.add_remote_dependency("test".to_string(), "url".to_string(), None);
         let dir = std::env::temp_dir().join("ktesio_test_manifest");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("skills.json");
         manifest.save(&path).unwrap();
         let loaded = Manifest::load(&path).unwrap();
-        assert!(loaded.has_skill("test"));
+        assert!(loaded.has_dependency("test"));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -284,51 +450,34 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_duplicate_names() {
-        // serde_json will just take the last value, so no duplicate error
-        // But we should test the validate function directly
-        let mut manifest = Manifest::new();
-        manifest.add_skill("test".to_string(), "url1".to_string());
-        // Manually add duplicate to test validation
-        manifest.skills.insert(
-            "test".to_string(),
-            SkillEntry {
-                repo: "url2".to_string(),
-                skill: None,
-            },
-        );
-        assert!(manifest.validate().is_ok()); // serde deduplicates
-    }
-
-    #[test]
     fn test_save_and_load_roundtrip() {
         let dir = std::env::temp_dir().join("ktesio_test_manifest_roundtrip");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("skills.json");
 
         let mut manifest = Manifest::new();
-        manifest.add_skill("skill1".to_string(), "url1".to_string());
-        manifest.add_skill("skill2".to_string(), "url2".to_string());
+        manifest.add_remote_dependency("skill1".to_string(), "url1".to_string(), None);
+        manifest.add_remote_dependency("skill2".to_string(), "url2".to_string(), None);
         manifest.save(&path).unwrap();
 
         let loaded = Manifest::load(&path).unwrap();
-        assert_eq!(loaded.skills.len(), 2);
-        assert!(loaded.has_skill("skill1"));
-        assert!(loaded.has_skill("skill2"));
+        assert_eq!(loaded.dependencies.len(), 2);
+        assert!(loaded.has_dependency("skill1"));
+        assert!(loaded.has_dependency("skill2"));
 
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn test_parse_invalid_name_special_chars() {
-        let content = r#"{"skills": {"bad@name": {"repo": "url"}}, "exports": {}}"#;
+        let content = r#"{"dependencies": {"bad@name": {"repo": "url"}}, "publish": []}"#;
         let path = Path::new("test.json");
         assert!(Manifest::parse_str(content, path).is_err());
     }
 
     #[test]
     fn test_parse_invalid_name_spaces() {
-        let content = r#"{"skills": {"has space": {"repo": "url"}}, "exports": {}}"#;
+        let content = r#"{"dependencies": {"has space": {"repo": "url"}}, "publish": []}"#;
         let path = Path::new("test.json");
         assert!(Manifest::parse_str(content, path).is_err());
     }
@@ -336,9 +485,47 @@ mod tests {
     #[test]
     fn test_validate_valid_names() {
         let mut manifest = Manifest::new();
-        manifest.add_skill("valid_name-123".to_string(), "url".to_string());
-        manifest.add_skill("another-skill".to_string(), "url".to_string());
-        manifest.add_skill("skill123".to_string(), "url".to_string());
+        manifest.add_remote_dependency("valid_name-123".to_string(), "url".to_string(), None);
+        manifest.add_remote_dependency("another-skill".to_string(), "url".to_string(), None);
+        manifest.add_remote_dependency("skill123".to_string(), "url".to_string(), None);
         assert!(manifest.validate().is_ok());
+    }
+
+    #[test]
+    fn test_rejects_old_schema_fields() {
+        let content = r#"{"skills": {}, "exports": {}}"#;
+        assert!(Manifest::parse_str(content, Path::new("test.json")).is_err());
+    }
+
+    #[test]
+    fn test_rejects_dependency_with_repo_and_path() {
+        let content =
+            r#"{"dependencies": {"docs": {"repo": "url", "path": "skills/docs"}}, "publish": []}"#;
+        assert!(Manifest::parse_str(content, Path::new("test.json")).is_err());
+    }
+
+    #[test]
+    fn test_rejects_publish_string_without_matching_dependency() {
+        let content = r#"{"dependencies": {}, "publish": ["docs"]}"#;
+        let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
+
+        assert!(error.to_string().contains("must match a dependency"));
+    }
+
+    #[test]
+    fn test_rejects_publish_string_for_remote_dependency() {
+        let content = r#"{"dependencies": {"docs": {"repo": "url"}}, "publish": ["docs"]}"#;
+        let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
+
+        assert!(error.to_string().contains("local path dependency"));
+    }
+
+    #[test]
+    fn test_parse_rev() {
+        assert_eq!(parse_rev("commit:abc").unwrap().0, RevKind::Commit);
+        assert_eq!(parse_rev("branch:main").unwrap().0, RevKind::Branch);
+        assert_eq!(parse_rev("tag:v1").unwrap().0, RevKind::Tag);
+        assert!(parse_rev("main").is_none());
+        assert!(parse_rev("commit:").is_none());
     }
 }

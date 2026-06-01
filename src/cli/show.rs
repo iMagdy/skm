@@ -54,7 +54,7 @@ pub(crate) fn run_in_with_options(
 
     let lockfile = Lockfile::load(&lockfile_path)?;
 
-    let entry = manifest.skills.get(package_name);
+    let entry = manifest.dependencies.get(package_name);
     let lock = lockfile.entry(package_name);
 
     if entry.is_none() && lock.is_none() {
@@ -65,12 +65,10 @@ pub(crate) fn run_in_with_options(
     }
 
     let repo = entry
-        .map(|e| e.repo.as_str())
+        .and_then(|e| e.repo.as_deref().or(e.path.as_deref()))
         .or_else(|| lock.map(|l| l.repo.as_str()))
         .unwrap_or("—");
-    let source_skill = entry
-        .and_then(|e| e.skill.clone())
-        .or_else(|| lock.and_then(|l| l.skill.clone()));
+    let source_skill = lock.and_then(|l| l.skill.clone());
     let commit = lock.map(|l| l.commit.as_str()).unwrap_or("—");
     let dir = git::skill_dir(project_root, package_name);
     let status = if dir.exists() {
@@ -133,7 +131,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
@@ -149,7 +147,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
 
@@ -163,7 +161,11 @@ mod tests {
     fn test_show_in_lockfile_only() {
         let dir = std::env::temp_dir().join("ktesio_test_show_lockonly");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         std::fs::write(
             dir.join("skills.lock"),
             r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
@@ -178,7 +180,11 @@ mod tests {
     fn test_show_missing_status() {
         let dir = std::env::temp_dir().join("ktesio_test_show_missing");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         std::fs::write(
             dir.join("skills.lock"),
             r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
@@ -196,7 +202,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
 

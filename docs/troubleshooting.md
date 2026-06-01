@@ -53,7 +53,7 @@ kt install
 
 Options:
 
-- Run `kt export` if the skill should be restored to the manifest.
+- Add the skill back under `dependencies` if it should be restored to the manifest.
 - Remove the stale lock entry by uninstalling or editing the lockfile.
 
 ## Project State Looks Wrong
@@ -64,7 +64,7 @@ Run:
 kt doctor
 ```
 
-`kt doctor` checks the manifest, lockfile, installed directories, local export paths, orphaned entries, and git availability, then prints repair hints.
+`kt doctor` checks the manifest, lockfile, installed directories, published local paths, orphaned entries, and git availability, then prints repair hints.
 
 ## Release Workflow Did Not Update Docs
 

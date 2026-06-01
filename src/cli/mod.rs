@@ -1,8 +1,8 @@
 pub mod doctor;
-pub mod export;
 pub mod init;
 pub mod install;
 pub mod list;
+pub mod publish;
 pub mod search;
 pub mod show;
 pub mod uninstall;

@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::error::DoctorUnhealthy;
 use crate::git;
 use crate::lockfile::Lockfile;
-use crate::manifest::Manifest;
+use crate::manifest::{Manifest, PublishEntry};
 use crate::ui;
 
 #[cfg(not(tarpaulin_include))]
@@ -56,7 +56,7 @@ fn check_project(project_root: &Path) -> DoctorReport {
     } else {
         report
             .warnings
-            .push("skills.json is missing; run 'kt init .' or 'kt export'.".to_string());
+            .push("skills.json is missing; run 'kt init .' to create one.".to_string());
         None
     };
 
@@ -73,19 +73,45 @@ fn check_project(project_root: &Path) -> DoctorReport {
     };
 
     if let Some(manifest) = &manifest {
-        for (name, export) in &manifest.exports {
-            let export_path = project_root.join(&export.path);
-            if !export_path.exists() {
-                report.errors.push(format!(
-                    "export '{}' points to missing path '{}'; create it or run 'kt export add {} <path>'.",
-                    name, export.path, name
-                ));
+        for entry in &manifest.publish {
+            match entry {
+                PublishEntry::Dependency(name) => {
+                    let Some(dependency) = manifest.dependencies.get(name) else {
+                        report.errors.push(format!(
+                            "publish entry '{}' does not match a dependency; add a local dependency or use 'kt publish add {} <path>'.",
+                            name, name
+                        ));
+                        continue;
+                    };
+                    let Some(path) = dependency.path.as_deref() else {
+                        report.errors.push(format!(
+                            "publish entry '{}' points to a remote dependency; publish entries must use local paths.",
+                            name
+                        ));
+                        continue;
+                    };
+                    if !project_root.join(path).exists() {
+                        report.errors.push(format!(
+                            "publish entry '{}' points to missing path '{}'; create it or run 'kt publish add {} <path>'.",
+                            name, path, name
+                        ));
+                    }
+                }
+                PublishEntry::Object(object) => {
+                    let publish_path = project_root.join(&object.path);
+                    if !publish_path.exists() {
+                        report.errors.push(format!(
+                            "published skill '{}' points to missing path '{}'; create it or run 'kt publish add {} <path>'.",
+                            object.skill, object.path, object.skill
+                        ));
+                    }
+                }
             }
         }
     }
 
     if let (Some(manifest), Some(lockfile)) = (&manifest, &lockfile) {
-        for name in manifest.skills.keys() {
+        for name in manifest.dependencies.keys() {
             let skill_dir = git::skill_dir(project_root, name);
             if !skill_dir.exists() && lockfile.contains(name) {
                 report.errors.push(format!(
@@ -106,14 +132,19 @@ fn check_project(project_root: &Path) -> DoctorReport {
         }
 
         for name in lockfile.entries().keys() {
-            if !manifest.skills.contains_key(name) {
+            if !manifest.dependencies.contains_key(name) {
                 report.warnings.push(format!(
-                    "skill '{}' is orphaned in skills.lock; run 'kt export' to restore it or 'kt uninstall {}'.",
+                    "skill '{}' is orphaned in skills.lock; add it to dependencies or run 'kt uninstall {}'.",
                     name, name
                 ));
             }
         }
     }
+
+    let published_dirs = manifest
+        .as_ref()
+        .map(|manifest| published_skill_dir_names(project_root, manifest))
+        .unwrap_or_default();
 
     let skills_root = project_root.join(".agents").join("skills");
     if skills_root.exists() {
@@ -129,15 +160,16 @@ fn check_project(project_root: &Path) -> DoctorReport {
                     let name = entry.file_name().to_string_lossy().to_string();
                     let known = manifest
                         .as_ref()
-                        .map(|manifest| manifest.skills.contains_key(&name))
+                        .map(|manifest| manifest.dependencies.contains_key(&name))
                         .unwrap_or(false)
                         || lockfile
                             .as_ref()
                             .map(|lockfile| lockfile.contains(&name))
-                            .unwrap_or(false);
+                            .unwrap_or(false)
+                        || published_dirs.contains(&name);
                     if !known {
                         report.warnings.push(format!(
-                            "installed directory '{}' is untracked; run 'kt export' if it should be kept.",
+                            "installed directory '{}' is untracked; run 'kt init .' to adopt it as a dependency or 'kt publish' if it should be published.",
                             name
                         ));
                     }
@@ -151,6 +183,34 @@ fn check_project(project_root: &Path) -> DoctorReport {
     }
 
     report
+}
+
+fn published_skill_dir_names(
+    project_root: &Path,
+    manifest: &Manifest,
+) -> std::collections::HashSet<String> {
+    let mut names = std::collections::HashSet::new();
+    let skills_root = project_root.join(".agents").join("skills");
+    for entry in &manifest.publish {
+        let (name, path) = match entry {
+            PublishEntry::Dependency(name) => {
+                let Some(path) = manifest
+                    .dependencies
+                    .get(name)
+                    .and_then(|dependency| dependency.path.as_deref())
+                else {
+                    continue;
+                };
+                (name.as_str(), path)
+            }
+            PublishEntry::Object(object) => (object.skill.as_str(), object.path.as_str()),
+        };
+        let published_path = project_root.join(path);
+        if published_path == skills_root.join(name) {
+            names.insert(name.to_string());
+        }
+    }
+    names
 }
 
 fn print_report(report: &DoctorReport) {
@@ -177,7 +237,11 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_doctor_healthy");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
 
         let result = check_project(&dir);
 
@@ -191,7 +255,11 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_doctor_run_healthy");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
 
         let result = run_in(&dir);
 
@@ -231,7 +299,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"docs": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"docs": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::write(
@@ -270,7 +338,11 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_doctor_bad_lock");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         std::fs::write(dir.join("skills.lock"), "not json").unwrap();
 
         let result = check_project(&dir);
@@ -283,13 +355,13 @@ mod tests {
     }
 
     #[test]
-    fn test_doctor_reports_missing_export_path() {
-        let dir = std::env::temp_dir().join("ktesio_test_doctor_missing_export");
+    fn test_doctor_reports_missing_publish_path() {
+        let dir = std::env::temp_dir().join("ktesio_test_doctor_missing_publish");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {}, "exports": {"docs": {"path": "skills/docs"}}}"#,
+            r#"{"dependencies": {}, "publish": [{"skill": "docs", "path": "skills/docs"}]}"#,
         )
         .unwrap();
 
@@ -298,7 +370,7 @@ mod tests {
         assert!(result
             .errors
             .iter()
-            .any(|error| error.contains("export 'docs'")));
+            .any(|error| error.contains("published skill 'docs'")));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -309,7 +381,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"docs": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"docs": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
 
@@ -329,7 +401,7 @@ mod tests {
         std::fs::create_dir_all(dir.join(".agents/skills/docs")).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"docs": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"docs": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
 
@@ -347,7 +419,11 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_doctor_orphan");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         std::fs::write(
             dir.join("skills.lock"),
             r#"{"docs": {"commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "repo": "url"}}"#,
@@ -368,7 +444,11 @@ mod tests {
         let dir = std::env::temp_dir().join("ktesio_test_doctor_untracked");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join(".agents/skills/local")).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
 
         let result = check_project(&dir);
 

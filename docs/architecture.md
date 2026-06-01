@@ -25,10 +25,11 @@ src/
 
 ```text
 read skills.json
-for each skill:
+for each dependency:
   clone repo into a temporary workspace with quiet git output and progress updates
+  apply rev selector when present
   read source skills.json
-  copy only exported paths into a staged install directory
+  copy only selected published paths into a staged install directory
   if source skills.json is missing:
     ask before discovering directories under skills/ or SKILLS/
     copy selected directories into the staged install directory
@@ -39,7 +40,7 @@ write skills.lock only when entries changed
 
 When no manifest is present, `kt install` looks for a local `skills/` directory and installs a discovered skill as a fallback.
 
-GitHub shorthand such as `owner/repo` is resolved before cloning. Exact source skill selections from `owner/repo/skill` or `--skill` are stored in both manifest and lockfile entries so future installs reproduce the same source export.
+GitHub shorthand such as `owner/repo` is resolved before cloning. For manifest dependencies, the dependency key is the source repo's published skill name.
 
 ### Search
 
@@ -52,13 +53,12 @@ normalize results into GitHub install targets when possible
 optionally install the selected result through the normal install flow
 ```
 
-### Export
+### Publish
 
 ```text
 load existing skills.json or create an empty manifest
-read skills.lock
-add locked skills back into skills.json
-scan .agents/skills/ for untracked local directories
+select local path dependencies or repo-local skill paths
+write selected entries to publish
 save skills.json
 ```
 

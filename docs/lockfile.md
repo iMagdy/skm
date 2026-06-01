@@ -18,8 +18,8 @@
 
 - Reproduce installs across machines.
 - Show exactly which commit is installed.
-- Preserve repo URLs for `kt export`.
-- Preserve the exact source export/fallback skill when a multi-skill repo is installed.
+- Preserve repo URLs for list/show/upgrade.
+- Preserve the exact source published/fallback skill when a multi-skill repo is installed interactively.
 
 ## Behavior
 
@@ -30,7 +30,7 @@
 
 For locally discovered skills, Ktesio records a zero commit (`0000000000000000000000000000000000000000`) because there is no remote commit to lock.
 
-The optional `skill` field is omitted for legacy entries and installs that copy every export from the source repo.
+The optional `skill` field is omitted for installs where the dependency name and source published skill name are the same.
 
 ## See Also
 

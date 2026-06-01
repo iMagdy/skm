@@ -17,6 +17,10 @@ pub fn clone(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
     clone_inner(url, dest, None)
 }
 
+pub fn clone_silent(url: &str, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    clone_inner(url, dest, None)
+}
+
 pub fn clone_with_progress(
     url: &str,
     dest: &Path,
@@ -130,6 +134,32 @@ pub fn checkout_default_branch(repo_dir: &Path) -> Result<(), Box<dyn std::error
             message: format!(
                 "git checkout origin/{} failed in {}: {}",
                 default_branch,
+                repo_dir.display(),
+                summarize_git_failure(&output.stderr)
+            ),
+        }
+        .into());
+    }
+
+    Ok(())
+}
+
+pub fn checkout_rev(repo_dir: &Path, rev: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_dir)
+        .arg("checkout")
+        .arg(rev)
+        .output()
+        .map_err(|e| GitCheckoutFailed {
+            message: format!("Failed to run git checkout: {}", e),
+        })?;
+
+    if !output.status.success() {
+        return Err(GitCheckoutFailed {
+            message: format!(
+                "git checkout {} failed in {}: {}",
+                rev,
                 repo_dir.display(),
                 summarize_git_failure(&output.stderr)
             ),

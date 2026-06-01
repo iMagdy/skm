@@ -1,6 +1,6 @@
 [package]
 name = "ktesio"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Agentic skills package manager"
 license = "Apache-2.0"

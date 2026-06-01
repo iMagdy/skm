@@ -15,7 +15,7 @@ Ktesio is a tiny Rust CLI for installing and sharing agent skills. It makes reus
 - **Portable skills**: move agent workflows between repositories without manual copy-paste.
 - **Git-native distribution**: install skills from normal HTTPS or SSH git repositories.
 - **Reproducible installs**: lock every installed skill to the exact commit that was fetched.
-- **Friendly project state**: list, inspect, upgrade, export, and remove skills from one CLI.
+- **Friendly project state**: list, inspect, upgrade, publish, and remove skills from one CLI.
 - **Polished terminal UX**: color-coded statuses, icons, and progress bars keep git work readable.
 - **Agent-ready layout**: installed content lands where coding agents already look for skills.
 
@@ -73,11 +73,11 @@ brew install imagdy/tap/ktesio
 |---------|---------|
 | `kt init <path>` | Create `skills.json` in a project |
 | `kt search <query>` | Search public skill listings from skills.sh |
-| `kt install` | Install every skill declared in `skills.json` |
+| `kt install` | Install every dependency declared in `skills.json` |
 | `kt install <name:repo>` | Add and install one skill |
-| `kt install --all <repo>` | Install all exported skills from one repo |
-| `kt export` | Rebuild `skills.json` from installed skills |
-| `kt export add <name> <path>` | Add or update a local export |
+| `kt install --all <repo>` | Install all published skills from one repo |
+| `kt publish` | Publish local skills from this repo |
+| `kt publish add <name> <path>` | Add or update one published local skill |
 | `kt upgrade` | Fetch latest commits for installed skills |
 | `kt list` | Show installed, missing, and orphaned skills |
 | `kt show <name>` | Show one skill's repo, commit, path, and status |
@@ -91,17 +91,20 @@ brew install imagdy/tap/ktesio
 
 ```json
 {
-  "skills": {
+  "dependencies": {
     "docs": {
       "repo": "https://github.com/example/agent-docs.git",
-      "skill": "docs"
+      "rev": "branch:main"
+    },
+    "local-docs": {
+      "path": ".agents/skills/local-docs"
     }
   },
-  "exports": {}
+  "publish": ["local-docs"]
 }
 ```
 
-When another repository installs a skill repo, that repo can use `exports` to choose which local files or folders become installable skills. The top-level `skills` and `exports` keys are optional and default to empty objects. Ktesio installs only exported paths; if the source repo has no `skills.json`, it asks before falling back to selectable directories under `skills/` or `SKILLS/`.
+`dependencies` declares skills this project uses. `publish` declares local skills this repo exposes for other projects to install. Ktesio installs only published paths from source repos; if the source repo has no `skills.json`, it asks before falling back to selectable directories under `skills/` or `SKILLS/`.
 
 ## Documentation
 

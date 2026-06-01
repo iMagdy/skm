@@ -90,7 +90,7 @@ fn collect_statuses(
 ) -> Vec<SkillStatus> {
     let mut statuses = Vec::new();
 
-    for (name, entry) in &manifest.skills {
+    for (name, entry) in &manifest.dependencies {
         let lock = lockfile.entry(name);
         let commit = lock.map(|l| l.commit.as_str()).unwrap_or("—");
         let dir = git::skill_dir(project_root, name);
@@ -104,11 +104,12 @@ fn collect_statuses(
 
         statuses.push(SkillStatus {
             name: name.clone(),
-            repo: entry.repo.clone(),
-            skill: entry
-                .skill
+            repo: entry
+                .repo
                 .clone()
-                .or_else(|| lock.and_then(|l| l.skill.clone())),
+                .or_else(|| entry.path.clone())
+                .unwrap_or_else(|| "—".to_string()),
+            skill: lock.and_then(|l| l.skill.clone()),
             commit: commit.to_string(),
             path: dir.display().to_string(),
             status: status.to_string(),
@@ -116,7 +117,7 @@ fn collect_statuses(
     }
 
     for (name, lock) in lockfile.entries() {
-        if !manifest.skills.contains_key(name) {
+        if !manifest.dependencies.contains_key(name) {
             statuses.push(SkillStatus {
                 name: name.clone(),
                 repo: lock.repo.clone(),
@@ -152,7 +153,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
 
@@ -168,7 +169,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
@@ -183,7 +184,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::write(
@@ -200,7 +201,11 @@ mod tests {
     fn test_list_orphaned() {
         let dir = std::env::temp_dir().join("ktesio_test_list_orphaned");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("skills.json"), r#"{"skills": {}, "exports": {}}"#).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
         std::fs::write(
             dir.join("skills.lock"),
             r#"{"orphan": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url"}}"#,
@@ -217,7 +222,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         std::fs::write(
@@ -237,7 +242,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("skills.json"),
-            r#"{"skills": {"test": {"repo": "url"}}, "exports": {}}"#,
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
         )
         .unwrap();
         // No lockfile
