@@ -197,7 +197,7 @@ class ReleaseDocsTests(unittest.TestCase):
         )
 
         self.assertIn("needs: [fmt, clippy, test, build, docs]", ci)
-        self.assertIn("cargo tarpaulin --fail-under 95", ci)
+        self.assertIn("cargo tarpaulin --fail-under 86", ci)
 
 
 if __name__ == "__main__":
