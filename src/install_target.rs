@@ -171,6 +171,8 @@ mod tests {
 
     #[test]
     fn test_resolve_invalid_shorthand() {
+        assert!(resolve_repo_target("", false).is_err());
+        assert!(resolve_repo_target("   ", false).is_err());
         assert!(resolve_repo_target("nameonly", false).is_err());
         assert!(resolve_repo_target("owner/repo/bad/name", false).is_err());
         assert!(resolve_repo_target("owner/repo/bad.name", false).is_err());
@@ -186,6 +188,7 @@ mod tests {
             install_target_from_source("owner/repo", "skill").as_deref(),
             Some("owner/repo/skill")
         );
+        assert!(github_repo_from_source("owner/repo/extra", false).is_none());
         assert!(install_target_from_source("domain.com", "skill").is_none());
     }
 }
