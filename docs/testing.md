@@ -26,11 +26,11 @@ Integration tests create local temporary git repositories. They do not require n
 
 ## Coverage
 
-CI runs `cargo tarpaulin --fail-under 86` as the current baseline coverage gate. To run it locally:
+CI runs `cargo tarpaulin --fail-under 95` as the coverage gate. To run it locally:
 
 ```bash
 cargo install cargo-tarpaulin
-cargo tarpaulin --fail-under 86
+cargo tarpaulin --fail-under 95
 ```
 
 Generate an HTML report:

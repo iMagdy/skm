@@ -171,4 +171,4 @@ jobs:
       - name: Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin
       - name: Enforce coverage
-        run: cargo tarpaulin --fail-under 86
+        run: cargo tarpaulin --fail-under 95
