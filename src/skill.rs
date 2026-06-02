@@ -160,6 +160,69 @@ mod tests {
     }
 
     #[test]
+    fn test_copy_skill_files_with_dependency_publish() {
+        let source = std::env::temp_dir().join("ktesio_test_dependency_publish_src");
+        let dest = std::env::temp_dir().join("ktesio_test_dependency_publish_dst");
+        let _ = std::fs::remove_dir_all(&source);
+        let _ = std::fs::remove_dir_all(&dest);
+        std::fs::create_dir_all(source.join("skills/docs")).unwrap();
+        std::fs::write(source.join("skills/docs/SKILL.md"), "content").unwrap();
+        let mut manifest = Manifest::new();
+        manifest.add_local_dependency("docs".to_string(), "skills/docs".to_string());
+        manifest.add_publish_dependency("docs".to_string());
+
+        let result = copy_skill_files(&source, &dest, &manifest);
+
+        assert!(result.is_ok());
+        assert!(dest.join("docs/SKILL.md").exists());
+        std::fs::remove_dir_all(&source).unwrap();
+        std::fs::remove_dir_all(&dest).unwrap();
+    }
+
+    #[test]
+    fn test_copy_skill_files_dependency_publish_reports_missing_dependency() {
+        let source = std::env::temp_dir().join("ktesio_test_dependency_publish_missing_src");
+        let dest = std::env::temp_dir().join("ktesio_test_dependency_publish_missing_dst");
+        let _ = std::fs::remove_dir_all(&source);
+        let _ = std::fs::remove_dir_all(&dest);
+        std::fs::create_dir_all(&source).unwrap();
+        let mut manifest = Manifest::new();
+        manifest.add_publish_dependency("docs".to_string());
+
+        let result = copy_skill_files(&source, &dest, &manifest);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("does not match a local dependency"));
+        std::fs::remove_dir_all(&source).unwrap();
+        let _ = std::fs::remove_dir_all(&dest);
+    }
+
+    #[test]
+    fn test_copy_skill_files_dependency_publish_reports_remote_dependency() {
+        let source = std::env::temp_dir().join("ktesio_test_dependency_publish_remote_src");
+        let dest = std::env::temp_dir().join("ktesio_test_dependency_publish_remote_dst");
+        let _ = std::fs::remove_dir_all(&source);
+        let _ = std::fs::remove_dir_all(&dest);
+        std::fs::create_dir_all(&source).unwrap();
+        let mut manifest = Manifest::new();
+        manifest.add_remote_dependency("docs".to_string(), "url".to_string(), None);
+        manifest.add_publish_dependency("docs".to_string());
+
+        let result = copy_skill_files(&source, &dest, &manifest);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("is not a local path dependency"));
+        std::fs::remove_dir_all(&source).unwrap();
+        let _ = std::fs::remove_dir_all(&dest);
+    }
+
+    #[test]
     fn test_copy_skill_files_publish_not_found() {
         let source = std::env::temp_dir().join("ktesio_test_notfound_src");
         let dest = std::env::temp_dir().join("ktesio_test_notfound_dst");

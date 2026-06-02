@@ -63,9 +63,17 @@ pub fn normalize_skill_name(name: &str) -> String {
 }
 
 /// Find the skills directory in a repository root.
-/// Normalizes directory names to lowercase before searching for "skills".
+/// Root-level skills directories take precedence over `.agents/skills`.
 /// Returns the path to the skills directory if found.
 pub fn find_skills_directory(repo_root: &Path) -> Option<PathBuf> {
+    for preferred in ["skills", "SKILLS"] {
+        let path = repo_root.join(preferred);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+
+    let mut root_matches = Vec::new();
     let entries = std::fs::read_dir(repo_root).ok()?;
 
     for entry in entries.flatten() {
@@ -75,11 +83,21 @@ pub fn find_skills_directory(repo_root: &Path) -> Option<PathBuf> {
         }
 
         let name = entry.file_name();
-        let name_str = name.to_string_lossy().to_lowercase();
+        let name_str = name.to_string_lossy();
 
-        if name_str == "skills" {
-            return Some(entry.path());
+        if name_str.to_lowercase() == "skills" && name_str != "skills" && name_str != "SKILLS" {
+            root_matches.push(entry.path());
         }
+    }
+
+    root_matches.sort();
+    if let Some(path) = root_matches.into_iter().next() {
+        return Some(path);
+    }
+
+    let agents_skills_dir = repo_root.join(".agents").join("skills");
+    if agents_skills_dir.is_dir() {
+        return Some(agents_skills_dir);
     }
 
     None
@@ -228,6 +246,45 @@ mod tests {
 
         let result = find_skills_directory(&dir);
         assert!(result.is_some());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_find_skills_directory_finds_agents_skills() {
+        let dir = std::env::temp_dir().join("ktesio_test_find_agents_skills");
+        let _ = std::fs::remove_dir_all(&dir);
+        let skills_dir = dir.join(".agents/skills");
+        std::fs::create_dir_all(&skills_dir).unwrap();
+
+        let result = find_skills_directory(&dir);
+        assert_eq!(result, Some(skills_dir));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_find_skills_directory_prefers_root_skills() {
+        let dir = std::env::temp_dir().join("ktesio_test_find_prefers_root_skills");
+        let _ = std::fs::remove_dir_all(&dir);
+        let root_skills_dir = dir.join("skills");
+        std::fs::create_dir_all(&root_skills_dir).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills")).unwrap();
+
+        let result = find_skills_directory(&dir);
+        assert_eq!(result, Some(root_skills_dir));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_find_skills_directory_ignores_agents_without_skills() {
+        let dir = std::env::temp_dir().join("ktesio_test_find_agents_without_skills");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents")).unwrap();
+
+        let result = find_skills_directory(&dir);
+        assert!(result.is_none());
 
         std::fs::remove_dir_all(&dir).unwrap();
     }

@@ -73,41 +73,7 @@ fn check_project(project_root: &Path) -> DoctorReport {
     };
 
     if let Some(manifest) = &manifest {
-        for entry in &manifest.publish {
-            match entry {
-                PublishEntry::Dependency(name) => {
-                    let Some(dependency) = manifest.dependencies.get(name) else {
-                        report.errors.push(format!(
-                            "publish entry '{}' does not match a dependency; add a local dependency or use 'kt publish add {} <path>'.",
-                            name, name
-                        ));
-                        continue;
-                    };
-                    let Some(path) = dependency.path.as_deref() else {
-                        report.errors.push(format!(
-                            "publish entry '{}' points to a remote dependency; publish entries must use local paths.",
-                            name
-                        ));
-                        continue;
-                    };
-                    if !project_root.join(path).exists() {
-                        report.errors.push(format!(
-                            "publish entry '{}' points to missing path '{}'; create it or run 'kt publish add {} <path>'.",
-                            name, path, name
-                        ));
-                    }
-                }
-                PublishEntry::Object(object) => {
-                    let publish_path = project_root.join(&object.path);
-                    if !publish_path.exists() {
-                        report.errors.push(format!(
-                            "published skill '{}' points to missing path '{}'; create it or run 'kt publish add {} <path>'.",
-                            object.skill, object.path, object.skill
-                        ));
-                    }
-                }
-            }
-        }
+        check_publish_entries(project_root, manifest, &mut report);
     }
 
     if let (Some(manifest), Some(lockfile)) = (&manifest, &lockfile) {
@@ -183,6 +149,44 @@ fn check_project(project_root: &Path) -> DoctorReport {
     }
 
     report
+}
+
+fn check_publish_entries(project_root: &Path, manifest: &Manifest, report: &mut DoctorReport) {
+    for entry in &manifest.publish {
+        match entry {
+            PublishEntry::Dependency(name) => {
+                let Some(dependency) = manifest.dependencies.get(name) else {
+                    report.errors.push(format!(
+                        "publish entry '{}' does not match a dependency; add a local dependency or use 'kt publish add {} <path>'.",
+                        name, name
+                    ));
+                    continue;
+                };
+                let Some(path) = dependency.path.as_deref() else {
+                    report.errors.push(format!(
+                        "publish entry '{}' points to a remote dependency; publish entries must use local paths.",
+                        name
+                    ));
+                    continue;
+                };
+                if !project_root.join(path).exists() {
+                    report.errors.push(format!(
+                        "publish entry '{}' points to missing path '{}'; create it or run 'kt publish add {} <path>'.",
+                        name, path, name
+                    ));
+                }
+            }
+            PublishEntry::Object(object) => {
+                let publish_path = project_root.join(&object.path);
+                if !publish_path.exists() {
+                    report.errors.push(format!(
+                        "published skill '{}' points to missing path '{}'; create it or run 'kt publish add {} <path>'.",
+                        object.skill, object.path, object.skill
+                    ));
+                }
+            }
+        }
+    }
 }
 
 fn published_skill_dir_names(
@@ -375,6 +379,63 @@ mod tests {
     }
 
     #[test]
+    fn test_doctor_reports_publish_dependency_without_dependency() {
+        let dir = std::env::temp_dir().join("ktesio_test_doctor_publish_missing_dependency");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut manifest = Manifest::new();
+        manifest.add_publish_dependency("docs".to_string());
+        let mut report = DoctorReport::default();
+
+        check_publish_entries(&dir, &manifest, &mut report);
+
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("does not match a dependency")));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_doctor_reports_publish_dependency_remote_dependency() {
+        let dir = std::env::temp_dir().join("ktesio_test_doctor_publish_remote_dependency");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut manifest = Manifest::new();
+        manifest.add_remote_dependency("docs".to_string(), "url".to_string(), None);
+        manifest.add_publish_dependency("docs".to_string());
+        let mut report = DoctorReport::default();
+
+        check_publish_entries(&dir, &manifest, &mut report);
+
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("points to a remote dependency")));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_doctor_reports_publish_dependency_missing_local_path() {
+        let dir = std::env::temp_dir().join("ktesio_test_doctor_publish_missing_local_path");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {"docs": {"path": "skills/docs"}}, "publish": ["docs"]}"#,
+        )
+        .unwrap();
+
+        let result = check_project(&dir);
+
+        assert!(result
+            .errors
+            .iter()
+            .any(|error| error.contains("points to missing path")));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_doctor_reports_declared_not_installed() {
         let dir = std::env::temp_dir().join("ktesio_test_doctor_manifest_only");
         let _ = std::fs::remove_dir_all(&dir);
@@ -456,6 +517,51 @@ mod tests {
             .warnings
             .iter()
             .any(|warning| warning.contains("untracked")));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_doctor_treats_published_agents_skill_as_tracked_and_skips_files() {
+        let dir = std::env::temp_dir().join("ktesio_test_doctor_published_agents_skill");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/docs")).unwrap();
+        std::fs::write(dir.join(".agents/skills/file.md"), "# File").unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {"docs": {"path": ".agents/skills/docs"}}, "publish": ["docs"]}"#,
+        )
+        .unwrap();
+
+        let result = check_project(&dir);
+
+        assert!(result.errors.is_empty());
+        assert!(!result
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("untracked")));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_doctor_published_skill_dir_names_ignores_unresolved_dependencies() {
+        let dir = std::env::temp_dir().join("ktesio_test_doctor_published_names");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/object")).unwrap();
+        let mut manifest = Manifest::new();
+        manifest.add_remote_dependency("remote".to_string(), "url".to_string(), None);
+        manifest.add_publish_dependency("remote".to_string());
+        manifest.add_publish_dependency("missing".to_string());
+        manifest.add_publish_object(
+            "object".to_string(),
+            ".agents/skills/object".to_string(),
+            false,
+        );
+
+        let names = published_skill_dir_names(&dir, &manifest);
+
+        assert!(names.contains("object"));
+        assert!(!names.contains("remote"));
+        assert!(!names.contains("missing"));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

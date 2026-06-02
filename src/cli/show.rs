@@ -177,6 +177,28 @@ mod tests {
     }
 
     #[test]
+    fn test_show_prints_source_skill_from_lockfile() {
+        let dir = std::env::temp_dir().join("ktesio_test_show_source_skill");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {}, "publish": []}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"test": {"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", "repo": "url", "skill": "source"}}"#,
+        )
+        .unwrap();
+
+        let result = run_in(&dir, "test");
+
+        assert!(result.is_ok());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_show_missing_status() {
         let dir = std::env::temp_dir().join("ktesio_test_show_missing");
         std::fs::create_dir_all(&dir).unwrap();

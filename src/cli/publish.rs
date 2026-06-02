@@ -303,6 +303,73 @@ mod tests {
     }
 
     #[test]
+    fn test_publish_add_rejects_invalid_skill_name() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_add_invalid_name");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
+
+        let result = run_add_in(&dir, "bad name", "skills/docs");
+
+        assert!(result.is_err());
+        assert!(!dir.join("skills.json").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_publish_add_accepts_absolute_path_and_rejects_outside_project() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_add_absolute");
+        let outside = std::env::temp_dir().join("ktesio_test_publish_add_outside");
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&outside);
+        std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+
+        let result = run_add_in(
+            &dir,
+            "docs",
+            dir.join("skills/docs").to_string_lossy().as_ref(),
+        );
+
+        assert!(result.is_ok());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert_eq!(manifest.publish[0].skill_name(), "docs");
+
+        let result = run_add_in(&dir, "outside", outside.to_string_lossy().as_ref());
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+        std::fs::remove_dir_all(&outside).unwrap();
+    }
+
+    #[test]
+    fn test_publish_run_creates_manifest_when_no_candidates() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_run_empty");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let result = run_in(&dir);
+
+        assert!(result.is_ok());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert!(manifest.dependencies.is_empty());
+        assert!(manifest.publish.is_empty());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(tarpaulin_include)]
+    #[test]
+    fn test_publish_run_reports_prompt_disabled_during_coverage() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_run_prompt_disabled");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/local")).unwrap();
+
+        let result = run_in(&dir);
+
+        assert!(result.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_publish_candidate_adopts_untracked_installed_skill_as_local_dependency() {
         let dir = std::env::temp_dir().join("ktesio_test_publish_candidate_adopt");
         let _ = std::fs::remove_dir_all(&dir);
@@ -342,5 +409,55 @@ mod tests {
         assert!(candidates.iter().any(|candidate| candidate.name == "local"));
         assert!(!candidates.iter().any(|candidate| candidate.name == "docs"));
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_publish_candidates_filter_entries_and_include_local_dependencies() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_candidate_filters");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("local/alpha")).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/beta")).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/bad name")).unwrap();
+        std::fs::write(dir.join(".agents/skills/file.md"), "# File").unwrap();
+
+        let mut manifest = Manifest::new();
+        manifest.add_local_dependency("alpha".to_string(), "local/alpha".to_string());
+        manifest.add_local_dependency("beta".to_string(), "local/missing".to_string());
+
+        let candidates = publish_candidates(&dir, &manifest).unwrap();
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].name, "alpha");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_publish_candidate_rejects_path_outside_project() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_candidate_outside_project");
+        let outside = std::env::temp_dir().join("ktesio_test_publish_candidate_outside_skill");
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&outside);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+
+        let mut manifest = Manifest::new();
+        let candidate = PublishCandidate {
+            name: "outside".to_string(),
+            path: outside.clone(),
+        };
+
+        let result = add_publish_candidate(&mut manifest, &dir, &candidate);
+
+        assert!(result.is_err());
+        assert!(!manifest.has_dependency("outside"));
+        std::fs::remove_dir_all(&dir).unwrap();
+        std::fs::remove_dir_all(&outside).unwrap();
+    }
+
+    #[test]
+    fn test_skill_dir_helper_uses_agents_skills_root() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_skill_dir_helper");
+
+        assert_eq!(_skill_dir(&dir, "docs"), dir.join(".agents/skills/docs"));
     }
 }

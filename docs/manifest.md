@@ -108,7 +108,7 @@ For remote dependencies, the dependency key is the published skill name in the s
 
 String publish entries reference local path dependencies. Object publish entries can expose any repo-local file or directory. When a repo with `publish` entries is installed, Ktesio copies only the selected published path into the destination skill directory.
 
-If a source repo has no `skills.json`, Ktesio asks before falling back to directories under `skills/` or `SKILLS/`. Repos with a `skills.json` but no `publish` entries are not installable by fallback.
+If a source repo has no `skills.json`, Ktesio asks before falling back to directories under `skills/`, `SKILLS/`, or `.agents/skills/`. Repos with a `skills.json` but no `publish` entries are not installable by fallback.
 
 ## See Also
 

@@ -60,7 +60,7 @@ Behavior:
 - Installs only paths declared in the source repo's `skills.json` `publish` list.
 - Supports local path dependencies with `dependencies.<name>.path`.
 - Supports optional `rev` selectors: `commit:<sha>`, `branch:<name>`, or `tag:<name>`.
-- If the source repo has no `skills.json`, asks before discovering directories under `skills/` or `SKILLS/`; multiple directories can be selected.
+- If the source repo has no `skills.json`, asks before discovering directories under `skills/`, `SKILLS/`, or `.agents/skills/`; multiple directories can be selected.
 - Records resolved commits in `skills.lock` only for successful installs.
 - Continues after individual clone/copy failures and reports all errors.
 
@@ -77,7 +77,7 @@ kt install docs:example/agent-docs/review
 
 The `repo` value can be an HTTPS URL, SSH URL, local git path, GitHub `owner/repo` shorthand, or GitHub `owner/repo/skill` shorthand. GitHub shorthand resolves to HTTPS by default; `--ssh` resolves shorthand to an SSH clone URL.
 
-Ktesio updates `skills.json` and `skills.lock` only after the repo is fetched and installable content is copied successfully. A bad target, failed clone, missing published skill, cancelled fallback, or missing fallback `skills/` directory leaves those files unchanged.
+Ktesio updates `skills.json` and `skills.lock` only after the repo is fetched and installable content is copied successfully. A bad target, failed clone, missing published skill, cancelled fallback, or missing fallback skill directory leaves those files unchanged.
 
 The single-skill install flow uses the same progress bar and quiet git output as bulk install.
 
@@ -101,7 +101,7 @@ Behavior:
 - `--skill <name>` installs one matching published or fallback-discovered skill.
 - `--yes` accepts safe defaults, such as a single obvious fallback skill.
 - `--no-input` fails instead of prompting when a choice is required.
-- Repos without `skills.json` can use fallback discovery from `.md` files or directories under `skills/` or `SKILLS/`.
+- Repos without `skills.json` can use fallback discovery from `.md` files or directories under `skills/`, `SKILLS/`, or `.agents/skills/`.
 
 ## `kt publish`
 

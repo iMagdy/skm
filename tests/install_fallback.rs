@@ -48,10 +48,36 @@ fn test_install_fallback_discovers_skills_directory() {
 }
 
 #[test]
+fn test_install_fallback_discovers_agents_skills_without_self_copy() {
+    let ctx = TestContext::new();
+
+    let fixture_dir = ctx.project_dir.join("fixture");
+    std::fs::create_dir_all(fixture_dir.join(".agents/skills/local-skill")).unwrap();
+    std::fs::write(
+        fixture_dir.join(".agents/skills/local-skill/SKILL.md"),
+        "# Local Skill",
+    )
+    .unwrap();
+
+    let result = run_kt_command(&["install"], &fixture_dir);
+
+    assert!(
+        result.is_ok(),
+        "fallback install should succeed: {:?}",
+        result.err()
+    );
+    assert!(fixture_dir
+        .join(".agents/skills/local-skill/SKILL.md")
+        .exists());
+    let lockfile = std::fs::read_to_string(fixture_dir.join("skills.lock")).unwrap();
+    assert!(lockfile.contains("local-skill"));
+}
+
+#[test]
 fn test_install_fallback_error_missing_skills_dir() {
     let ctx = TestContext::new();
 
-    // Create a directory without skills/ or SKILLS/
+    // Create a directory without skills/, SKILLS/, or .agents/skills/
     let fixture_dir = ctx.project_dir.join("fixture");
     std::fs::create_dir_all(&fixture_dir).unwrap();
 

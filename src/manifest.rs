@@ -505,11 +505,44 @@ mod tests {
     }
 
     #[test]
+    fn test_rejects_dependency_without_repo_or_path() {
+        let content = r#"{"dependencies": {"docs": {}}, "publish": []}"#;
+        let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
+
+        assert!(error.to_string().contains("exactly one"));
+    }
+
+    #[test]
+    fn test_rejects_local_dependency_with_rev() {
+        let content = r#"{"dependencies": {"docs": {"path": "skills/docs", "rev": "branch:main"}}, "publish": []}"#;
+        let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
+
+        assert!(error.to_string().contains("cannot use rev"));
+    }
+
+    #[test]
+    fn test_rejects_dependency_with_invalid_rev() {
+        let content =
+            r#"{"dependencies": {"docs": {"repo": "url", "rev": "main"}}, "publish": []}"#;
+        let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
+
+        assert!(error.to_string().contains("invalid rev"));
+    }
+
+    #[test]
     fn test_rejects_publish_string_without_matching_dependency() {
         let content = r#"{"dependencies": {}, "publish": ["docs"]}"#;
         let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
 
         assert!(error.to_string().contains("must match a dependency"));
+    }
+
+    #[test]
+    fn test_rejects_publish_string_with_invalid_name() {
+        let content = r#"{"dependencies": {}, "publish": ["bad name"]}"#;
+        let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
+
+        assert!(error.to_string().contains("Invalid published"));
     }
 
     #[test]
@@ -521,11 +554,33 @@ mod tests {
     }
 
     #[test]
+    fn test_rejects_publish_string_with_empty_local_dependency_path() {
+        let content = r#"{"dependencies": {"docs": {"path": ""}}, "publish": ["docs"]}"#;
+        let error = Manifest::parse_str(content, Path::new("test.json")).unwrap_err();
+
+        assert!(error.to_string().contains("exactly one"));
+    }
+
+    #[test]
+    fn test_rejects_publish_object_invalid_name_and_empty_path() {
+        let invalid_name =
+            r#"{"dependencies": {}, "publish": [{"skill": "bad name", "path": "skills/docs"}]}"#;
+        let empty_path = r#"{"dependencies": {}, "publish": [{"skill": "docs", "path": "  "}]}"#;
+
+        let name_error = Manifest::parse_str(invalid_name, Path::new("test.json")).unwrap_err();
+        let path_error = Manifest::parse_str(empty_path, Path::new("test.json")).unwrap_err();
+
+        assert!(name_error.to_string().contains("Invalid published"));
+        assert!(path_error.to_string().contains("non-empty path"));
+    }
+
+    #[test]
     fn test_parse_rev() {
         assert_eq!(parse_rev("commit:abc").unwrap().0, RevKind::Commit);
         assert_eq!(parse_rev("branch:main").unwrap().0, RevKind::Branch);
         assert_eq!(parse_rev("tag:v1").unwrap().0, RevKind::Tag);
         assert!(parse_rev("main").is_none());
         assert!(parse_rev("commit:").is_none());
+        assert!(parse_rev("other:value").is_none());
     }
 }

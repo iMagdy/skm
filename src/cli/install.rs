@@ -13,6 +13,7 @@ use crate::skill;
 use crate::ui;
 
 const LOCAL_COMMIT: &str = "0000000000000000000000000000000000000000";
+const FALLBACK_SKILLS_LOCATIONS: &str = "skills/, SKILLS/, or .agents/skills/";
 
 #[derive(Debug, Clone, Default)]
 pub struct InstallOptions {
@@ -218,8 +219,10 @@ fn run_bulk_with_fallback(project_root: &Path) -> Result<(), Box<dyn std::error:
         Some(dir) => dir,
         None => {
             return Err(crate::error::DiscoveryError {
-                message: "No skills directory found. Cannot discover skills without a manifest."
-                    .to_string(),
+                message: format!(
+                    "No fallback skill directory found ({}). Cannot discover skills without a manifest.",
+                    FALLBACK_SKILLS_LOCATIONS
+                ),
             }
             .into());
         }
@@ -313,7 +316,11 @@ fn install_discovered_skill(
     // We'll copy it directly instead of cloning
 
     let skill_dir = git::skill_dir(project_root, &skill.name);
-    std::fs::create_dir_all(&skill_dir)?;
+    let source_is_destination =
+        skill.skill_type == SkillType::Directory && paths_are_same(&skill.path, &skill_dir)?;
+    if !source_is_destination {
+        std::fs::create_dir_all(&skill_dir)?;
+    }
 
     pb.set_position(40);
     pb.set_message(format!(
@@ -321,15 +328,17 @@ fn install_discovered_skill(
         ui::skill_name(&skill.name)
     ));
 
-    // Copy the skill from the discovered location
-    match skill.skill_type {
-        SkillType::File => {
-            // Copy the .md file
-            std::fs::copy(&skill.path, skill_dir.join(skill.path.file_name().unwrap()))?;
-        }
-        SkillType::Directory => {
-            // Copy the directory contents
-            copy_dir_recursive(&skill.path, &skill_dir)?;
+    if !source_is_destination {
+        // Copy the skill from the discovered location
+        match skill.skill_type {
+            SkillType::File => {
+                // Copy the .md file
+                std::fs::copy(&skill.path, skill_dir.join(skill.path.file_name().unwrap()))?;
+            }
+            SkillType::Directory => {
+                // Copy the directory contents
+                copy_dir_recursive(&skill.path, &skill_dir)?;
+            }
         }
     }
 
@@ -349,6 +358,14 @@ fn install_discovered_skill(
     ui::success(format!("Installed {}", ui::skill_name(&skill.name)));
 
     Ok(())
+}
+
+fn paths_are_same(left: &Path, right: &Path) -> Result<bool, Box<dyn std::error::Error>> {
+    if !left.exists() || !right.exists() {
+        return Ok(false);
+    }
+
+    Ok(left.canonicalize()? == right.canonicalize()?)
 }
 
 /// Copy directory recursively, skipping .git and other common directories
@@ -590,7 +607,10 @@ fn copy_repo_content_for_install(
 
     let skills_dir =
         discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
-            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+            message: format!(
+                "Source repo has no skills.json and no fallback skill directory ({})",
+                FALLBACK_SKILLS_LOCATIONS
+            ),
         })?;
     let skills = discover_fallback_skill_dirs(&skills_dir)?;
     if skills.is_empty() {
@@ -644,7 +664,10 @@ impl FallbackPrompter for DialoguerFallbackPrompter {
     fn confirm_missing_manifest(&self) -> Result<bool, Box<dyn std::error::Error>> {
         ui::warning("Source repo has no skills.json file.");
         Ok(Confirm::new()
-            .with_prompt("Fetch skill directories from skills/SKILLS if present?")
+            .with_prompt(format!(
+                "Fetch skill directories from {} if present?",
+                FALLBACK_SKILLS_LOCATIONS
+            ))
             .default(false)
             .interact()?)
     }
@@ -831,7 +854,10 @@ fn discover_repo_installables_for_exact(
 
     let skills_dir =
         discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
-            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+            message: format!(
+                "Source repo has no skills.json and no fallback skill directory ({})",
+                FALLBACK_SKILLS_LOCATIONS
+            ),
         })?;
     let fallback = discover_fallback_skill_dirs(&skills_dir)?;
     if fallback.is_empty() {
@@ -981,7 +1007,10 @@ fn discover_repo_installables(
 
     let skills_dir =
         discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
-            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+            message: format!(
+                "Source repo has no skills.json and no fallback skill directory ({})",
+                FALLBACK_SKILLS_LOCATIONS
+            ),
         })?;
     let fallback = discover_fallback_skill_dirs(&skills_dir)?;
     if fallback.is_empty() {
@@ -1471,6 +1500,140 @@ mod tests {
     }
 
     #[test]
+    fn test_copy_repo_content_for_install_uses_manifest_without_prompt() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_manifest");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("skills/docs")).unwrap();
+        std::fs::write(src.join("skills/docs/SKILL.md"), "# Docs").unwrap();
+        std::fs::write(
+            src.join("skills.json"),
+            r#"{"publish": [{"skill": "docs", "path": "skills/docs"}]}"#,
+        )
+        .unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: false,
+            selections: vec![],
+        };
+
+        let result = copy_repo_content_for_install(&src, &dst, None, &prompter);
+
+        assert!(result.is_ok());
+        assert!(dst.join("docs/SKILL.md").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_copy_repo_content_for_install_reports_missing_exact_source_skill() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_missing_exact");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("skills/docs")).unwrap();
+        std::fs::write(src.join("skills/docs/SKILL.md"), "# Docs").unwrap();
+        std::fs::write(
+            src.join("skills.json"),
+            r#"{"publish": [{"skill": "docs", "path": "skills/docs"}]}"#,
+        )
+        .unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = copy_repo_content_for_install(&src, &dst, Some("missing"), &prompter);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("was not found"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_copy_repo_content_for_install_copies_deprecated_exact_source_skill() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_content_deprecated_exact");
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("skills/docs")).unwrap();
+        std::fs::write(src.join("skills/docs/SKILL.md"), "# Docs").unwrap();
+        std::fs::write(
+            src.join("skills.json"),
+            r#"{"publish": [{"skill": "docs", "path": "skills/docs", "deprecated": true}]}"#,
+        )
+        .unwrap();
+        let prompter = FakeFallbackPrompter {
+            confirm: true,
+            selections: vec![],
+        };
+
+        let result = copy_repo_content_for_install(&src, &dst, Some("docs"), &prompter);
+
+        assert!(result.is_ok());
+        assert!(dst.join("SKILL.md").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_install_local_dependency_copies_directory_file_and_self_path() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_local_dependency");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("local/docs")).unwrap();
+        std::fs::write(dir.join("local/docs/SKILL.md"), "# Docs").unwrap();
+        std::fs::write(dir.join("file-skill.md"), "# File").unwrap();
+
+        let dir_result = install_local_dependency(&dir, "docs", "local/docs");
+        let file_result = install_local_dependency(&dir, "file-skill", "file-skill.md");
+        let self_result = install_local_dependency(&dir, "docs", ".agents/skills/docs");
+
+        assert!(dir_result.is_ok());
+        assert!(file_result.is_ok());
+        assert!(self_result.is_ok());
+        assert!(dir.join(".agents/skills/docs/SKILL.md").exists());
+        assert!(dir.join(".agents/skills/file-skill/file-skill.md").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_install_local_dependency_reports_missing_and_existing_destination() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_local_dependency_errors");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/docs")).unwrap();
+        std::fs::create_dir_all(dir.join("local/docs")).unwrap();
+
+        let missing = install_local_dependency(&dir, "missing", "local/missing");
+        let existing = install_local_dependency(&dir, "docs", "local/docs");
+
+        assert!(missing.is_err());
+        assert!(existing.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_copy_installable_path_rejects_missing_file_name() {
+        let dir = std::env::temp_dir().join("ktesio_test_copy_installable_no_file_name");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let result = copy_installable_path(Path::new(""), &dir);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Cannot determine"));
+    }
+
+    #[test]
+    fn test_checkout_manifest_rev_rejects_invalid_rev() {
+        let dir = std::env::temp_dir().join("ktesio_test_checkout_invalid_rev");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let result = checkout_manifest_rev(&dir, "main");
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid rev"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_run_bulk_fallback_no_skills_dir() {
         let dir = std::env::temp_dir().join("ktesio_test_install_fallback_nodir");
         std::fs::create_dir_all(&dir).unwrap();
@@ -1617,6 +1780,64 @@ mod tests {
         std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
         let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
         assert!(result.is_ok());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_with_manifest_skips_existing_unlocked_remote_dependency() {
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_unlocked_remote");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/test")).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {"test": {"repo": "url"}}, "publish": []}"#,
+        )
+        .unwrap();
+
+        let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
+
+        assert!(result.is_ok());
+        assert!(!dir.join("skills.lock").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_with_manifest_installs_local_dependency() {
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_local_dependency");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("local/docs")).unwrap();
+        std::fs::write(dir.join("local/docs/SKILL.md"), "# Docs").unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {"docs": {"path": "local/docs"}}, "publish": []}"#,
+        )
+        .unwrap();
+
+        let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/docs/SKILL.md").exists());
+        let lockfile = Lockfile::load(&dir.join("skills.lock")).unwrap();
+        assert!(lockfile.contains("docs"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_bulk_with_manifest_reports_local_dependency_error() {
+        let dir = std::env::temp_dir().join("ktesio_test_bulk_manifest_local_dependency_error");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {"docs": {"path": "local/missing"}}, "publish": []}"#,
+        )
+        .unwrap();
+
+        let result = run_bulk_with_manifest(&dir, &dir.join("skills.json"));
+
+        assert!(result.is_ok());
+        assert!(!dir.join("skills.lock").exists());
+        assert!(!dir.join(".agents/skills/docs").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -2011,6 +2232,49 @@ mod tests {
     }
 
     #[test]
+    fn test_discover_manifest_installables_accepts_dependency_publish() {
+        let dir = std::env::temp_dir().join("ktesio_test_repo_installables_dependency_publish");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skills/docs")).unwrap();
+        std::fs::write(dir.join("skills/docs/SKILL.md"), "# Docs").unwrap();
+        std::fs::write(
+            dir.join("skills.json"),
+            r#"{"dependencies": {"docs": {"path": "skills/docs"}}, "publish": ["docs"]}"#,
+        )
+        .unwrap();
+
+        let installables = discover_manifest_installables(&dir, &dir.join("skills.json")).unwrap();
+
+        assert_eq!(installables.len(), 1);
+        assert_eq!(installables[0].name, "docs");
+        assert_eq!(installables[0].path, dir.join("skills/docs"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_fallback_skill_dirs_skips_empty_normalized_names() {
+        let dir = std::env::temp_dir().join("ktesio_test_fallback_empty_normalized");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("!!!.md"), "# Empty").unwrap();
+        std::fs::write(dir.join("docs.md"), "# Docs").unwrap();
+
+        let skills = discover_fallback_skill_dirs(&dir).unwrap();
+
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "docs");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_resolve_manifest_entry_keeps_unrecognized_repo() {
+        let resolved = resolve_manifest_entry("not a shorthand", Some("docs".to_string()));
+
+        assert_eq!(resolved.repo, "not a shorthand");
+        assert_eq!(resolved.source_skill.as_deref(), Some("docs"));
+    }
+
+    #[test]
     fn test_discover_repo_installables_for_exact_uses_fallback_dirs() {
         let dir = std::env::temp_dir().join("ktesio_test_repo_installables_exact_fallback");
         let _ = std::fs::remove_dir_all(&dir);
@@ -2254,6 +2518,29 @@ mod tests {
         assert!(manifest.has_skill("source"));
         let lockfile = Lockfile::load(&dir.join("skills.lock")).unwrap();
         assert!(lockfile.contains("source"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_run_repo_target_installs_deprecated_published_skill() {
+        let dir = std::env::temp_dir().join("ktesio_test_run_repo_target_deprecated");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = create_deprecated_local_repo(&dir, "legacy");
+
+        let result = run_repo_target(
+            &dir,
+            repo.to_str().unwrap(),
+            InstallOptions {
+                all: true,
+                ..InstallOptions::default()
+            },
+        );
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/legacy/SKILL.md").exists());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert!(manifest.has_skill("legacy"));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -2524,6 +2811,37 @@ mod tests {
                 "commit",
                 "-m",
                 "initial fixture",
+            ],
+        );
+        repo
+    }
+
+    fn create_deprecated_local_repo(root: &Path, name: &str) -> std::path::PathBuf {
+        let repo = root.join(name);
+        std::fs::create_dir_all(repo.join("skills").join(name)).unwrap();
+        std::fs::write(repo.join("skills").join(name).join("SKILL.md"), "# Legacy").unwrap();
+        std::fs::write(
+            repo.join("skills.json"),
+            format!(
+                r#"{{"publish": [{{"skill": "{}", "path": "skills/{}", "deprecated": true}}]}}"#,
+                name, name
+            ),
+        )
+        .unwrap();
+        run_git(&repo, &["init"]);
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=ktesio tests",
+                "-c",
+                "user.email=ktesio-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "deprecated fixture",
             ],
         );
         repo

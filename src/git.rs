@@ -387,6 +387,44 @@ mod tests {
     }
 
     #[test]
+    fn test_clone_fetch_checkout_and_rev_parse_success() {
+        let root = std::env::temp_dir().join("ktesio_test_git_success_paths");
+        let _ = std::fs::remove_dir_all(&root);
+        let repo = root.join("repo");
+        let clone_dir = root.join("clone");
+        std::fs::create_dir_all(&repo).unwrap();
+        run_git(&repo, &["init", "-b", "main"]);
+        std::fs::write(repo.join("README.md"), "content").unwrap();
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=ktesio tests",
+                "-c",
+                "user.email=ktesio-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "initial",
+            ],
+        );
+
+        let progress = ProgressBar::hidden();
+        let result = clone_with_progress(repo.to_str().unwrap(), &clone_dir, &progress);
+
+        assert!(result.is_ok());
+        assert_eq!(progress.position(), 90);
+        assert_eq!(rev_parse_head(&clone_dir).unwrap().len(), 40);
+        assert_eq!(resolve_default_branch(&clone_dir).unwrap(), "main");
+        assert!(checkout_rev(&clone_dir, "HEAD").is_ok());
+        assert!(checkout_default_branch(&clone_dir).is_ok());
+        assert!(fetch(&clone_dir).is_ok());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
     fn test_fetch_invalid_dir() {
         let dir = std::env::temp_dir().join("ktesio_test_fetch_invalid");
         let result = fetch(&dir);
