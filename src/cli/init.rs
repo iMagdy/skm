@@ -289,6 +289,7 @@ fn is_valid_skill_name(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Command;
 
     #[test]
     fn test_init_new() {
@@ -361,5 +362,196 @@ mod tests {
         assert!(manifest.publish.is_empty());
         assert!(!dir.join("skills.lock").exists());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_init_adopts_remote_lock_entry_without_resolver() {
+        let dir = std::env::temp_dir().join("ktesio_test_init_lock_adopt");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/docs")).unwrap();
+        std::fs::write(
+            dir.join("skills.lock"),
+            r#"{"docs": {"commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "repo": "https://github.com/example/docs.git", "skill": "source-docs"}}"#,
+        )
+        .unwrap();
+
+        let result = run_with_remote_resolver(dir.to_str().unwrap(), |_, _| {
+            panic!("remote resolver should not run for a remote lock entry")
+        });
+
+        assert!(result.is_ok());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert_eq!(
+            manifest.dependencies["docs"].repo.as_deref(),
+            Some("https://github.com/example/docs.git")
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_init_falls_back_to_local_when_remote_commit_is_invalid() {
+        let dir = std::env::temp_dir().join("ktesio_test_init_invalid_remote_commit");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/local")).unwrap();
+
+        let result = run_with_remote_resolver(dir.to_str().unwrap(), |_, _| {
+            Ok(Some(RemoteAdoption {
+                repo: "https://github.com/example/local.git".to_string(),
+                commit: "not-a-commit".to_string(),
+                source_skill: None,
+            }))
+        });
+
+        assert!(result.is_ok());
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert_eq!(
+            manifest.dependencies["local"].path.as_deref(),
+            Some(".agents/skills/local")
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_init_disables_remote_resolution_after_error() {
+        let dir = std::env::temp_dir().join("ktesio_test_init_resolver_error");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills/alpha")).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/beta")).unwrap();
+        let mut calls = 0usize;
+
+        let result = run_with_remote_resolver(dir.to_str().unwrap(), |_, _| {
+            calls += 1;
+            Err("skills.sh unavailable".into())
+        });
+
+        assert!(result.is_ok());
+        assert_eq!(calls, 1);
+        let manifest = Manifest::load(&dir.join("skills.json")).unwrap();
+        assert_eq!(
+            manifest.dependencies["alpha"].path.as_deref(),
+            Some(".agents/skills/alpha")
+        );
+        assert_eq!(
+            manifest.dependencies["beta"].path.as_deref(),
+            Some(".agents/skills/beta")
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_init_skips_files_invalid_names_and_existing_dependencies() {
+        let dir = std::env::temp_dir().join("ktesio_test_init_skips_entries");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".agents/skills")).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/bad name")).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/local")).unwrap();
+        std::fs::write(dir.join(".agents/skills/file.md"), "# File").unwrap();
+        let mut manifest = Manifest::new();
+        let mut lockfile = Lockfile::default();
+        manifest.add_local_dependency("local".to_string(), ".agents/skills/local".to_string());
+
+        let changed =
+            adopt_existing_local_skills(&dir, &mut manifest, &mut lockfile, &mut |_, _| Ok(None))
+                .unwrap();
+
+        assert!(!changed);
+        assert_eq!(manifest.dependencies.len(), 1);
+        assert!(manifest.has_dependency("local"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_init_helpers_match_installable_results_and_sanitize_names() {
+        let results = vec![
+            SkillSearchResult {
+                id: "one".to_string(),
+                name: "one".to_string(),
+                source: "example/one".to_string(),
+                skill: "docs".to_string(),
+                repo: None,
+                installs: 0,
+                url: None,
+                install_target: None,
+                installable: true,
+            },
+            SkillSearchResult {
+                id: "two".to_string(),
+                name: "two".to_string(),
+                source: "example/two".to_string(),
+                skill: "docs".to_string(),
+                repo: Some("https://github.com/example/docs.git".to_string()),
+                installs: 0,
+                url: None,
+                install_target: Some("example/docs".to_string()),
+                installable: true,
+            },
+        ];
+
+        let matched = exact_installable_match("docs", &results).unwrap();
+        assert_eq!(
+            matched.repo.as_deref(),
+            Some("https://github.com/example/docs.git")
+        );
+        assert_eq!(sanitize_temp_name("bad name!"), "bad-name-");
+        assert!(unique_suffix() > 0);
+        assert!(is_valid_commit(&"a".repeat(40)));
+        assert!(!is_valid_commit("short"));
+    }
+
+    #[test]
+    fn test_resolve_remote_head_clones_reads_commit_and_cleans_up() {
+        let dir = std::env::temp_dir().join("ktesio_test_init_resolve_remote_head");
+        let _ = std::fs::remove_dir_all(&dir);
+        let repo = dir.join("repo");
+        std::fs::create_dir_all(&repo).unwrap();
+        std::fs::write(repo.join("README.md"), "fixture").unwrap();
+        run_git(&repo, &["init"]);
+        run_git(&repo, &["add", "."]);
+        run_git(
+            &repo,
+            &[
+                "-c",
+                "user.name=ktesio tests",
+                "-c",
+                "user.email=ktesio-tests@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "initial fixture",
+            ],
+        );
+        let expected = git::rev_parse_head(&repo).unwrap();
+        let progress = ProgressBar::hidden();
+
+        let actual = resolve_remote_head(repo.to_str().unwrap(), "docs", &progress).unwrap();
+
+        assert_eq!(actual, expected);
+        assert_eq!(progress.position(), 95);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_resolve_known_skill_propagates_short_query_error_without_network() {
+        let progress = ProgressBar::hidden();
+
+        let result = resolve_known_skill("x", &progress);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("at least 2"));
+    }
+
+    fn run_git(repo: &Path, args: &[&str]) {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(repo)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 }
