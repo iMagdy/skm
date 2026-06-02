@@ -13,6 +13,7 @@ use crate::skill;
 use crate::ui;
 
 const LOCAL_COMMIT: &str = "0000000000000000000000000000000000000000";
+const FALLBACK_SKILLS_LOCATIONS: &str = "skills/, SKILLS/, or .agents/skills/";
 
 #[derive(Debug, Clone, Default)]
 pub struct InstallOptions {
@@ -218,8 +219,10 @@ fn run_bulk_with_fallback(project_root: &Path) -> Result<(), Box<dyn std::error:
         Some(dir) => dir,
         None => {
             return Err(crate::error::DiscoveryError {
-                message: "No skills directory found. Cannot discover skills without a manifest."
-                    .to_string(),
+                message: format!(
+                    "No fallback skill directory found ({}). Cannot discover skills without a manifest.",
+                    FALLBACK_SKILLS_LOCATIONS
+                ),
             }
             .into());
         }
@@ -313,7 +316,11 @@ fn install_discovered_skill(
     // We'll copy it directly instead of cloning
 
     let skill_dir = git::skill_dir(project_root, &skill.name);
-    std::fs::create_dir_all(&skill_dir)?;
+    let source_is_destination =
+        skill.skill_type == SkillType::Directory && paths_are_same(&skill.path, &skill_dir)?;
+    if !source_is_destination {
+        std::fs::create_dir_all(&skill_dir)?;
+    }
 
     pb.set_position(40);
     pb.set_message(format!(
@@ -321,15 +328,17 @@ fn install_discovered_skill(
         ui::skill_name(&skill.name)
     ));
 
-    // Copy the skill from the discovered location
-    match skill.skill_type {
-        SkillType::File => {
-            // Copy the .md file
-            std::fs::copy(&skill.path, skill_dir.join(skill.path.file_name().unwrap()))?;
-        }
-        SkillType::Directory => {
-            // Copy the directory contents
-            copy_dir_recursive(&skill.path, &skill_dir)?;
+    if !source_is_destination {
+        // Copy the skill from the discovered location
+        match skill.skill_type {
+            SkillType::File => {
+                // Copy the .md file
+                std::fs::copy(&skill.path, skill_dir.join(skill.path.file_name().unwrap()))?;
+            }
+            SkillType::Directory => {
+                // Copy the directory contents
+                copy_dir_recursive(&skill.path, &skill_dir)?;
+            }
         }
     }
 
@@ -349,6 +358,14 @@ fn install_discovered_skill(
     ui::success(format!("Installed {}", ui::skill_name(&skill.name)));
 
     Ok(())
+}
+
+fn paths_are_same(left: &Path, right: &Path) -> Result<bool, Box<dyn std::error::Error>> {
+    if !left.exists() || !right.exists() {
+        return Ok(false);
+    }
+
+    Ok(left.canonicalize()? == right.canonicalize()?)
 }
 
 /// Copy directory recursively, skipping .git and other common directories
@@ -590,7 +607,10 @@ fn copy_repo_content_for_install(
 
     let skills_dir =
         discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
-            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+            message: format!(
+                "Source repo has no skills.json and no fallback skill directory ({})",
+                FALLBACK_SKILLS_LOCATIONS
+            ),
         })?;
     let skills = discover_fallback_skill_dirs(&skills_dir)?;
     if skills.is_empty() {
@@ -644,7 +664,10 @@ impl FallbackPrompter for DialoguerFallbackPrompter {
     fn confirm_missing_manifest(&self) -> Result<bool, Box<dyn std::error::Error>> {
         ui::warning("Source repo has no skills.json file.");
         Ok(Confirm::new()
-            .with_prompt("Fetch skill directories from skills/SKILLS if present?")
+            .with_prompt(format!(
+                "Fetch skill directories from {} if present?",
+                FALLBACK_SKILLS_LOCATIONS
+            ))
             .default(false)
             .interact()?)
     }
@@ -831,7 +854,10 @@ fn discover_repo_installables_for_exact(
 
     let skills_dir =
         discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
-            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+            message: format!(
+                "Source repo has no skills.json and no fallback skill directory ({})",
+                FALLBACK_SKILLS_LOCATIONS
+            ),
         })?;
     let fallback = discover_fallback_skill_dirs(&skills_dir)?;
     if fallback.is_empty() {
@@ -981,7 +1007,10 @@ fn discover_repo_installables(
 
     let skills_dir =
         discovery::find_skills_directory(clone_dir).ok_or_else(|| SkillCopyFailed {
-            message: "Source repo has no skills.json or skills/SKILLS directory".to_string(),
+            message: format!(
+                "Source repo has no skills.json and no fallback skill directory ({})",
+                FALLBACK_SKILLS_LOCATIONS
+            ),
         })?;
     let fallback = discover_fallback_skill_dirs(&skills_dir)?;
     if fallback.is_empty() {

@@ -100,7 +100,7 @@ During install and upgrade, Ktesio shows progress bars for long-running git work
 }
 ```
 
-`dependencies` declares skills this project uses. `publish` declares local skills this repo exposes for other projects to install. Ktesio installs only published paths from source repos; if the source repo has no `skills.json`, it asks before falling back to selectable directories under `skills/` or `SKILLS/`.
+`dependencies` declares skills this project uses. `publish` declares local skills this repo exposes for other projects to install. Ktesio installs only published paths from source repos; if the source repo has no `skills.json`, it asks before falling back to selectable directories under `skills/`, `SKILLS/`, or `.agents/skills/`.
 
 ## Documentation
 

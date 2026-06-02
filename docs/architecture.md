@@ -31,14 +31,14 @@ for each dependency:
   read source skills.json
   copy only selected published paths into a staged install directory
   if source skills.json is missing:
-    ask before discovering directories under skills/ or SKILLS/
+    ask before discovering directories under skills/, SKILLS/, or .agents/skills/
     copy selected directories into the staged install directory
   move staged content into .agents/skills/<name>/
   record HEAD commit in skills.lock after successful copy
 write skills.lock only when entries changed
 ```
 
-When no manifest is present, `kt install` looks for a local `skills/` directory and installs a discovered skill as a fallback.
+When no manifest is present, `kt install` looks for a local `skills/`, `SKILLS/`, or `.agents/skills/` directory and installs a discovered skill as a fallback.
 
 GitHub shorthand such as `owner/repo` is resolved before cloning. For manifest dependencies, the dependency key is the source repo's published skill name.
 

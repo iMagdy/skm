@@ -67,6 +67,42 @@ fn test_install_all_from_repo_without_manifest_installs_fallback_files() {
 }
 
 #[test]
+fn test_install_all_from_repo_without_manifest_discovers_agents_skills() {
+    let ctx = TestContext::new();
+    let repo = create_no_manifest_agents_skill_repo(&ctx.project_dir, "fallback");
+
+    let result = run_kt_command(
+        &["install", "--all", repo.to_str().unwrap()],
+        &ctx.project_dir,
+    );
+
+    assert!(
+        result.is_ok(),
+        "agents fallback install failed: {:?}",
+        result.err()
+    );
+    assert!(ctx.skills_dir().join("agent-skill/SKILL.md").exists());
+}
+
+#[test]
+fn test_install_repo_skill_selects_agents_fallback_skill() {
+    let ctx = TestContext::new();
+    let repo = create_no_manifest_agents_skill_repo(&ctx.project_dir, "fallback");
+
+    let result = run_kt_command(
+        &["install", "--skill", "agent-skill", repo.to_str().unwrap()],
+        &ctx.project_dir,
+    );
+
+    assert!(
+        result.is_ok(),
+        "agents fallback exact install failed: {:?}",
+        result.err()
+    );
+    assert!(ctx.skills_dir().join("agent-skill/SKILL.md").exists());
+}
+
+#[test]
 fn test_list_and_show_json_output() {
     let ctx = TestContext::new();
     let repo = create_multi_publish_repo(&ctx.project_dir, "source");
@@ -175,6 +211,33 @@ fn create_no_manifest_file_skill_repo(root: &Path, name: &str) -> PathBuf {
     let repo = root.join(format!("{name}-repo"));
     std::fs::create_dir_all(repo.join("skills")).unwrap();
     std::fs::write(repo.join("skills/file-skill.md"), "# File Skill").unwrap();
+    run_git(&repo, &["init"]);
+    run_git(&repo, &["add", "."]);
+    run_git(
+        &repo,
+        &[
+            "-c",
+            "user.name=ktesio tests",
+            "-c",
+            "user.email=ktesio-tests@example.com",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            "initial fixture",
+        ],
+    );
+    repo
+}
+
+fn create_no_manifest_agents_skill_repo(root: &Path, name: &str) -> PathBuf {
+    let repo = root.join(format!("{name}-repo"));
+    std::fs::create_dir_all(repo.join(".agents/skills/agent-skill")).unwrap();
+    std::fs::write(
+        repo.join(".agents/skills/agent-skill/SKILL.md"),
+        "# Agent Skill",
+    )
+    .unwrap();
     run_git(&repo, &["init"]);
     run_git(&repo, &["add", "."]);
     run_git(
