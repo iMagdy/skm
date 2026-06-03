@@ -66,4 +66,6 @@ This verifies the release-note generator can handle a first-release style tag wh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_automation.py
 ```
 
-These tests cover Speckit task parsing, safe checkbox pull behavior, GitHub Project ambiguity handling, release asset tables, and workflow expectations.
+These tests cover Speckit task parsing, safe checkbox pull behavior, GitHub
+Project ambiguity handling, release asset tables, installer dry-run decisions,
+and workflow expectations.
