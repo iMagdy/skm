@@ -1,3 +1,8 @@
+---
+title: Architecture
+description: A compact tour of Ktesio's Rust modules, install flow, and file-based project state.
+---
+
 # Architecture
 
 Ktesio is a single-binary Rust CLI. It keeps domain logic small and file-based so users can understand and repair project state manually when needed.

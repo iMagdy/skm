@@ -1,3 +1,8 @@
+---
+title: Testing
+description: Required checks, integration fixtures, coverage gates, and documentation validation for Ktesio contributors.
+---
+
 # Testing
 
 The test suite covers unit behavior, CLI workflows, and local git fixtures.

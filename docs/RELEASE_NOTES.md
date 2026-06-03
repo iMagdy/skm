@@ -1,3 +1,8 @@
+---
+title: Release Notes
+description: Generated release summaries, asset tables, checksums, and changes for published Ktesio versions.
+---
+
 # Release Notes
 
 Release notes are generated when a version tag is published.

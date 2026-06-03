@@ -1,3 +1,8 @@
+---
+title: Getting Started
+description: Build Ktesio from source and run the local skill manifest workflow end to end.
+---
+
 # Quickstart
 
 This guide gets Ktesio running from source and shows the full local workflow.

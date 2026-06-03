@@ -1,0 +1,30 @@
+import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
+
+const files = [
+  'README.md',
+  'get-started.md',
+  'installation.md',
+  'troubleshooting.md',
+  'commands.md',
+  'manifest.md',
+  'lockfile.md',
+  'architecture.md',
+  'testing.md',
+  'contributing.md',
+  'release-process.md',
+  'github-project-sync.md',
+  'github-repository-audit-checklist.md',
+  'RELEASE_NOTES.md',
+];
+
+export const docs = defineDocs({
+  dir: '.',
+  docs: {
+    files,
+  },
+  meta: {
+    files: ['meta.json'],
+  },
+});
+
+export default defineConfig();

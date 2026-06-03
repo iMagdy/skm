@@ -1,3 +1,8 @@
+---
+title: Contributing Guide
+description: Development setup, contribution workflow, pull request expectations, and docs update guidance.
+---
+
 # Contributing Guide
 
 This page is the hands-on development guide. For project rules and DCO details, see [../CONTRIBUTING.md](../CONTRIBUTING.md).
@@ -26,7 +31,7 @@ python3 scripts/check_docs.py
 - Add or update a module under `src/cli/`.
 - Add unit tests for command logic with explicit project roots.
 - Add integration tests under `tests/` for user-facing workflows.
-- Update [commands.md](commands.md) and [quickstart.md](quickstart.md) when behavior changes.
+- Update [commands.md](commands.md) and [get-started.md](get-started.md) when behavior changes.
 
 ## Test Fixtures
 

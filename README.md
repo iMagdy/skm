@@ -122,7 +122,7 @@ During install and upgrade, Ktesio shows progress bars for long-running git work
 
 ## Documentation
 
-- [Quickstart](docs/quickstart.md)
+- [Getting started](docs/get-started.md)
 - [Installation](docs/installation.md)
 - [Command reference](docs/commands.md)
 - [Manifest format](docs/manifest.md)

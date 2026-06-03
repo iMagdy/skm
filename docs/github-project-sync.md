@@ -1,3 +1,8 @@
+---
+title: GitHub Project Sync
+description: Sync Speckit stories and tasks into GitHub issues and project items with dry-run safety.
+---
+
 # GitHub Project Sync
 
 Speckit story and task files can be synced to GitHub issues and the GitHub Project titled Ktesio.

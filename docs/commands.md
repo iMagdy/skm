@@ -1,3 +1,8 @@
+---
+title: Command Reference
+description: Every kt command, its expected arguments, and the workflows each command supports.
+---
+
 # Command Reference
 
 All commands support `--help`. `kt --version` prints the package version.

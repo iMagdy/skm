@@ -1,3 +1,8 @@
+---
+title: Manifest Format
+description: The skills.json shape for declaring installed skill dependencies and published local skills.
+---
+
 # Manifest Format
 
 `skills.json` is the project manifest. It declares skill dependencies this project uses and local skills this repo publishes for others.

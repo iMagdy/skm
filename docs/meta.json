@@ -1,0 +1,24 @@
+{
+  "title": "Ktesio",
+  "pages": [
+    "README",
+    "---Start Here---",
+    "get-started",
+    "installation",
+    "troubleshooting",
+    "---Reference---",
+    "commands",
+    "manifest",
+    "lockfile",
+    "---Internals---",
+    "architecture",
+    "---Project Workflows---",
+    "testing",
+    "contributing",
+    "release-process",
+    "github-project-sync",
+    "github-repository-audit-checklist",
+    "---Release Notes---",
+    "RELEASE_NOTES"
+  ]
+}

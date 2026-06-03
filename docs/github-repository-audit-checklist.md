@@ -1,3 +1,8 @@
+---
+title: GitHub Repository Audit Checklist
+description: Repository hardening checks and evidence for the public Ktesio GitHub project.
+---
+
 # GitHub Repository Audit Checklist
 
 Status date: 2026-05-31.

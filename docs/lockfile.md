@@ -1,3 +1,8 @@
+---
+title: Lockfile Format
+description: How skills.lock records exact skill sources, commits, and reproducible install state.
+---
+
 # Lockfile Format
 
 `skills.lock` records the exact source and commit for installed skills.

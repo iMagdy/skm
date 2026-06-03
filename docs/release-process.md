@@ -1,3 +1,8 @@
+---
+title: Release Process
+description: How Ktesio release tags build binaries, publish crates, update Homebrew, and refresh release documentation.
+---
+
 # Release Process
 
 Ktesio releases are driven by git tags.

@@ -1,3 +1,8 @@
+---
+title: Troubleshooting
+description: Common Ktesio setup, git, install, upgrade, and release-doc issues with practical fixes.
+---
+
 # Troubleshooting
 
 ## `skills.json` Not Found

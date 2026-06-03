@@ -1,3 +1,8 @@
+---
+title: Installation
+description: Install Ktesio on macOS, Linux, or Windows with the hosted installer, Homebrew, Cargo, release archives, or source builds.
+---
+
 # Installation
 
 Ktesio is a Rust CLI. It works on macOS, Linux, and Windows as long as `git` is available on `PATH`.
@@ -117,5 +122,5 @@ Set `KTESIO_NO_UPDATE_CHECK=1` to skip automatic update checks.
 
 ## Next Steps
 
-- [Quickstart](quickstart.md)
+- [Getting started](get-started.md)
 - [Command reference](commands.md)

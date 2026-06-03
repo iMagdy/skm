@@ -1,10 +1,17 @@
+---
+title: Ktesio
+description: Share, install, and manage reusable agent skills from a tiny Rust CLI.
+---
+
 # Ktesio Documentation
+
+![Ktesio banner: Share, install, and manage agent skills](assets/ktesio-banner.jpg)
 
 Welcome to the Ktesio docs. These pages explain how to install, use, contribute to, test, and release the skills package manager.
 
 ## Start Here
 
-- [Quickstart](quickstart.md)
+- [Getting started](get-started.md)
 - [Installation](installation.md)
 - [Command reference](commands.md)
 
