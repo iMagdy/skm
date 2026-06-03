@@ -93,6 +93,22 @@ brew install imagdy/tap/ktesio
 
 The formula installs the prebuilt macOS or Linux release archive for your platform.
 
+## Updating Ktesio
+
+Ktesio checks GitHub Releases through an hourly cache when a subcommand runs. If a
+newer release is available, it prints a small stderr notice that asks you to run:
+
+```bash
+kt self-update
+```
+
+`kt self-update` preserves the current install channel automatically. Homebrew
+installs upgrade with Homebrew, Cargo installs upgrade with Cargo, and manual
+release installs download the latest GitHub Release archive, verify its
+`.sha256` checksum, and replace the current binary.
+
+Set `KTESIO_NO_UPDATE_CHECK=1` to skip automatic update checks.
+
 ## Platform Notes
 
 - macOS may require Xcode Command Line Tools when building from source.

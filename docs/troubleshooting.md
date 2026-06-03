@@ -87,6 +87,45 @@ Choose a different install directory and make sure it appears before the other
 `kt` command on `PATH`, or remove the conflicting command if it is no longer
 needed.
 
+## Update Check Is Unavailable Or Unwanted
+
+Ktesio checks GitHub Releases through an hourly cache before running subcommands.
+Network failures, cache write failures, and unexpected release responses are
+ignored so the requested command can continue.
+
+If you do not want automatic update checks, run commands with:
+
+```bash
+KTESIO_NO_UPDATE_CHECK=1 kt list
+```
+
+Ktesio also skips automatic update checks when `CI=true`.
+
+## Self Update Fails
+
+`kt self-update` is an explicit update action, so it reports failures instead of
+ignoring them.
+
+For Homebrew or Cargo installs, re-run the underlying package manager command to
+see full diagnostics:
+
+```bash
+brew upgrade imagdy/tap/ktesio
+cargo install ktesio --force
+```
+
+For manual installs, Ktesio downloads the latest release archive and its
+`.sha256` file from GitHub Releases. Retry the command if the download was
+interrupted. If checksum verification keeps failing, download the archive and
+checksum from [GitHub Releases](https://github.com/iMagdy/ktesio/releases) and
+compare them locally before replacing the binary.
+
+If your platform does not have a prebuilt release archive, install with Cargo:
+
+```bash
+cargo install ktesio --force
+```
+
 ## Search Is Rate Limited Or Unavailable
 
 `kt search` uses skills.sh for discovery only. If skills.sh returns a rate limit or temporary service failure, Ktesio retries automatically up to 3 total attempts and prints messages such as:

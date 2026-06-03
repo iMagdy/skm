@@ -92,6 +92,7 @@ During install and upgrade, Ktesio shows progress bars for long-running git work
 | `kt publish` | Publish local skills from this repo |
 | `kt publish add <name> <path>` | Add or update one published local skill |
 | `kt upgrade` | Fetch latest commits for installed skills |
+| `kt self-update` | Update the kt command itself |
 | `kt list` | Show installed, missing, and orphaned skills |
 | `kt show <name>` | Show one skill's repo, commit, path, and status |
 | `kt doctor` | Validate manifest, lockfile, installed files, and git state |

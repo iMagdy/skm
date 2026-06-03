@@ -2,6 +2,39 @@
 
 All commands support `--help`. `kt --version` prints the package version.
 
+## Update Checks
+
+When a `kt` subcommand runs, Ktesio checks whether a newer GitHub Release is
+available. The check uses an hourly cache, so repeated commands only contact
+GitHub after the cached result is at least one hour old.
+
+If an update is available, Ktesio prints a short notice to stderr that asks you
+to run `kt self-update`. Machine-readable JSON output on stdout remains
+unchanged.
+
+Disable automatic update checks with:
+
+```bash
+KTESIO_NO_UPDATE_CHECK=1 kt list
+```
+
+## `kt self-update`
+
+Update the `kt` binary itself.
+
+```bash
+kt self-update
+```
+
+Behavior:
+
+- Detects the current install channel automatically.
+- Uses `brew upgrade imagdy/tap/ktesio` for Homebrew installs.
+- Uses `cargo install ktesio --force` for Cargo installs.
+- Downloads, verifies, extracts, and replaces the current binary for manual release installs.
+- Fails with an actionable Cargo install recommendation when no prebuilt binary exists for the current platform.
+- Skips the passive update notice while the explicit update command is running.
+
 ## `kt search <query>`
 
 Search public skill listings from skills.sh.

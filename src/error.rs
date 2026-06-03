@@ -126,3 +126,10 @@ pub struct DoctorUnhealthy {
 pub struct SearchFailed {
     pub message: String,
 }
+
+#[derive(Error, Diagnostic, Debug)]
+#[error("{}", message)]
+#[diagnostic(code(ktesio::self_update::failed))]
+pub struct SelfUpdateFailed {
+    pub message: String,
+}

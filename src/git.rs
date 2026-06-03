@@ -467,6 +467,22 @@ mod tests {
     }
 
     #[test]
+    fn test_checkout_rev_reports_bad_revision() {
+        let dir = std::env::temp_dir().join("ktesio_test_checkout_bad_rev");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        run_git(&dir, &["init", "-b", "main"]);
+
+        let result = checkout_rev(&dir, "not-a-real-revision");
+
+        assert!(result.is_err());
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains("not-a-real-revision"));
+        assert!(message.contains("git checkout"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_clone_to_existing_dir() {
         let dir = std::env::temp_dir().join("ktesio_test_clone_existing");
         std::fs::create_dir_all(&dir).unwrap();

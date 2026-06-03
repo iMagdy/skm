@@ -107,6 +107,7 @@ pub fn run_kt_command_output(args: &[&str], working_dir: &Path) -> Result<KtComm
     let output = Command::new(env!("CARGO_BIN_EXE_kt"))
         .args(args)
         .current_dir(working_dir)
+        .env("KTESIO_NO_UPDATE_CHECK", "1")
         .output()
         .map_err(|e| format!("Failed to execute kt: {}", e))?;
 
