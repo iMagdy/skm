@@ -71,7 +71,7 @@ where
     }
 
     if !options.json {
-        ui::info("Searching skills.sh public listings (rate-limited, with retries).");
+        ui::info("Searching Ktesio skill listings (cached, rate-limited, with retries).");
     }
 
     let mut notify = |message| ui::warning(message);
@@ -220,6 +220,9 @@ mod tests {
             url: Some(format!("https://skills.sh/example/repo/{name}")),
             install_target: install_target.map(str::to_string),
             installable: install_target.is_some(),
+            stars: None,
+            description: None,
+            updated_at: None,
         }
     }
 

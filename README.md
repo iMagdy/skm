@@ -85,7 +85,7 @@ During install and upgrade, Ktesio shows progress bars for long-running git work
 | Command | Purpose |
 |---------|---------|
 | `kt init <path>` | Create `skills.json` in a project |
-| `kt search <query>` | Search public skill listings from skills.sh |
+| `kt search <query>` | Search public skill listings through Ktesio search |
 | `kt install` | Install every dependency declared in `skills.json` |
 | `kt install <name:repo>` | Add and install one skill |
 | `kt install --all <repo>` | Install all published skills from one repo |
@@ -140,7 +140,7 @@ Ktesio is early, useful, and intentionally conservative. The current package for
 
 ## Thanks
 
-Thank you to [Skills.sh](https://www.skills.sh/) for providing public skill search, and to [Vercel](https://vercel.com/) for making Skills.sh available to everyone for free.
+Thank you to [SkillsMP](https://skillsmp.com/) for skill search data and to [Skills.sh](https://www.skills.sh/) for the fallback public listings that help keep discovery resilient.
 
 ## License
 

@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ktesio-search-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.05
+  },
+  "routes": [
+    {
+      "pattern": "api.ktesio.dev/search-skills*",
+      "zone_name": "ktesio.dev"
+    }
+  ],
+  "vars": {
+    "SKILLSMP_SEARCH_URL": "https://skillsmp.com/api/v1/skills/search",
+    "SKILLS_SH_SEARCH_URL": "https://www.skills.sh/api/search",
+    "UPSTREAM_DAILY_CAP": "450",
+    "UPSTREAM_MINUTE_CAP": "25"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SEARCH_CACHE",
+      "id": "__SEARCH_CACHE_KV_ID__"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ktesio-search-index",
+      "database_id": "__SKILLS_INDEX_D1_ID__",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "UPSTREAM_BUDGET",
+        "class_name": "UpstreamBudget"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["UpstreamBudget"]
+    }
+  ]
+}

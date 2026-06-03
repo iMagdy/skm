@@ -1,0 +1,19 @@
+{
+  "name": "ktesio-search-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "prepare:config": "node scripts/write-wrangler-config.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260603.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14",
+    "wrangler": "^4.54.0"
+  }
+}

@@ -56,7 +56,7 @@ kt search tests
 kt search tests --install
 ```
 
-Search uses skills.sh for discovery and still installs by cloning git repositories. Ktesio respects skills.sh rate limits with bounded retries.
+Search uses Ktesio's cached public API for discovery and still installs by cloning git repositories. The hosted API uses SkillsMP as its primary backfill source and Skills.sh only as fallback.
 
 Or edit `skills.json` manually and run:
 
