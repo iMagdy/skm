@@ -4,6 +4,32 @@ Release notes are generated when a version tag is published.
 
 The tag workflow updates the GitHub Release immediately and then opens a pull request that refreshes this file and the root `CHANGELOG.md`.
 
+## v0.4.0
+
+Comparison: [v0.3.1...v0.4.0](https://github.com/iMagdy/ktesio/compare/v0.3.1...v0.4.0)
+
+| Platform | Target | Archive | Checksum |
+|----------|--------|---------|----------|
+| macOS Intel | `x86_64-apple-darwin` | [ktesio-v0.4.0-x86_64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-x86_64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-x86_64-apple-darwin.tar.gz.sha256) |
+| macOS Apple Silicon | `aarch64-apple-darwin` | [ktesio-v0.4.0-aarch64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-aarch64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-aarch64-apple-darwin.tar.gz.sha256) |
+| Windows x64 | `x86_64-pc-windows-msvc` | [ktesio-v0.4.0-x86_64-pc-windows-msvc.zip](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-x86_64-pc-windows-msvc.zip) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-x86_64-pc-windows-msvc.zip.sha256) |
+| Linux x64 | `x86_64-unknown-linux-gnu` | [ktesio-v0.4.0-x86_64-unknown-linux-gnu.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-x86_64-unknown-linux-gnu.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-x86_64-unknown-linux-gnu.tar.gz.sha256) |
+| All | checksums | [ktesio-v0.4.0-checksums.txt](https://github.com/iMagdy/ktesio/releases/download/v0.4.0/ktesio-v0.4.0-checksums.txt) | - |
+
+### Features
+
+- add update notice and self-update (#34) ([5fcfb60](https://github.com/iMagdy/ktesio/commit/5fcfb60))
+- add hosted installers (#36) ([2fe0f82](https://github.com/iMagdy/ktesio/commit/2fe0f82))
+
+### Documentation
+
+- update release notes for v0.3.1 (#32) ([6f50c2e](https://github.com/iMagdy/ktesio/commit/6f50c2e))
+
+### Maintenance
+
+- bump version to 0.4.0 ([580dfa1](https://github.com/iMagdy/ktesio/commit/580dfa1))
+- add kt-release skill ([ff17e29](https://github.com/iMagdy/ktesio/commit/ff17e29))
+
 ## v0.3.1
 
 Comparison: [v0.3.0...v0.3.1](https://github.com/iMagdy/ktesio/compare/v0.3.0...v0.3.1)
