@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "kt-release": {
+      "path": ".agents/skills/kt-release"
+    }
+  },
+  "publish": []
+}

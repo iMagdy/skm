@@ -1,0 +1,4 @@
+interface:
+  display_name: "KT Release"
+  short_description: "Prepare and tag Ktesio releases"
+  default_prompt: "Use $kt-release to prepare and start a Ktesio release."
