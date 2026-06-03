@@ -4,8 +4,48 @@ Ktesio is a Rust CLI. It works on macOS, Linux, and Windows as long as `git` is 
 
 ## Prerequisites
 
-- Rust 2021 toolchain or newer from [rustup](https://rustup.rs/)
 - Git
+
+Rust is only required when installing through Cargo or from source.
+
+## Install with the Installer
+
+On macOS or Linux:
+
+```bash
+curl -fsSL https://cli.ktesio.dev/install.sh | sh
+```
+
+On Windows with PowerShell:
+
+```powershell
+irm https://cli.ktesio.dev/install.ps1 | iex
+```
+
+The installer preserves an existing Ktesio install channel when it can:
+
+- Homebrew installs are updated with `brew upgrade imagdy/tap/ktesio`.
+- Cargo installs are updated with `cargo install ktesio --force`.
+- Manual binary installs are replaced in their existing writable directory.
+
+For new macOS and Linux installs, the installer prefers Homebrew, then Cargo,
+then a prebuilt GitHub Release binary. For new Windows installs, it prefers
+Cargo, then a prebuilt GitHub Release binary.
+
+Installer overrides:
+
+```bash
+KTESIO_INSTALL_METHOD=binary curl -fsSL https://cli.ktesio.dev/install.sh | sh
+KTESIO_INSTALL_DIR="$HOME/.local/bin" curl -fsSL https://cli.ktesio.dev/install.sh | sh
+KTESIO_INSTALL_DRY_RUN=1 curl -fsSL https://cli.ktesio.dev/install.sh | sh
+```
+
+`KTESIO_INSTALL_METHOD` accepts `auto`, `brew`, `cargo`, or `binary` on macOS
+and Linux. Windows accepts `auto`, `cargo`, or `binary`.
+
+The installer does not install Homebrew, Rust, Cargo, Git, or shell profile
+entries. If it installs a binary into a directory that is not on `PATH`, it
+prints the directory to add.
 
 ## Install from Source
 

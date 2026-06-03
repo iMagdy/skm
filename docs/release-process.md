@@ -75,6 +75,35 @@ Configure these repository settings before publishing a tag:
 
 The generated formula installs the prebuilt macOS or Linux archive for the user's platform and declares `git` as a runtime dependency.
 
+## Installer Hosting
+
+The public installer files live under:
+
+```text
+scripts/public/
+```
+
+Cloudflare Pages should serve only that isolated directory, not the full
+automation-focused `scripts/` directory.
+
+Pages configuration:
+
+- Project: `ktesio-cli`
+- Repository: `iMagdy/ktesio`
+- Production branch: `main`
+- Build command: `exit 0`
+- Output directory: `scripts/public`
+- Custom domain: `cli.ktesio.dev`
+
+Use Cloudflare Pages Git integration for this project so deployments track the
+repository. The installer endpoint should be configured through the Pages
+custom-domain flow before relying on DNS records alone.
+
+The installer binary fallback resolves the latest GitHub Release, downloads the
+matching archive and `.sha256` file, verifies the checksum, and installs `kt`.
+Keep the asset names below stable or update `scripts/public/install.sh`,
+`scripts/public/install.ps1`, and the installer tests in the same change.
+
 ## Local Dry Run
 
 Generate release notes without publishing anything:

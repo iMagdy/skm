@@ -23,6 +23,70 @@ Check that:
 
 If you need full git diagnostics, run the equivalent `git clone <repo-url>` manually from the same shell.
 
+## Installer Cannot Find `kt` After Installing
+
+When the installer uses a prebuilt binary, it installs into the detected manual
+install directory, `KTESIO_INSTALL_DIR`, or a user-local default directory. If
+that directory is not on `PATH`, the installer prints a warning with the exact
+directory to add.
+
+Run a dry run to see the selected path without installing:
+
+```bash
+KTESIO_INSTALL_DRY_RUN=1 curl -fsSL https://cli.ktesio.dev/install.sh | sh
+```
+
+Then either add the printed directory to `PATH` or choose an existing directory:
+
+```bash
+KTESIO_INSTALL_DIR="$HOME/.local/bin" curl -fsSL https://cli.ktesio.dev/install.sh | sh
+```
+
+## Installer Reports an Unsupported OS or Architecture
+
+The prebuilt binary fallback supports macOS Intel, macOS Apple Silicon, Linux
+x64, and Windows x64. Other platforms should install with Cargo:
+
+```bash
+cargo install ktesio --force
+```
+
+If Cargo is unavailable, install Rust from [rustup](https://rustup.rs/) first.
+
+## Installer Checksum Verification Fails
+
+The binary installer downloads both the release archive and its `.sha256` file
+from GitHub Releases. A checksum mismatch usually means the download was
+interrupted, cached incorrectly, or replaced by a network proxy.
+
+Retry the installer. If the error repeats, download the archive and checksum
+from [GitHub Releases](https://github.com/iMagdy/ktesio/releases) directly and
+compare them locally before installing.
+
+## Installer Package Manager Step Fails
+
+When Homebrew or Cargo is available, the installer lets that package manager do
+the install or upgrade. Re-run the printed command directly to see full package
+manager diagnostics:
+
+```bash
+brew install imagdy/tap/ktesio
+cargo install ktesio --force
+```
+
+Use `KTESIO_INSTALL_METHOD=binary` to bypass Homebrew and Cargo and install the
+prebuilt binary instead.
+
+## Installer Refuses to Overwrite `kt`
+
+The installer checks `kt --version` before replacing an existing `kt` command.
+If the command is not Ktesio, the installer stops rather than overwrite another
+tool with the same name.
+
+Choose a different install directory and make sure it appears before the other
+`kt` command on `PATH`, or remove the conflicting command if it is no longer
+needed.
+
 ## Search Is Rate Limited Or Unavailable
 
 `kt search` uses skills.sh for discovery only. If skills.sh returns a rate limit or temporary service failure, Ktesio retries automatically up to 3 total attempts and prints messages such as:

@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -198,6 +200,155 @@ class ReleaseDocsTests(unittest.TestCase):
 
         self.assertIn("needs: [fmt, clippy, test, build, docs]", ci)
         self.assertIn("cargo tarpaulin --fail-under 95", ci)
+
+
+class InstallerScriptTests(unittest.TestCase):
+    def run_install_sh(
+        self,
+        env: dict[str, str],
+        *,
+        expect_success: bool = True,
+    ) -> subprocess.CompletedProcess[str]:
+        script = release_docs.ROOT / "scripts" / "public" / "install.sh"
+        merged_env = os.environ.copy()
+        merged_env.update(
+            {
+                "KTESIO_INSTALL_DRY_RUN": "1",
+                "KTESIO_INSTALL_TEST_KT_PATH": "",
+                "KTESIO_INSTALL_TEST_HAS_BREW": "0",
+                "KTESIO_INSTALL_TEST_HAS_CARGO": "0",
+                "KTESIO_INSTALL_TEST_OS": "Linux",
+                "KTESIO_INSTALL_TEST_ARCH": "x86_64",
+                "CARGO_HOME": "",
+            }
+        )
+        merged_env.update(env)
+
+        result = subprocess.run(
+            ["sh", str(script)],
+            cwd=release_docs.ROOT,
+            env=merged_env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        if expect_success:
+            self.assertEqual(
+                0,
+                result.returncode,
+                result.stdout + result.stderr,
+            )
+        else:
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+
+        return result
+
+    def fake_kt(self, directory: Path, output: str = "kt 1.2.3") -> Path:
+        path = directory / "kt"
+        path.write_text(f"#!/bin/sh\nprintf '%s\\n' '{output}'\n", encoding="utf-8")
+        path.chmod(0o755)
+        return path
+
+    def test_install_sh_prefers_homebrew_for_new_installs(self) -> None:
+        result = self.run_install_sh({"KTESIO_INSTALL_TEST_HAS_BREW": "1"})
+
+        self.assertIn("DRY RUN: brew install imagdy/tap/ktesio", result.stdout)
+
+    def test_install_sh_uses_cargo_when_homebrew_is_unavailable(self) -> None:
+        result = self.run_install_sh({"KTESIO_INSTALL_TEST_HAS_CARGO": "1"})
+
+        self.assertIn("DRY RUN: cargo install ktesio --force", result.stdout)
+
+    def test_install_sh_uses_prebuilt_binary_without_package_managers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.run_install_sh({"HOME": tmp})
+
+        self.assertIn(
+            "DRY RUN: install prebuilt x86_64-unknown-linux-gnu",
+            result.stdout,
+        )
+
+    def test_install_sh_updates_existing_homebrew_install(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            kt_path = self.fake_kt(Path(tmp))
+            result = self.run_install_sh(
+                {
+                    "KTESIO_INSTALL_TEST_KT_PATH": str(kt_path),
+                    "KTESIO_INSTALL_TEST_BREW_INSTALLED": "1",
+                    "KTESIO_INSTALL_TEST_HAS_BREW": "1",
+                }
+            )
+
+        self.assertIn("DRY RUN: brew upgrade imagdy/tap/ktesio", result.stdout)
+
+    def test_install_sh_updates_existing_cargo_install(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            cargo_bin = home / ".cargo" / "bin"
+            cargo_bin.mkdir(parents=True)
+            kt_path = self.fake_kt(cargo_bin)
+            result = self.run_install_sh(
+                {
+                    "HOME": str(home),
+                    "KTESIO_INSTALL_TEST_KT_PATH": str(kt_path),
+                    "KTESIO_INSTALL_TEST_HAS_CARGO": "1",
+                }
+            )
+
+        self.assertIn("DRY RUN: cargo install ktesio --force", result.stdout)
+
+    def test_install_sh_replaces_existing_manual_install(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = Path(tmp) / "bin"
+            bin_dir.mkdir()
+            kt_path = self.fake_kt(bin_dir)
+            result = self.run_install_sh(
+                {
+                    "KTESIO_INSTALL_TEST_KT_PATH": str(kt_path),
+                    "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+                }
+            )
+
+        self.assertIn(f"to {kt_path}", result.stdout)
+
+    def test_install_sh_rejects_unwritable_manual_install_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = Path(tmp) / "bin"
+            bin_dir.mkdir()
+            kt_path = self.fake_kt(bin_dir)
+            bin_dir.chmod(0o555)
+            try:
+                result = self.run_install_sh(
+                    {"KTESIO_INSTALL_TEST_KT_PATH": str(kt_path)},
+                    expect_success=False,
+                )
+            finally:
+                bin_dir.chmod(0o755)
+
+        output = result.stdout + result.stderr
+        self.assertIn("is not writable", output)
+        self.assertIn("KTESIO_INSTALL_DIR", output)
+
+    def test_install_sh_rejects_unsupported_binary_target_without_cargo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.run_install_sh(
+                {"HOME": tmp, "KTESIO_INSTALL_TEST_ARCH": "aarch64"},
+                expect_success=False,
+            )
+
+        self.assertIn("No prebuilt Ktesio binary is available", result.stderr)
+
+    def test_install_sh_refuses_non_ktesio_kt_conflict(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            kt_path = self.fake_kt(Path(tmp), "not ktesio")
+            result = self.run_install_sh(
+                {"KTESIO_INSTALL_TEST_KT_PATH": str(kt_path)},
+                expect_success=False,
+            )
+
+        self.assertIn("Refusing to overwrite non-Ktesio kt", result.stderr)
 
 
 if __name__ == "__main__":

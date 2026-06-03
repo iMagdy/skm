@@ -21,13 +21,30 @@ Ktesio is a tiny Rust CLI for installing and sharing agent skills. It makes reus
 
 ## 60-Second Quickstart
 
-Install Ktesio with Cargo if you already have Rust:
+Install Ktesio on macOS or Linux:
+
+```bash
+curl -fsSL https://cli.ktesio.dev/install.sh | sh
+```
+
+Install Ktesio on Windows with PowerShell:
+
+```powershell
+irm https://cli.ktesio.dev/install.ps1 | iex
+```
+
+The installer preserves existing Ktesio install channels when it can. New
+macOS and Linux installs prefer Homebrew, then Cargo, then a prebuilt GitHub
+Release binary. New Windows installs prefer Cargo, then a prebuilt GitHub
+Release binary.
+
+If you already have Rust, you can also install from crates.io:
 
 ```bash
 cargo install ktesio
 ```
 
-Or with Homebrew:
+Or install with Homebrew:
 
 ```bash
 brew install imagdy/tap/ktesio
