@@ -63,7 +63,7 @@ Each dependency must declare exactly one of `repo` or `path`.
 }
 ```
 
-When `.agents/skills/` already contains installed skills, `kt init` adopts those directories into `dependencies`. Known public skills are recorded as remote dependencies when they can be resolved through an existing lock entry or an exact skills.sh match; unmatched custom skills are recorded as local path dependencies. Adopted skills are not added to `publish` automatically.
+When `.agents/skills/` already contains installed skills, `kt init` adopts those directories into `dependencies`. Known public skills are recorded as remote dependencies when they can be resolved through an existing lock entry or an exact Ktesio search match; unmatched custom skills are recorded as local path dependencies. Adopted skills are not added to `publish` automatically.
 
 ## Dependency Example
 

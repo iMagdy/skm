@@ -128,17 +128,17 @@ cargo install ktesio --force
 
 ## Search Is Rate Limited Or Unavailable
 
-`kt search` uses skills.sh for discovery only. If skills.sh returns a rate limit or temporary service failure, Ktesio retries automatically up to 3 total attempts and prints messages such as:
+`kt search` uses Ktesio's hosted search API for discovery only. If the API returns a rate limit or temporary service failure, Ktesio retries automatically up to 3 total attempts and prints messages such as:
 
 ```text
-skills.sh rate limit reached; retrying in 12s (attempt 2/3).
+Ktesio search API rate limit reached; retrying in 12s (attempt 2/3).
 ```
 
-If all attempts fail, retry later, search less frequently, or configure `KTESIO_SKILLS_SH_API_KEY` after receiving skills.sh API access. Ktesio avoids unbounded retry loops so it can use the public API responsibly.
+If all attempts fail, retry later or search less frequently. Development builds can use `KTESIO_SEARCH_API_URL` to point at a local or staging-compatible endpoint.
 
 ## Search Result Is Not Installable
 
-Search results from non-GitHub sources are shown as `not installable yet`. Ktesio currently uses skills.sh for discovery and still installs by cloning git repositories.
+Search results from non-GitHub sources are shown as `not installable yet`. Ktesio uses hosted search for discovery and still installs by cloning git repositories.
 
 ## Skill Is Listed as Missing
 

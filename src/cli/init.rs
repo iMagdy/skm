@@ -193,7 +193,10 @@ fn resolve_known_skill(
     progress: &ProgressBar,
 ) -> Result<Option<RemoteAdoption>, Box<dyn std::error::Error>> {
     progress.set_position(10);
-    progress.set_message(format!("Looking up {} on skills.sh", ui::skill_name(name)));
+    progress.set_message(format!(
+        "Looking up {} in Ktesio search",
+        ui::skill_name(name)
+    ));
 
     let mut notify = |message| progress.println(ui::warning_text(message));
     let results = skills_sh::search(name, 10, &mut notify)?;
@@ -421,7 +424,7 @@ mod tests {
 
         let result = run_with_remote_resolver(dir.to_str().unwrap(), |_, _| {
             calls += 1;
-            Err("skills.sh unavailable".into())
+            Err("Ktesio search unavailable".into())
         });
 
         assert!(result.is_ok());
@@ -473,6 +476,9 @@ mod tests {
                 url: None,
                 install_target: None,
                 installable: true,
+                stars: None,
+                description: None,
+                updated_at: None,
             },
             SkillSearchResult {
                 id: "two".to_string(),
@@ -484,6 +490,9 @@ mod tests {
                 url: None,
                 install_target: Some("example/docs".to_string()),
                 installable: true,
+                stars: None,
+                description: None,
+                updated_at: None,
             },
         ];
 

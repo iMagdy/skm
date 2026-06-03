@@ -49,10 +49,10 @@ Examples:
 
 const SEARCH_AFTER_HELP: &str = "\
 Details:
-  Searches skills.sh for public skill listings and prints install targets that
-  Ktesio can clone from git. Ktesio uses the skills.sh public API responsibly,
-  respects rate limits with bounded retries, and will use the documented
-  authenticated API when KTESIO_SKILLS_SH_API_KEY is configured.
+  Searches Ktesio's cached skill index and prints install targets that Ktesio
+  can clone from git. The public API uses SkillsMP as its primary backfill
+  source, falls back to Skills.sh only when needed, and respects upstream rate
+  limits with bounded retries.
 
 Examples:
   kt search tests

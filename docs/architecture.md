@@ -14,7 +14,7 @@ src/
 ├── install_target.rs # git URL, local path, and GitHub shorthand resolution
 ├── lockfile.rs      # skills.lock load/save/validation
 ├── manifest.rs      # skills.json load/save/validation
-├── skills_sh.rs     # skills.sh search client, normalization, and retries
+├── skills_sh.rs     # Ktesio search API client and retries
 ├── skill.rs         # copy and remove skill files
 └── ui.rs            # shared terminal colors, icons, statuses, and progress bars
 ```
@@ -46,10 +46,9 @@ GitHub shorthand such as `owner/repo` is resolved before cloning. For manifest d
 
 ```text
 read query and limit
-use authenticated skills.sh API when KTESIO_SKILLS_SH_API_KEY exists
-otherwise use the public skills.sh search endpoint
-retry 429, 503, and transient transport errors up to 3 total attempts
-normalize results into GitHub install targets when possible
+call https://api.ktesio.dev/search-skills with kt CLI headers
+retry 429, 5xx, and transient transport errors up to 3 total attempts
+receive normalized results with GitHub install targets when possible
 optionally install the selected result through the normal install flow
 ```
 

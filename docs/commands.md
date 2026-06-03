@@ -37,7 +37,7 @@ Behavior:
 
 ## `kt search <query>`
 
-Search public skill listings from skills.sh.
+Search public skill listings through Ktesio's cached search API.
 
 ```bash
 kt search tests
@@ -48,15 +48,16 @@ kt search tests --install
 
 Behavior:
 
-- Uses the public skills.sh search endpoint by default.
-- Uses the documented authenticated skills.sh API when `KTESIO_SKILLS_SH_API_KEY` is set.
+- Uses `https://api.ktesio.dev/search-skills` by default.
+- Sends CLI-identifying headers required by the API soft gate.
+- Use `KTESIO_SEARCH_API_URL` to point development and tests at another compatible endpoint.
 - Prints install commands for GitHub-backed results, such as `kt install owner/repo/skill`.
 - Marks unsupported sources as `not installable yet`.
 - Retries rate limits, temporary service failures, and transient network errors up to 3 total attempts.
 - For `429 Too Many Requests`, respects `Retry-After` or `X-RateLimit-Reset` before falling back to short exponential backoff with jitter.
 - Shows friendly retry and final failure messages instead of raw HTTP or JSON errors.
 
-Ktesio uses the skills.sh public API responsibly as described in the skills.sh terms, respects rate limits, and will use the documented authenticated API once API access is available.
+The hosted API checks Ktesio's exact-response cache, first-party D1 index, SkillsMP, and finally Skills.sh fallback when SkillsMP is unavailable or rate-limited.
 
 ## `kt init <path>`
 
@@ -71,7 +72,7 @@ Behavior:
 - Creates `skills.json` with `dependencies` and `publish` fields.
 - Scans existing `.agents/skills/*` directories.
 - Shows per-skill progress while looking up public matches, cloning matched repos to resolve commits, and falling back to local path dependencies.
-- Uses existing `skills.lock` entries or exact public skills.sh matches to adopt known installed skills as remote dependencies and lock their current commit.
+- Uses existing `skills.lock` entries or exact public search matches to adopt known installed skills as remote dependencies and lock their current commit.
 - Records unmatched installed skills as local path dependencies.
 - Does not automatically publish adopted local skills.
 - Leaves an existing manifest untouched.

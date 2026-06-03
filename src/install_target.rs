@@ -62,6 +62,7 @@ pub fn github_clone_url(owner: &str, repo: &str, use_ssh: bool) -> String {
     }
 }
 
+#[allow(dead_code)]
 pub fn github_repo_from_source(source: &str, use_ssh: bool) -> Option<String> {
     let mut parts = source.split('/');
     let owner = parts.next()?;
@@ -73,6 +74,7 @@ pub fn github_repo_from_source(source: &str, use_ssh: bool) -> Option<String> {
     Some(github_clone_url(owner, repo, use_ssh))
 }
 
+#[allow(dead_code)]
 pub fn install_target_from_source(source: &str, skill: &str) -> Option<String> {
     if github_repo_from_source(source, false).is_none() || !is_skill_component(skill) {
         return None;
