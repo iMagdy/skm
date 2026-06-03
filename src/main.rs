@@ -2,12 +2,14 @@ mod cli;
 mod discovery;
 mod error;
 mod git;
+mod install_channel;
 mod install_target;
 mod lockfile;
 mod manifest;
 mod skill;
 mod skills_sh;
 mod ui;
+mod update_check;
 
 use clap::{CommandFactory, Parser, Subcommand};
 
@@ -64,6 +66,15 @@ Details:
 
 Example:
   kt upgrade";
+
+const SELF_UPDATE_AFTER_HELP: &str = "\
+Details:
+  Updates the kt binary using the current install channel. Homebrew installs run
+  brew upgrade, Cargo installs run cargo install --force, and manual binary
+  installs download and verify the latest GitHub Release archive.
+
+Example:
+  kt self-update";
 
 const PUBLISH_AFTER_HELP: &str = "\
 Details:
@@ -182,6 +193,13 @@ enum Commands {
         after_help = UPGRADE_AFTER_HELP
     )]
     Upgrade,
+    /// Update the kt binary
+    #[command(
+        name = "self-update",
+        about = "Update the kt binary",
+        after_help = SELF_UPDATE_AFTER_HELP
+    )]
+    SelfUpdate,
     /// Publish local skills from this repo
     #[command(
         about = "Publish local skills from this repo",
@@ -254,6 +272,12 @@ fn main() {
 fn run_cli() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
+    if should_check_for_updates(&cli.command) {
+        if let Some(notice) = update_check::maybe_notice() {
+            ui::update_notice(&notice.current_version, &notice.latest_version);
+        }
+    }
+
     match cli.command {
         Some(Commands::Init { path }) => cli::init::run(&path),
         Some(Commands::Install {
@@ -289,6 +313,7 @@ fn run_cli() -> Result<(), Box<dyn std::error::Error>> {
             },
         ),
         Some(Commands::Upgrade) => cli::upgrade::run(),
+        Some(Commands::SelfUpdate) => cli::self_update::run(),
         Some(Commands::Publish { command }) => match command {
             Some(PublishCommands::Add { skill, path }) => cli::publish::run_add(&skill, &path),
             None => cli::publish::run(),
@@ -307,6 +332,10 @@ fn run_cli() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+fn should_check_for_updates(command: &Option<Commands>) -> bool {
+    matches!(command, Some(command) if !matches!(command, Commands::SelfUpdate))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -323,6 +352,7 @@ mod tests {
         assert!(cmd.find_subcommand("install").is_some());
         assert!(cmd.find_subcommand("search").is_some());
         assert!(cmd.find_subcommand("upgrade").is_some());
+        assert!(cmd.find_subcommand("self-update").is_some());
         assert!(cmd.find_subcommand("publish").is_some());
         assert!(cmd.find_subcommand("list").is_some());
         assert!(cmd.find_subcommand("show").is_some());
@@ -350,6 +380,7 @@ mod tests {
             ("init", "Creates a manifest with dependencies"),
             ("install", "installs every dependency"),
             ("upgrade", "Fetches latest upstream commits"),
+            ("self-update", "Updates the kt binary"),
             ("publish", "Publishes local skill paths"),
             ("list", "Shows each known skill"),
             ("show", "Shows the repo URL"),
@@ -365,5 +396,12 @@ mod tests {
             assert!(help.contains(detail), "{} help missing detail", command);
             assert!(help.contains("Example"), "{} help missing example", command);
         }
+    }
+
+    #[test]
+    fn test_self_update_skips_passive_update_check() {
+        let cli = Cli::try_parse_from(["kt", "self-update"]).expect("self-update should parse");
+
+        assert!(!should_check_for_updates(&cli.command));
     }
 }

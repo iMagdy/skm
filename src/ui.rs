@@ -70,6 +70,17 @@ pub fn error(message: impl Display) {
     eprintln!("{}", error_text(message));
 }
 
+pub(crate) fn update_notice(current_version: &str, latest_version: &str) {
+    eprintln!("{}", update_notice_text(current_version, latest_version));
+}
+
+pub(crate) fn update_notice_text(current_version: &str, latest_version: &str) -> String {
+    format!(
+        "{} Ktesio {latest_version} is available (current {current_version}). Update: kt self-update",
+        warning_text("Update available:")
+    )
+}
+
 pub fn info(message: impl Display) {
     println!("{} {}", style(INFO).cyan(), message);
 }
@@ -525,6 +536,19 @@ mod tests {
     }
 
     #[test]
+    fn test_update_notice_text_points_to_self_update_only() {
+        let notice = update_notice_text("0.3.0", "0.4.0");
+
+        assert!(notice.contains("Update available"));
+        assert!(notice.contains("0.3.0"));
+        assert!(notice.contains("0.4.0"));
+        assert!(notice.contains("kt self-update"));
+        assert!(!notice.contains("cargo install"));
+        assert!(!notice.contains("brew upgrade"));
+        assert!(!notice.contains("github.com"));
+    }
+
+    #[test]
     fn test_render_table_respects_display_width() {
         let columns = [
             TableColumn::new("Name", 16, 30),
@@ -573,6 +597,7 @@ mod tests {
         let columns = [TableColumn::new("Name", 6, 12)];
         let rows = [vec![TableCell::plain("docs")]];
         print_table("Skills", &columns, &rows);
+        update_notice("0.3.0", "0.4.0");
         print_diagnostics(
             "Errors",
             &["a diagnostic message that should wrap cleanly".to_string()],
@@ -647,6 +672,14 @@ mod tests {
             wrap_text("supercalifragilistic", 6),
             vec!["superc", "alifra", "gilist", "ic"]
         );
+    }
+
+    #[test]
+    fn test_wrap_text_flushes_current_line_before_long_word() {
+        let wrapped = wrap_text("short supercalifragilistic", 6);
+
+        assert_eq!(wrapped.first().map(String::as_str), Some("short"));
+        assert!(wrapped.len() > 2);
     }
 
     #[test]

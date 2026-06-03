@@ -432,6 +432,24 @@ mod tests {
     }
 
     #[test]
+    fn test_publish_candidates_skip_installed_skill_already_candidate() {
+        let dir = std::env::temp_dir().join("ktesio_test_publish_candidate_duplicate");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("local/docs")).unwrap();
+        std::fs::create_dir_all(dir.join(".agents/skills/docs")).unwrap();
+
+        let mut manifest = Manifest::new();
+        manifest.add_local_dependency("docs".to_string(), "local/docs".to_string());
+
+        let candidates = publish_candidates(&dir, &manifest).unwrap();
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].name, "docs");
+        assert_eq!(candidates[0].path, dir.join("local/docs"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_publish_candidate_rejects_path_outside_project() {
         let dir = std::env::temp_dir().join("ktesio_test_publish_candidate_outside_project");
         let outside = std::env::temp_dir().join("ktesio_test_publish_candidate_outside_skill");

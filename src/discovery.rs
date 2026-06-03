@@ -425,6 +425,27 @@ mod tests {
     }
 
     #[test]
+    fn test_deduplicate_skills_reports_duplicates() {
+        let skills = vec![
+            DiscoveredSkill {
+                name: "skill".to_string(),
+                path: PathBuf::from("/a"),
+                skill_type: SkillType::File,
+            },
+            DiscoveredSkill {
+                name: "skill".to_string(),
+                path: PathBuf::from("/b"),
+                skill_type: SkillType::Directory,
+            },
+        ];
+
+        let result = deduplicate_skills(skills);
+
+        assert_eq!(result.skills.len(), 1);
+        assert_eq!(result.warnings, vec!["Duplicate skill 'skill' skipped"]);
+    }
+
+    #[test]
     fn test_deduplicate_skills_empty() {
         let skills = vec![];
         let result = deduplicate_skills(skills);

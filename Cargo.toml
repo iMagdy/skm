@@ -27,6 +27,11 @@ regex = "1"
 dialoguer = "0.12"
 ureq = { version = "2", features = ["json"] }
 urlencoding = "2"
+semver = "1"
+flate2 = "1"
+sha2 = "0.10"
+tar = "0.4"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 tempfile = "3"

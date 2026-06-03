@@ -31,6 +31,7 @@ KT_COMMANDS = {
     "search",
     "install",
     "upgrade",
+    "self-update",
     "publish",
     "list",
     "show",

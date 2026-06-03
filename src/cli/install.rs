@@ -1415,6 +1415,28 @@ mod tests {
     }
 
     #[test]
+    fn test_run_in_with_options_repo_target_installs_selected_skill() {
+        let dir = std::env::temp_dir().join("ktesio_test_install_repo_target_dispatch");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = create_multi_local_repo(&dir, "source");
+
+        let result = run_in_with_options(
+            &dir,
+            Some(repo.to_str().unwrap()),
+            InstallOptions {
+                skill: Some("beta".to_string()),
+                ..InstallOptions::default()
+            },
+        );
+
+        assert!(result.is_ok());
+        assert!(dir.join(".agents/skills/beta/SKILL.md").exists());
+        assert!(!dir.join(".agents/skills/alpha").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn test_copy_repo_content_for_install_requires_confirmation_without_manifest() {
         let dir = std::env::temp_dir().join("ktesio_test_repo_content_decline");
         let _ = std::fs::remove_dir_all(&dir);
@@ -1606,6 +1628,18 @@ mod tests {
 
         assert!(missing.is_err());
         assert!(existing.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_paths_are_same_handles_existing_and_missing_paths() {
+        let dir = std::env::temp_dir().join("ktesio_test_paths_are_same");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("skill")).unwrap();
+
+        assert!(paths_are_same(&dir.join("skill"), &dir.join("skill")).unwrap());
+        assert!(!paths_are_same(&dir.join("skill"), &dir.join("missing")).unwrap());
+
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
