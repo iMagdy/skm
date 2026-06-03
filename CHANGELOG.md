@@ -4,6 +4,32 @@ All notable changes to Ktesio are generated from git history when a version tag 
 
 Release automation updates this file with a pull request after each `vMAJOR.MINOR.PATCH` tag.
 
+## v0.3.1
+
+Comparison: [v0.3.0...v0.3.1](https://github.com/iMagdy/ktesio/compare/v0.3.0...v0.3.1)
+
+| Platform | Target | Archive | Checksum |
+|----------|--------|---------|----------|
+| macOS Intel | `x86_64-apple-darwin` | [ktesio-v0.3.1-x86_64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-x86_64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-x86_64-apple-darwin.tar.gz.sha256) |
+| macOS Apple Silicon | `aarch64-apple-darwin` | [ktesio-v0.3.1-aarch64-apple-darwin.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-aarch64-apple-darwin.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-aarch64-apple-darwin.tar.gz.sha256) |
+| Windows x64 | `x86_64-pc-windows-msvc` | [ktesio-v0.3.1-x86_64-pc-windows-msvc.zip](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-x86_64-pc-windows-msvc.zip) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-x86_64-pc-windows-msvc.zip.sha256) |
+| Linux x64 | `x86_64-unknown-linux-gnu` | [ktesio-v0.3.1-x86_64-unknown-linux-gnu.tar.gz](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-x86_64-unknown-linux-gnu.tar.gz) | [sha256](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-x86_64-unknown-linux-gnu.tar.gz.sha256) |
+| All | checksums | [ktesio-v0.3.1-checksums.txt](https://github.com/iMagdy/ktesio/releases/download/v0.3.1/ktesio-v0.3.1-checksums.txt) | - |
+
+### Features
+
+- discover fallback skills from agents directory (#31) ([634c99a](https://github.com/iMagdy/ktesio/commit/634c99a))
+
+### Documentation
+
+- merge install details into quickstart ([7913033](https://github.com/iMagdy/ktesio/commit/7913033))
+- update quickstart install paths ([1a94d4f](https://github.com/iMagdy/ktesio/commit/1a94d4f))
+- update release notes for v0.3.0 (#28) ([05651e6](https://github.com/iMagdy/ktesio/commit/05651e6))
+
+### Maintenance
+
+- bump version to 0.3.1 ([dc0965b](https://github.com/iMagdy/ktesio/commit/dc0965b))
+
 ## v0.3.0
 
 Comparison: [v0.2.0...v0.3.0](https://github.com/iMagdy/ktesio/compare/v0.2.0...v0.3.0)
