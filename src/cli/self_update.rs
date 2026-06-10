@@ -428,10 +428,12 @@ struct UreqReleaseClient {
 #[cfg(not(tarpaulin_include))]
 impl UreqReleaseClient {
     fn new() -> Self {
+        let config = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(30)))
+            .http_status_as_error(false)
+            .build();
         Self {
-            agent: ureq::AgentBuilder::new()
-                .timeout(std::time::Duration::from_secs(30))
-                .build(),
+            agent: config.into(),
         }
     }
 }
@@ -439,11 +441,11 @@ impl UreqReleaseClient {
 #[cfg(not(tarpaulin_include))]
 impl ReleaseClient for UreqReleaseClient {
     fn latest_release_tag(&self) -> Result<String, String> {
-        let response = self
+        let mut response = self
             .agent
             .get(LATEST_RELEASE_URL)
-            .set("Accept", "application/vnd.github+json")
-            .set("User-Agent", concat!("ktesio/", env!("CARGO_PKG_VERSION")))
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", concat!("ktesio/", env!("CARGO_PKG_VERSION")))
             .call()
             .map_err(|error| error.to_string())?;
 
@@ -451,14 +453,18 @@ impl ReleaseClient for UreqReleaseClient {
             return Err(format!("GitHub returned HTTP {}", response.status()));
         }
 
-        let body = response.into_string().map_err(|error| error.to_string())?;
+        let mut body = String::new();
+        response
+            .body_mut()
+            .read_to_string(&mut body)
+            .map_err(|error| error.to_string())?;
         let release: GitHubLatestRelease =
             serde_json::from_str(&body).map_err(|error| error.to_string())?;
         Ok(release.tag_name)
     }
 
     fn download(&self, url: &str) -> Result<Vec<u8>, String> {
-        let response = self
+        let mut response = self
             .agent
             .get(url)
             .call()
@@ -469,7 +475,7 @@ impl ReleaseClient for UreqReleaseClient {
 
         let mut bytes = Vec::new();
         response
-            .into_reader()
+            .body_mut()
             .read_to_end(&mut bytes)
             .map_err(|error| error.to_string())?;
         Ok(bytes)

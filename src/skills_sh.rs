@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Read;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -384,10 +385,12 @@ struct UreqTransport {
 #[cfg(not(tarpaulin_include))]
 impl UreqTransport {
     fn new() -> Self {
+        let config = ureq::Agent::config_builder()
+            .timeout_global(Some(Duration::from_secs(15)))
+            .http_status_as_error(false)
+            .build();
         Self {
-            agent: ureq::AgentBuilder::new()
-                .timeout(Duration::from_secs(15))
-                .build(),
+            agent: config.into(),
         }
     }
 }
@@ -398,19 +401,42 @@ impl HttpTransport for UreqTransport {
         let mut request = self
             .agent
             .get(url)
-            .set("Accept", "application/json")
-            .set("User-Agent", concat!("ktesio/", env!("CARGO_PKG_VERSION")));
+            .header("Accept", "application/json")
+            .header("User-Agent", concat!("ktesio/", env!("CARGO_PKG_VERSION")));
 
         let auth_header;
         if let Some(api_key) = api_key {
             auth_header = format!("Bearer {api_key}");
-            request = request.set("Authorization", &auth_header);
+            request = request.header("Authorization", &auth_header);
         }
 
         match request.call() {
-            Ok(response) => response_to_http(response),
-            Err(ureq::Error::Status(_, response)) => response_to_http(response),
-            Err(ureq::Error::Transport(error)) => Err(HttpTransportError {
+            Ok(mut response) => {
+                let status = response.status();
+                let headers = ["Retry-After", "X-RateLimit-Reset"]
+                    .into_iter()
+                    .filter_map(|name| {
+                        response
+                            .header(name)
+                            .map(|value| (name.to_ascii_lowercase(), value.to_string()))
+                    })
+                    .collect();
+                let mut body = String::new();
+                response
+                    .body_mut()
+                    .read_to_string(&mut body)
+                    .map_err(|error| HttpTransportError {
+                        message: error.to_string(),
+                        retryable: false,
+                    })?;
+
+                Ok(HttpResponse {
+                    status,
+                    headers,
+                    body,
+                })
+            }
+            Err(error) => Err(HttpTransportError {
                 message: friendly_transport_error(&error.to_string()),
                 retryable: true,
             }),
@@ -429,34 +455,6 @@ fn friendly_transport_error(message: &str) -> String {
     } else {
         "temporary network error".to_string()
     }
-}
-
-#[cfg(not(tarpaulin_include))]
-fn response_to_http(response: ureq::Response) -> Result<HttpResponse, HttpTransportError> {
-    let status = response.status();
-    let headers = interesting_headers(&response);
-    let body = response.into_string().map_err(|error| HttpTransportError {
-        message: error.to_string(),
-        retryable: false,
-    })?;
-
-    Ok(HttpResponse {
-        status,
-        headers,
-        body,
-    })
-}
-
-#[cfg(not(tarpaulin_include))]
-fn interesting_headers(response: &ureq::Response) -> HashMap<String, String> {
-    ["Retry-After", "X-RateLimit-Reset"]
-        .into_iter()
-        .filter_map(|name| {
-            response
-                .header(name)
-                .map(|value| (name.to_ascii_lowercase(), value.to_string()))
-        })
-        .collect()
 }
 
 #[derive(Debug, Deserialize)]
