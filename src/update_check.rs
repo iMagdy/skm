@@ -1,5 +1,4 @@
 use std::env;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -225,10 +224,9 @@ impl ReleaseTransport for UreqReleaseTransport {
             return Err(format!("GitHub returned HTTP {}", response.status()));
         }
 
-        let mut body = String::new();
-        response
+        let body = response
             .body_mut()
-            .read_to_string(&mut body)
+            .read_to_string()
             .map_err(|error| error.to_string())?;
         let release: GitHubLatestRelease =
             serde_json::from_str(&body).map_err(|error| error.to_string())?;

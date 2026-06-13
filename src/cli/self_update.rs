@@ -453,10 +453,9 @@ impl ReleaseClient for UreqReleaseClient {
             return Err(format!("GitHub returned HTTP {}", response.status()));
         }
 
-        let mut body = String::new();
-        response
+        let body = response
             .body_mut()
-            .read_to_string(&mut body)
+            .read_to_string()
             .map_err(|error| error.to_string())?;
         let release: GitHubLatestRelease =
             serde_json::from_str(&body).map_err(|error| error.to_string())?;
@@ -473,12 +472,10 @@ impl ReleaseClient for UreqReleaseClient {
             return Err(format!("{url} returned HTTP {}", response.status()));
         }
 
-        let mut bytes = Vec::new();
         response
             .body_mut()
-            .read_to_end(&mut bytes)
-            .map_err(|error| error.to_string())?;
-        Ok(bytes)
+            .read_to_vec()
+            .map_err(|error| error.to_string())
     }
 }
 

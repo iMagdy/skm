@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::Read;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -412,23 +411,25 @@ impl HttpTransport for UreqTransport {
 
         match request.call() {
             Ok(mut response) => {
-                let status = response.status();
+                let status = response.status().as_u16();
                 let headers = ["Retry-After", "X-RateLimit-Reset"]
                     .into_iter()
                     .filter_map(|name| {
                         response
-                            .header(name)
+                            .headers()
+                            .get(name)
+                            .and_then(|value| value.to_str().ok())
                             .map(|value| (name.to_ascii_lowercase(), value.to_string()))
                     })
                     .collect();
-                let mut body = String::new();
-                response
-                    .body_mut()
-                    .read_to_string(&mut body)
-                    .map_err(|error| HttpTransportError {
-                        message: error.to_string(),
-                        retryable: false,
-                    })?;
+                let body =
+                    response
+                        .body_mut()
+                        .read_to_string()
+                        .map_err(|error| HttpTransportError {
+                            message: error.to_string(),
+                            retryable: false,
+                        })?;
 
                 Ok(HttpResponse {
                     status,
