@@ -199,8 +199,12 @@ struct UreqReleaseTransport {
 #[cfg(not(tarpaulin_include))]
 impl UreqReleaseTransport {
     fn new() -> Self {
+        let config = ureq::Agent::config_builder()
+            .timeout_global(Some(REQUEST_TIMEOUT))
+            .http_status_as_error(false)
+            .build();
         Self {
-            agent: ureq::AgentBuilder::new().timeout(REQUEST_TIMEOUT).build(),
+            agent: config.into(),
         }
     }
 }
@@ -208,11 +212,11 @@ impl UreqReleaseTransport {
 #[cfg(not(tarpaulin_include))]
 impl ReleaseTransport for UreqReleaseTransport {
     fn latest_release_tag(&self) -> Result<String, String> {
-        let response = self
+        let mut response = self
             .agent
             .get(LATEST_RELEASE_URL)
-            .set("Accept", "application/vnd.github+json")
-            .set("User-Agent", concat!("ktesio/", env!("CARGO_PKG_VERSION")))
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", concat!("ktesio/", env!("CARGO_PKG_VERSION")))
             .call()
             .map_err(|error| error.to_string())?;
 
@@ -220,7 +224,10 @@ impl ReleaseTransport for UreqReleaseTransport {
             return Err(format!("GitHub returned HTTP {}", response.status()));
         }
 
-        let body = response.into_string().map_err(|error| error.to_string())?;
+        let body = response
+            .body_mut()
+            .read_to_string()
+            .map_err(|error| error.to_string())?;
         let release: GitHubLatestRelease =
             serde_json::from_str(&body).map_err(|error| error.to_string())?;
         Ok(release.tag_name)
